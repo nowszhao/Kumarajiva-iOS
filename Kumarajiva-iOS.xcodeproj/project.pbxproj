@@ -10,9 +10,22 @@
 		7E69EBDE2D58B28A00CECFDC /* Kumarajiva-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Kumarajiva-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7E69EC2B2D58D68800CECFDC /* Exceptions for "Kumarajiva-iOS" folder in "Kumarajiva-iOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7E69EBDD2D58B28A00CECFDC /* Kumarajiva-iOS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7E69EBE02D58B28A00CECFDC /* Kumarajiva-iOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7E69EC2B2D58D68800CECFDC /* Exceptions for "Kumarajiva-iOS" folder in "Kumarajiva-iOS" target */,
+			);
 			path = "Kumarajiva-iOS";
 			sourceTree = "<group>";
 		};
@@ -255,6 +268,9 @@
 				DEVELOPMENT_TEAM = VWKUKT2732;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Kumarajiva-iOS/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = NSAppTransportSecurity;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -284,6 +300,9 @@
 				DEVELOPMENT_TEAM = VWKUKT2732;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Kumarajiva-iOS/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = NSAppTransportSecurity;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
