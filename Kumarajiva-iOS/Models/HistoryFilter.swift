@@ -17,7 +17,8 @@ enum HistoryFilter: CaseIterable {
     
     var dateRange: (Date, Date) {
         let now = Date()
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.timeZone = TimeZone.current  // 确保使用本地时区
         
         switch self {
         case .today:
@@ -26,7 +27,7 @@ enum HistoryFilter: CaseIterable {
             
         case .yesterday:
             let startOfYesterday = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now))!
-            let endOfYesterday = calendar.date(byAdding: .day, value: 1, to: startOfYesterday)!
+            let endOfYesterday = calendar.date(byAdding: .day, value: 1, to: startOfYesterday)!.addingTimeInterval(-1)  // 减去1秒以确保是23:59:59
             return (startOfYesterday, endOfYesterday)
             
         case .lastWeek:
