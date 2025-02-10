@@ -37,7 +37,7 @@ struct QuizView: View {
                 
                 if showingResult {
                     // 单词展示卡片
-                    WordCard(word: quiz.word)
+                    WordCard(quiz: quiz)
                     
                     // 下一题按钮
                     NextButton {
@@ -122,20 +122,19 @@ struct QuestionCard: View {
                         .font(.system(size: 17))
                         .lineSpacing(4)
                         .lineLimit(nil)
+                    
+                    Button(action: {
+                        AudioService.shared.playPronunciation(word: method)
+                    }){
+                        HStack(spacing: 8) {
+                            Image(systemName: "speaker.wave.2")
+                                .font(.system(size: 14))
+                                .foregroundColor(.blue)
+                        }
+                    }
                 }
             }
-            
-            // 音标
-            if let phonetic = quiz.phonetic {
-                HStack(spacing: 8) {
-                    Image(systemName: "speaker.wave.2")
-                        .font(.system(size: 14))
-                        .foregroundColor(.blue)
-                    Text(phonetic)
-                        .font(.system(size: 15))
-                        .foregroundColor(.secondary)
-                }
-            }
+          
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
@@ -268,21 +267,98 @@ struct AnswerOptionButton: View {
 
 // 单词卡片组件
 struct WordCard: View {
-    let word: String
+    let quiz: Quiz
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("单词")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            Text(word)
-                .font(.title3.bold())
+        VStack(alignment: .leading, spacing: 20) {
+            // 单词部分
+            VStack(alignment: .leading, spacing: 8) {
+                Text("单词")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(8)
+                
+                HStack(alignment: .center, spacing: 12) {
+                    Text(quiz.word)
+                        .font(.title2.bold())
+                        .foregroundColor(.primary)
+                    
+                    if let phonetic = quiz.phonetic {
+                        Button(action: {
+                            AudioService.shared.playPronunciation(word: quiz.word)
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "speaker.wave.2.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.blue)
+                                Text(phonetic)
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color.blue.opacity(0.1))
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // 分隔线
+            Divider()
+                .background(Color.gray.opacity(0.1))
+            
+            // 释义部分
+            VStack(alignment: .leading, spacing: 16) {
+                Text("释义")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(8)
+                
+                ForEach(quiz.definitions.indices, id: \.self) { index in
+                    HStack(alignment: .top, spacing: 12) {
+                        Text("\(index + 1).")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(quiz.definitions[index].meaning)
+                                .font(.system(size: 16))
+                                .foregroundColor(.primary)
+                                .multilineTextAlignment(.leading)
+                            
+                            Text(quiz.definitions[index].pos)
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color(.systemGray6))
+                                )
+                        }
+                    }
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemGray6))
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.blue.opacity(0.1), lineWidth: 1)
         )
         .padding(.horizontal)
     }

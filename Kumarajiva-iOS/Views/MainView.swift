@@ -12,6 +12,11 @@ struct MainView: View {
                 .tabItem {
                     Label("历史记录", systemImage: "clock.fill")
                 }
+            
+            SettingsView()
+                .tabItem {
+                    Label("设置", systemImage: "gear")
+                }
         }
     }
 } 

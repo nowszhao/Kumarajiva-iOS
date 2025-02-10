@@ -3,17 +3,36 @@ import SwiftUI
 struct HistoryView: View {
     @StateObject private var viewModel = HistoryViewModel()
     @State private var selectedFilter: HistoryFilter = .today
+    @State private var isPlayingBatch = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // 筛选器
-                FilterSegmentView(selectedFilter: $selectedFilter) {
-                    Task {
-                        await viewModel.loadHistory(filter: selectedFilter)
+                // 筛选器和播放控制
+                HStack {
+                    FilterSegmentView(selectedFilter: $selectedFilter) {
+                        Task {
+                            await viewModel.loadHistory(filter: selectedFilter)
+                        }
+                    }
+                    
+                    // 批量播放按钮
+                    if !viewModel.histories.isEmpty {
+                        Button(action: {
+                            isPlayingBatch.toggle()
+                            if isPlayingBatch {
+                                AudioService.shared.startBatchPlayback(words: viewModel.histories)
+                            } else {
+                                AudioService.shared.stopPlayback()
+                            }
+                        }) {
+                            Image(systemName: isPlayingBatch ? "stop.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(isPlayingBatch ? .red : .blue)
+                                .padding(.horizontal)
+                        }
                     }
                 }
-                .padding(.horizontal)
                 .padding(.vertical, 12)
                 
                 if viewModel.isLoading {
@@ -106,41 +125,99 @@ struct FilterButton: View {
 // 历史记录项组件
 struct HistoryItemView: View {
     let history: History
+    @State private var isPlayingMemory = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // 单词和音标
             HStack(alignment: .center, spacing: 12) {
                 Text(history.word)
-                    .font(.headline)
+                    .font(.title3.bold())
                 
                 if let pronunciationStr = history.pronunciation,
                    let pronunciation = parsePronunciation(pronunciationStr) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "speaker.wave.2")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                        Text(pronunciation)
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
+                    Button(action: {
+                        AudioService.shared.playPronunciation(word: history.word)
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "speaker.wave.2.fill")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            Text(pronunciation)
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color.blue.opacity(0.1))
+                        )
                     }
                 }
             }
             
             // 释义
-            ForEach(history.definitions, id: \.meaning) { definition in
-                Text("\(definition.meaning) (\(definition.pos))")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(history.definitions, id: \.meaning) { definition in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(definition.pos)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color(.systemGray6))
+                            )
+                        
+                        Text(definition.meaning)
+                            .font(.system(size: 15))
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             
             // 记忆方法
             if let method = history.memoryMethod {
-                Text(method)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 4)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("记忆方法")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.orange.opacity(0.1))
+                            .cornerRadius(8)
+                        
+                        Button(action: {
+                            isPlayingMemory.toggle()
+                            if isPlayingMemory {
+                                AudioService.shared.playPronunciation(word: history.word)
+                            } else {
+                                AudioService.shared.stopPlayback()
+                            }
+                        }) {
+                            Image(systemName: isPlayingMemory ? "stop.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(isPlayingMemory ? .red : .blue)
+                        }
+                    }
+                    
+                    Text(method)
+                        .font(.system(size: 15))
+                        .foregroundColor(.secondary)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(.systemGray6))
+                        )
+                }
             }
+            
+            Divider()
+                .padding(.vertical, 4)
             
             // 统计信息
             HStack {

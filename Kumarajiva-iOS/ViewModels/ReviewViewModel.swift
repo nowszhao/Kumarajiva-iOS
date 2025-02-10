@@ -13,15 +13,21 @@ class ReviewViewModel: ObservableObject {
     func loadTodayWords() async {
         isLoading = true
         do {
-            // First get progress to know where we left off
-            progress = try await APIService.shared.getProgress()
-            words = try await APIService.shared.getTodayWords()
+            // 并行执行这两个请求
+            async let progressTask = APIService.shared.getProgress()
+            async let wordsTask = APIService.shared.getTodayWords()
             
-            // Set current index from progress
-            currentWordIndex = progress?.currentWordIndex ?? 0
-            print("currentWordIndex:\(currentWordIndex)")
+            // 等待两个请求都完成
+            let (fetchedProgress, fetchedWords) = await (try progressTask, try wordsTask)
             
-            // Load current word's quiz
+            // 更新状态
+            self.progress = fetchedProgress
+            self.words = fetchedWords
+            
+            // 设置当前索引
+            currentWordIndex = fetchedProgress.currentWordIndex
+            
+            // 加载当前单词的测验
             if currentWordIndex < words.count {
                 try await loadQuiz(for: words[currentWordIndex].word)
             } else {
