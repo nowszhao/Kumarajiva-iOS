@@ -9,7 +9,7 @@ struct ReviewView: View {
                 if viewModel.isLoading {
                     ProgressView()
                 } else if let quiz = viewModel.currentQuiz {
-                    QuizView(quiz: quiz, progress: viewModel.progress) { isCorrect in
+                    QuizView(quiz: quiz, progress: viewModel.progress,viewModel:viewModel) { isCorrect in
                         Task {
                             await viewModel.submitAnswer(word: quiz.word, isCorrect: isCorrect)
                         }

@@ -3,7 +3,9 @@ import SwiftUI
 struct QuizView: View {
     let quiz: Quiz
     let progress: Progress?
+    let viewModel: ReviewViewModel
     let onAnswer: (Bool) -> Void
+   
     
     @State private var selectedAnswer: Word.Definition?
     @State private var showingResult = false
@@ -20,7 +22,7 @@ struct QuizView: View {
                 )
                 
                 // 问题内容
-                QuestionCard(quiz: quiz)
+                QuestionCard(quiz: quiz, word: viewModel.words[progress?.currentWordIndex ?? 0])
                 
                 // 使用新的选项列表组件
                 OptionsListView(
@@ -47,6 +49,8 @@ struct QuizView: View {
                         selectedAnswer = nil
                         showingResult = false
                         hasSubmitted = false
+                        
+                        
                     }
                 }
             }
@@ -104,19 +108,20 @@ struct ProgressBar: View {
 // 问题卡片组件
 struct QuestionCard: View {
     let quiz: Quiz
+    let word : Word
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // 添加新词/复习标签
             HStack(spacing: 8) {
-                Text(quiz.isNew ?? false ? "新词" : "复习")
+                Text(word.isNew ?? false ? "新词" : "复习")
                     .font(.system(size: 13))
-                    .foregroundColor(quiz.isNew ?? false ? .orange : .blue)
+                    .foregroundColor(word.isNew ?? false ? .orange : .blue)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(quiz.isNew ?? false ? Color.orange.opacity(0.1) : Color.blue.opacity(0.1))
+                            .fill(word.isNew ?? false ? Color.orange.opacity(0.1) : Color.blue.opacity(0.1))
                     )
                 
                 Spacer()
