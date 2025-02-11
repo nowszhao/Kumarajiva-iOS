@@ -8,6 +8,7 @@ struct Word: Codable, Identifiable {
     let pronunciation: Pronunciation
     let mastered: Int
     let timestamp: Int64
+    let isNew: Bool
     
     struct Definition: Codable {
         let meaning: String
@@ -26,5 +27,6 @@ struct Word: Codable, Identifiable {
         case pronunciation
         case mastered
         case timestamp
+        case isNew
     }
 } 

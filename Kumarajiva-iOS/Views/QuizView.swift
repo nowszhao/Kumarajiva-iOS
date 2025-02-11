@@ -107,6 +107,21 @@ struct QuestionCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // 添加新词/复习标签
+            HStack(spacing: 8) {
+                Text(quiz.isNew ?? false ? "新词" : "复习")
+                    .font(.system(size: 13))
+                    .foregroundColor(quiz.isNew ?? false ? .orange : .blue)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(quiz.isNew ?? false ? Color.orange.opacity(0.1) : Color.blue.opacity(0.1))
+                    )
+                
+                Spacer()
+            }
+            
             // 记忆方法
             if let method = quiz.memoryMethod {
                 VStack(alignment: .leading, spacing: 8) {

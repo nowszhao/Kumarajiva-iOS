@@ -14,7 +14,7 @@ class APIService {
     private init() {}
     
     func getTodayWords() async throws -> [Word] {
-        print("📝 Getting today's words...")
+//        print("📝 Getting today's words...")
         let url = "\(baseURL)/review/today"
         return try await get(url)
     }
@@ -24,7 +24,7 @@ class APIService {
         return try await post(url, body: ["word": word])
     }
     
-    func submitReview(word: String, result: Bool) async throws -> Bool {
+    func submitReview(word: String, result: Bool) async throws -> ReviewResult {
         let url = "\(baseURL)/review/record"
         return try await post(url, body: [
             "word": word,
@@ -69,6 +69,7 @@ class APIService {
         guard let url = URL(string: url) else {
             throw APIError.invalidURL
         }
+        print("\n\n#################start###################")
         print("📦 (Raw) Request url: \(url)")
         var request = URLRequest(url: url)
         request.httpMethod = HTTPMethod.post.rawValue
@@ -82,6 +83,8 @@ class APIService {
             print("📊 (Raw) Status code: \(httpResponse.statusCode)")
         }
         
+        print("#################end###################\n\n")
+        
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         return try decoder.decode(T.self, from: data)
@@ -91,6 +94,7 @@ class APIService {
         guard let url = URL(string: url) else {
             throw APIError.invalidURL
         }
+        print("\n\n#################start###################")
         print("📦 Request url: \(url)")
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
@@ -123,6 +127,9 @@ class APIService {
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
                 let response = try decoder.decode(APIResponse<T>.self, from: data)
                 print("✅ Successfully decoded response")
+                
+                print("#################end###################\n\n")
+
                 return response.data
             } catch {
                 print("❌ Decoding error: \(error)")
@@ -132,6 +139,7 @@ class APIService {
             print("❌ Network error: \(error)")
             throw APIError.networkError(error)
         }
+        
     }
     
     private enum HTTPMethod: String {

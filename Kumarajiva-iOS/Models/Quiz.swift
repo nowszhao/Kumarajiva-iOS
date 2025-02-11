@@ -9,6 +9,7 @@ struct Quiz: Codable {
     let memoryMethod: String?
     let correctAnswer: String?
     let options: [Option]
+    let isNew: Bool?
     
     struct Option: Codable {
         let definition: String
