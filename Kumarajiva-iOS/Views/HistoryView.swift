@@ -62,7 +62,7 @@ struct HistoryView: View {
     
     private var groupedHistories: [Date: [History]] {
         Dictionary(grouping: viewModel.histories) { history in
-            Calendar.current.startOfDay(for: Date(timeIntervalSince1970: TimeInterval(history.timestamp / 1000)))
+            Calendar.current.startOfDay(for: Date(timeIntervalSince1970: TimeInterval(history.lastReviewDate! / 1000)))
         }
     }
     
