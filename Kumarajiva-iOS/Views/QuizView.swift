@@ -50,8 +50,14 @@ struct QuizView: View {
                         showingResult = false
                         hasSubmitted = false
                         
-                        // 切换题目时自动播放单词发音
-                        AudioService.shared.playPronunciation(word: viewModel.words[(progress?.currentWordIndex ?? 0)+1].word)
+                        
+                        if let currentIndex = progress?.currentWordIndex,
+                           let totalWords = progress?.totalWords,
+                           currentIndex + 1 < totalWords,
+                           viewModel.words.count > currentIndex + 1 {
+                            // 切换题目时自动播放单词发音
+                            AudioService.shared.playPronunciation(word: viewModel.words[currentIndex + 1].word)
+                        }
                     }
                 }
             }

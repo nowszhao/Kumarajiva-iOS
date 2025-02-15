@@ -122,7 +122,7 @@ struct SettingsView: View {
                                     Text(mode.title).tag(mode)
                                 }
                             }
-                            .pickerStyle(.navigationLink)
+                            .pickerStyle(.menu)
                             .onChange(of: playbackMode) { newValue in
                                 UserSettings.shared.playbackMode = newValue
                             }
@@ -134,6 +134,6 @@ struct SettingsView: View {
                 .background(Color(.systemBackground))
                 .cornerRadius(10)
                 .padding(.horizontal)
-        }
+        }.frame(height: 200)
     }
 }
