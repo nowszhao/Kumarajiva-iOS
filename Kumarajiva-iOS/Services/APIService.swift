@@ -57,6 +57,11 @@ class APIService {
         return response.success
     }
     
+    func getStats() async throws -> Stats {
+        let url = "\(baseURL)/review/stats"
+        return try await get(url)
+    }
+    
     private func get<T: Decodable>(_ url: String) async throws -> T {
         try await request(.get, url: url)
     }

@@ -50,13 +50,18 @@ struct QuizView: View {
                         showingResult = false
                         hasSubmitted = false
                         
-                        
+                        // 切换题目时自动播放单词发音
+                        AudioService.shared.playPronunciation(word: viewModel.words[(progress?.currentWordIndex ?? 0)+1].word)
                     }
                 }
             }
             .padding(.vertical)
         }
         .background(Color(.systemGray6))
+        .onAppear {
+            // 页面加载时自动播放当前单词发音
+            AudioService.shared.playPronunciation(word: viewModel.words[progress?.currentWordIndex ?? 0].word)
+        }
     }
 }
 
@@ -114,6 +119,10 @@ struct QuestionCard: View {
         VStack(alignment: .leading, spacing: 16) {
             // 添加新词/复习标签
             HStack(spacing: 8) {
+                Text(word.word)
+                    .font(.title2.bold())
+                    .foregroundColor(.primary)
+                
                 Text(word.isNew ?? false ? "新词" : "复习")
                     .font(.system(size: 13))
                     .foregroundColor(word.isNew ?? false ? .orange : .blue)
@@ -123,8 +132,6 @@ struct QuestionCard: View {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(word.isNew ?? false ? Color.orange.opacity(0.1) : Color.blue.opacity(0.1))
                     )
-                
-                Spacer()
             }
             
             // 记忆方法

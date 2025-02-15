@@ -13,9 +13,9 @@ struct MainView: View {
                     Label("历史记录", systemImage: "clock.fill")
                 }
             
-            SettingsView()
+            ProfileView()
                 .tabItem {
-                    Label("设置", systemImage: "gear")
+                    Label("我的", systemImage: "person.fill")
                 }
         }
     }
