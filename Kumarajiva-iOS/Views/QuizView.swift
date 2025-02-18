@@ -13,55 +13,66 @@ struct QuizView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                // 进度头部
-                ProgressHeader(
-                    current: (progress?.currentWordIndex ?? 0) + 1,
-                    total: progress?.totalWords ?? 0,
-                    percentage: Double(progress?.completed ?? 0) / Double(progress?.totalWords ?? 1)
-                )
-                
-                // 问题内容
-                QuestionCard(quiz: quiz, word: viewModel.words[progress?.currentWordIndex ?? 0])
-                
-                // 使用新的选项列表组件
-                OptionsListView(
-                    options: quiz.options,
-                    selectedAnswer: selectedAnswer,
-                    showingResult: showingResult,
-                    correctAnswer: quiz.correctAnswer
-                ) { definition in
-                    guard !hasSubmitted else { return }
-                    selectedAnswer = definition
-                    showingResult = true
-                    hasSubmitted = true
-                }
-                
-                if showingResult {
-                    // 单词展示卡片
-                    WordCard(quiz: quiz)
+            ScrollViewReader { proxy in
+                VStack(spacing: 24) {
+                    // 进度头部
+                    ProgressHeader(
+                        current: (progress?.currentWordIndex ?? 0) + 1,
+                        total: viewModel.words.count,
+                        percentage: Double(progress?.completed ?? 0) / Double(viewModel.words.count)
+                    )
                     
-                    // 下一题按钮
-                    NextButton {
-                        if let selected = selectedAnswer {
-                            onAnswer(selected.meaning == quiz.correctAnswer)
+                    // 问题内容
+                    QuestionCard(quiz: quiz, word: viewModel.words[progress?.currentWordIndex ?? 0])
+                    
+                    // 使用新的选项列表组件
+                    OptionsListView(
+                        options: quiz.options,
+                        selectedAnswer: selectedAnswer,
+                        showingResult: showingResult,
+                        correctAnswer: quiz.correctAnswer
+                    ) { definition in
+                        guard !hasSubmitted else { return }
+                        selectedAnswer = definition
+                        showingResult = true
+                        hasSubmitted = true
+                    }
+                    
+                    if showingResult {
+                        // 单词展示卡片
+                        WordCard(quiz: quiz)
+                        
+                        // 下一题按钮
+                        NextButton {
+                            if let selected = selectedAnswer {
+                                onAnswer(selected.meaning == quiz.correctAnswer)
+                            }
+                            selectedAnswer = nil
+                            showingResult = false
+                            hasSubmitted = false
+                            
+                            
+                            if let currentIndex = progress?.currentWordIndex,
+                               let totalWords = progress?.totalWords,
+                               currentIndex + 1 < totalWords,
+                               viewModel.words.count > currentIndex + 1 {
+                                // 切换题目时自动播放单词发音
+                                AudioService.shared.playPronunciation(word: viewModel.words[currentIndex + 1].word)
+                            }
                         }
-                        selectedAnswer = nil
-                        showingResult = false
-                        hasSubmitted = false
-                        
-                        
-                        if let currentIndex = progress?.currentWordIndex,
-                           let totalWords = progress?.totalWords,
-                           currentIndex + 1 < totalWords,
-                           viewModel.words.count > currentIndex + 1 {
-                            // 切换题目时自动播放单词发音
-                            AudioService.shared.playPronunciation(word: viewModel.words[currentIndex + 1].word)
+                        .id("nextButton") // 添加 ID 用于滚动定位
+                    }
+                }
+                .padding(.vertical)
+                .onChange(of: showingResult) { newValue in
+                    if newValue {
+                        // 当显示结果时，滚动到下一题按钮
+                        withAnimation {
+                            proxy.scrollTo("nextButton", anchor: .bottom)
                         }
                     }
                 }
             }
-            .padding(.vertical)
         }
         .background(Color(.systemGray6))
         .onAppear {
@@ -119,7 +130,9 @@ struct ProgressBar: View {
 // 问题卡片组件
 struct QuestionCard: View {
     let quiz: Quiz
-    let word : Word
+    let word: Word
+    
+    @State private var isMemoryMethodExpanded = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -140,34 +153,52 @@ struct QuestionCard: View {
                     )
             }
             
-            // 记忆方法
+            // 记忆方法部分改为可展开/收起
             if let method = quiz.memoryMethod {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("场景例句")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(8)
-                    
-                    Text(method)
-                        .font(.system(size: 17))
-                        .lineSpacing(4)
-                        .lineLimit(nil)
-                    
                     Button(action: {
-                        AudioService.shared.playPronunciation(word: method)
-                    }){
-                        HStack(spacing: 8) {
-                            Image(systemName: "speaker.wave.2")
-                                .font(.system(size: 14))
-                                .foregroundColor(.blue)
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isMemoryMethodExpanded.toggle()
                         }
+                    }) {
+                        HStack {
+                            Text("场景例句")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(8)
+                            
+                            Spacer()
+                            
+                            Image(systemName: isMemoryMethodExpanded ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    if isMemoryMethodExpanded {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(method)
+                                .font(.system(size: 17))
+                                .lineSpacing(4)
+                                .lineLimit(nil)
+                            
+                            Button(action: {
+                                AudioService.shared.playPronunciation(word: method)
+                            }){
+                                HStack(spacing: 8) {
+                                    Image(systemName: "speaker.wave.2")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
             }
-          
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
@@ -314,32 +345,31 @@ struct WordCard: View {
                     .background(Color.blue.opacity(0.1))
                     .cornerRadius(8)
                 
-                HStack(alignment: .center, spacing: 12) {
-                    Text(quiz.word)
-                        .font(.title2.bold())
-                        .foregroundColor(.primary)
-                    
-                    if let phonetic = quiz.phonetic {
-                        Button(action: {
-                            AudioService.shared.playPronunciation(word: quiz.word)
-                        }) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "speaker.wave.2.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.blue)
-                                Text(phonetic)
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                Capsule()
-                                    .fill(Color.blue.opacity(0.1))
-                            )
+                Text(quiz.word)
+                    .font(.title2.bold())
+                    .foregroundColor(.primary)
+                
+                if let phonetic = quiz.phonetic {
+                    Button(action: {
+                        AudioService.shared.playPronunciation(word: quiz.word)
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "speaker.wave.2.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.blue)
+                            Text(phonetic)
+                                .font(.system(size: 15))
+                                .foregroundColor(.secondary)
                         }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.blue.opacity(0.1))
+                        )
                     }
                 }
+                
             }
             
             // 分隔线
