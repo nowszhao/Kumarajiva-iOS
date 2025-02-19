@@ -23,20 +23,23 @@ enum HistoryFilter: CaseIterable {
         switch self {
         case .today:
             let startOfDay = calendar.startOfDay(for: now)
-            return (startOfDay, now)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!.addingTimeInterval(-1)
+            return (startOfDay, endOfDay)
             
         case .yesterday:
             let startOfYesterday = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now))!
-            let endOfYesterday = calendar.date(byAdding: .day, value: 1, to: startOfYesterday)!.addingTimeInterval(-1)  // 减去1秒以确保是23:59:59
+            let endOfYesterday = calendar.date(byAdding: .day, value: 1, to: startOfYesterday)!.addingTimeInterval(-1)
             return (startOfYesterday, endOfYesterday)
             
         case .lastWeek:
             let startOfWeek = calendar.date(byAdding: .day, value: -7, to: calendar.startOfDay(for: now))!
-            return (startOfWeek, now)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!.addingTimeInterval(-1)
+            return (startOfWeek, endOfDay)
             
         case .lastMonth:
             let startOfMonth = calendar.date(byAdding: .day, value: -30, to: calendar.startOfDay(for: now))!
-            return (startOfMonth, now)
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))!.addingTimeInterval(-1)
+            return (startOfMonth, endOfDay)
         }
     }
 } 

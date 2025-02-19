@@ -1,27 +1,57 @@
 import Foundation
+import SwiftUI
 
 @MainActor
 class HistoryViewModel: ObservableObject {
     @Published var histories: [History] = []
     @Published var isLoading = false
     @Published var error: String?
+    @Published var total: Int = 0
     
-    func loadHistory(filter: HistoryFilter) async {
+    private var currentOffset = 0
+    private let pageSize = 100
+    
+    func loadHistory(filter: HistoryFilter? = nil, wordType: WordTypeFilter? = nil) async {
         isLoading = true
         do {
-            let allHistories = try await APIService.shared.getHistory()
-            let (startDate, endDate) = filter.dateRange
+            // 构建请求参数
+            var params: [String: Any] = [
+                "limit": pageSize,
+                "offset": currentOffset
+            ]
             
-            histories = allHistories.filter { history in
-                let historyDate = Date(timeIntervalSince1970: TimeInterval(history.lastReviewDate! / 1000))
-                return historyDate >= startDate && historyDate <= endDate
+            // 添加时间过滤
+            if let filter = filter {
+                let (startDate, endDate) = filter.dateRange
+                params["startDate"] = Int64(startDate.timeIntervalSince1970 * 1000)
+                params["endDate"] = Int64(endDate.timeIntervalSince1970 * 1000)
             }
             
-            // 按时间倒序排序
-            histories.sort { $0.lastReviewDate! > $1.lastReviewDate! }
+            // 添加单词类型过滤
+            if let wordType = wordType, wordType != .all {
+                params["wordType"] = wordType.apiValue
+            }
+            
+            let response = try await APIService.shared.getHistory(params: params)
+            histories = response.data
+            total = response.total
+            
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+    
+    func loadMore() async {
+        guard !isLoading, histories.count < total else { return }
+        
+        currentOffset += pageSize
+        await loadHistory()
+    }
+    
+    func reset() {
+        currentOffset = 0
+        histories = []
+        total = 0
     }
 } 

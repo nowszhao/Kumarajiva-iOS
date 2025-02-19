@@ -4,55 +4,36 @@ struct HistoryView: View {
     @StateObject private var viewModel = HistoryViewModel()
     @State private var selectedFilter: HistoryFilter = .today
     @State private var isPlayingBatch = false
+    @State private var selectedWordTypes: Set<WordTypeFilter> = [.all]
+    @State private var currentPlayingWord: String? = nil
+    @State private var showingFilterSheet = false
+    @AppStorage("lastPlaybackIndex") private var lastPlaybackIndex: Int = 0
+    
+    private var filterTypeText: String {
+        if selectedWordTypes.count == 1 && selectedWordTypes.contains(.all) {
+            return "全部"
+        }
+        return "已选择\(selectedWordTypes.count)项"
+    }
+    
+    private var filteredHistories: [History] {
+        viewModel.histories.filter { history in
+            if selectedWordTypes.contains(.all) {
+                return true
+            }
+            return selectedWordTypes.contains { filter in
+                filter.matches(history)
+            }
+        }
+    }
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // 筛选器和播放控制
-                HStack {
-                    FilterSegmentView(selectedFilter: $selectedFilter) {
-                        Task {
-                            await viewModel.loadHistory(filter: selectedFilter)
-                        }
-                    }
-                    
-                    // 批量播放按钮
-                    if !viewModel.histories.isEmpty {
-                        Button(action: {
-                            isPlayingBatch.toggle()
-                            if isPlayingBatch {
-                                AudioService.shared.startBatchPlayback(words: viewModel.histories)
-                            } else {
-                                AudioService.shared.stopPlayback()
-                            }
-                        }) {
-                            Image(systemName: isPlayingBatch ? "stop.circle.fill" : "play.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(isPlayingBatch ? .red : .blue)
-                                .padding(.horizontal)
-                        }
-                    }
-                }
-                .padding(.vertical, 12)
-                
-                if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxHeight: .infinity)
-                } else if viewModel.histories.isEmpty {
-                    EmptyStateView()
-                } else {
-                    List {
-                        ForEach(groupedHistories.keys.sorted(by: >), id: \.self) { date in
-                            Section(header: Text(formatSectionDate(date)).foregroundColor(.secondary)) {
-                                ForEach(groupedHistories[date] ?? [], id: \.word) { history in
-                                    HistoryItemView(history: history)
-                                }
-                            }
-                        }
-                    }
-                    .listStyle(InsetGroupedListStyle())
-                }
+                filterToolbar
+                contentView
             }
+            .overlay(playbackControlPanel, alignment: .bottom)
             .navigationTitle("历史记录")
         }
         .task {
@@ -60,8 +41,117 @@ struct HistoryView: View {
         }
     }
     
+    private var filterToolbar: some View {
+        HStack(spacing: 16) {
+            Menu {
+                ForEach(WordTypeFilter.allCases) { filter in
+                    Button(action: {
+                        toggleWordTypeFilter(filter)
+                    }) {
+                        HStack {
+                            Text(filter.title)
+                            if selectedWordTypes.contains(filter) {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                FilterLabel(text: filterTypeText)
+            }
+            
+            Menu {
+                ForEach(HistoryFilter.allCases, id: \.self) { filter in
+                    Button(action: {
+                        selectedFilter = filter
+                        Task {
+                            await viewModel.loadHistory(filter: filter)
+                        }
+                    }) {
+                        HStack {
+                            Text(filter.title)
+                            if selectedFilter == filter {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                FilterLabel(text: selectedFilter.title)
+            }
+            
+            Spacer()
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+    
+    private var contentView: some View {
+        Group {
+            if viewModel.isLoading && viewModel.histories.isEmpty {
+                ProgressView()
+                    .frame(maxHeight: .infinity)
+            } else if viewModel.histories.isEmpty {
+                EmptyStateView()
+            } else {
+                ScrollViewReader { proxy in
+                    List {
+                        ForEach(groupedHistories.keys.sorted(by: >), id: \.self) { date in
+                            Section(header: Text(formatSectionDate(date)).foregroundColor(.secondary)) {
+                                ForEach(groupedHistories[date] ?? [], id: \.word) { history in
+                                    HistoryItemView(
+                                        history: history,
+                                        isPlaying: history.word == currentPlayingWord
+                                    )
+                                    .id(history.word)
+                                    .listRowBackground(
+                                        history.word == currentPlayingWord ?
+                                            Color.blue.opacity(0.1) : Color(.systemBackground)
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // 添加加载更多功能
+                        if !viewModel.histories.isEmpty && viewModel.histories.count < viewModel.total {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .onAppear {
+                                    Task {
+                                        await viewModel.loadMore()
+                                    }
+                                }
+                        }
+                    }
+                    .listStyle(InsetGroupedListStyle())
+                    .onChange(of: currentPlayingWord) { newWord in
+                        if let word = newWord {
+                            withAnimation {
+                                proxy.scrollTo(word, anchor: .center)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private var playbackControlPanel: some View {
+        Group {
+            if !viewModel.histories.isEmpty {
+                EnhancedPlaybackControlPanel(
+                    isPlaying: $isPlayingBatch,
+                    currentWord: $currentPlayingWord,
+                    currentIndex: $lastPlaybackIndex,
+                    histories: filteredHistories
+                )
+                .transition(.move(edge: .bottom))
+            }
+        }
+    }
+    
     private var groupedHistories: [Date: [History]] {
-        Dictionary(grouping: viewModel.histories) { history in
+        Dictionary(grouping: filteredHistories) { history in
             Calendar.current.startOfDay(for: Date(timeIntervalSince1970: TimeInterval(history.lastReviewDate! / 1000)))
         }
     }
@@ -77,47 +167,32 @@ struct HistoryView: View {
             return formatter.string(from: date)
         }
     }
-}
-
-// 筛选器组件
-struct FilterSegmentView: View {
-    @Binding var selectedFilter: HistoryFilter
-    let onFilterChange: () -> Void
     
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(HistoryFilter.allCases, id: \.self) { filter in
-                    FilterButton(
-                        title: filter.title,
-                        isSelected: selectedFilter == filter
-                    ) {
-                        selectedFilter = filter
-                        onFilterChange()
-                    }
+    private func toggleWordTypeFilter(_ filter: WordTypeFilter) {
+        if filter == .all {
+            selectedWordTypes = [.all]
+        } else {
+            selectedWordTypes.remove(.all)
+            if selectedWordTypes.contains(filter) {
+                selectedWordTypes.remove(filter)
+                if selectedWordTypes.isEmpty {
+                    selectedWordTypes = [.all]
                 }
+            } else {
+                selectedWordTypes.insert(filter)
             }
-            .padding(.horizontal)
         }
-    }
-}
-
-struct FilterButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 15))
-                .foregroundColor(isSelected ? .white : .primary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(isSelected ? Color.blue : Color(.systemGray6))
-                )
+        
+        isPlayingBatch = false
+        currentPlayingWord = nil
+        lastPlaybackIndex = 0
+        
+        // 重置 ViewModel 并重新加载数据
+        viewModel.reset()
+        Task {
+            // 由于我们现在只支持单个类型过滤，取第一个非 .all 的类型
+            let filterType = selectedWordTypes.first { $0 != .all } ?? .all
+            await viewModel.loadHistory(filter: selectedFilter, wordType: filterType)
         }
     }
 }
@@ -125,7 +200,13 @@ struct FilterButton: View {
 // 历史记录项组件
 struct HistoryItemView: View {
     let history: History
+    let isPlaying: Bool
     @State private var isPlayingMemory = false
+    
+    private func getPronunciation(_ pronunciation: History.Pronunciation?) -> String? {
+        guard let pronunciation = pronunciation else { return nil }
+        return pronunciation.American.isEmpty ? pronunciation.British : pronunciation.American
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -134,26 +215,10 @@ struct HistoryItemView: View {
                 Text(history.word)
                     .font(.title3.bold())
                 
-                if let pronunciationStr = history.pronunciation,
-                   let pronunciation = parsePronunciation(pronunciationStr) {
-                    Button(action: {
-                        AudioService.shared.playPronunciation(word: history.word)
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "speaker.wave.2.fill")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                            Text(pronunciation)
-                                .font(.system(size: 14))
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(Color.blue.opacity(0.1))
-                        )
-                    }
+                if let pronunciation = getPronunciation(history.pronunciation) {
+                    Text(pronunciation)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
             }
             
@@ -245,15 +310,6 @@ struct HistoryItemView: View {
         .padding(.vertical, 8)
     }
     
-    private func parsePronunciation(_ jsonString: String) -> String? {
-        guard let data = jsonString.data(using: .utf8),
-              let dict = try? JSONDecoder().decode([String: String].self, from: data),
-              let american = dict["American"] else {
-            return nil
-        }
-        return american
-    }
-    
     private func calculateAccuracy(correct: Int, total: Int) -> Int {
         guard total > 0 else { return 0 }
         return Int((Double(correct) / Double(total)) * 100)
@@ -297,4 +353,135 @@ struct EmptyStateView: View {
         }
         .frame(maxHeight: .infinity)
     }
-} 
+}
+
+// 新增筛选标签组件
+struct FilterLabel: View {
+    let text: String
+    
+    var body: some View {
+        HStack {
+            Text(text)
+                .foregroundColor(.primary)
+            Image(systemName: "chevron.down")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(.systemGray6))
+        )
+    }
+}
+
+// 增强版播放控制面板
+struct EnhancedPlaybackControlPanel: View {
+    @Binding var isPlaying: Bool
+    @Binding var currentWord: String?
+    @Binding var currentIndex: Int
+    let histories: [History]
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+            
+            HStack(spacing: 32) {
+                // 上一条按钮
+                Button(action: {
+                    playPrevious()
+                }) {
+                    Image(systemName: "backward.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.blue)
+                }
+                .disabled(currentIndex <= 0 || histories.isEmpty)
+                
+                // 播放/停止按钮
+                Button(action: togglePlayback) {
+                    Image(systemName: isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundColor(isPlaying ? .red : .blue)
+                }
+                .disabled(histories.isEmpty)
+                
+                // 下一条按钮
+                Button(action: {
+                    playNext()
+                }) {
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.blue)
+                }
+                .disabled(currentIndex >= histories.count - 1 || histories.isEmpty)
+            }
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
+            .background(
+                Color(.systemBackground)
+                    .shadow(color: .black.opacity(0.1), radius: 8, y: -4)
+                    .edgesIgnoringSafeArea(.bottom)
+            )
+        }
+        .onAppear {
+            if currentWord == nil, let firstHistory = histories.first {
+                currentWord = firstHistory.word
+                currentIndex = 0
+            }
+        }
+    }
+    
+    private func togglePlayback() {
+        isPlaying.toggle()
+        if isPlaying {
+            AudioService.shared.startBatchPlayback(
+                words: histories,
+                startIndex: currentIndex,
+                onWordChange: { word, index in
+                    currentWord = word
+                    currentIndex = index
+                }
+            )
+        } else {
+            AudioService.shared.stopPlayback()
+            currentWord = nil
+        }
+    }
+    
+    private func playPrevious() {
+        if currentIndex > 0 {
+            currentIndex -= 1
+            if isPlaying {
+                AudioService.shared.startBatchPlayback(
+                    words: histories,
+                    startIndex: currentIndex,
+                    onWordChange: { word, index in
+                        currentWord = word
+                        currentIndex = index
+                    }
+                )
+            } else {
+                currentWord = histories[currentIndex].word
+            }
+        }
+    }
+    
+    private func playNext() {
+        if currentIndex < histories.count - 1 {
+            currentIndex += 1
+            if isPlaying {
+                AudioService.shared.startBatchPlayback(
+                    words: histories,
+                    startIndex: currentIndex,
+                    onWordChange: { word, index in
+                        currentWord = word
+                        currentIndex = index
+                    }
+                )
+            } else {
+                currentWord = histories[currentIndex].word
+            }
+        }
+    }
+}

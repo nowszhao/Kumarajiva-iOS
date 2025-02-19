@@ -8,6 +8,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     private var currentWords: [History]?
     private var currentIndex = 0
     private var shouldPlayMemory = false
+    private var onWordChangeWithIndex: ((String, Int) -> Void)?
     
     private override init() {
         super.init()
@@ -48,12 +49,17 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         player?.play()
     }
     
-    func startBatchPlayback(words: [History]) {
+    func startBatchPlayback(
+        words: [History],
+        startIndex: Int = 0,
+        onWordChange: ((String, Int) -> Void)? = nil
+    ) {
         stopPlayback()
         currentWords = words
-        currentIndex = 0
+        currentIndex = startIndex
         isLooping = true
         shouldPlayMemory = false
+        self.onWordChangeWithIndex = onWordChange
         playNextContent()
     }
     
@@ -81,6 +87,12 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         
         let history = words[currentIndex]
         let playbackMode = UserSettings.shared.playbackMode
+        
+        // 通知当前播放的单词和索引变化
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.onWordChangeWithIndex?(history.word, self.currentIndex)
+        }
         
         switch playbackMode {
         case .wordOnly:

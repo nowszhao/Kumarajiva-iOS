@@ -42,9 +42,17 @@ class APIService {
         return try await post(url, body: [:])
     }
     
-    func getHistory() async throws -> [History] {
-        let url = "\(baseURL)/review/history"
-        return try await get(url)
+    func getHistory(params: [String: Any]) async throws -> HistoryResponse {
+        var urlComponents = URLComponents(string: "\(baseURL)/review/history")!
+        urlComponents.queryItems = params.map { key, value in
+            URLQueryItem(name: key, value: String(describing: value))
+        }
+        
+        guard let url = urlComponents.url else {
+            throw APIError.invalidURL
+        }
+        
+        return try await getRaw(url.absoluteString)
     }
     
     func updateProgress(currentWordIndex: Int, completed: Int, correct: Int) async throws -> Bool {
@@ -147,6 +155,47 @@ class APIService {
         
     }
     
+    private func getRaw<T: Decodable>(_ url: String) async throws -> T {
+        guard let url = URL(string: url) else {
+            throw APIError.invalidURL
+        }
+        
+        print("\n\n#################start###################")
+        print("📦 Request url: \(url)")
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = HTTPMethod.get.rawValue
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        print("📥 Response received")
+        if let httpResponse = response as? HTTPURLResponse {
+            print("📊 Status code: \(httpResponse.statusCode)")
+        }
+        
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("📦 Response data: \(responseString)")
+        }
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.invalidResponse
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            let response = try decoder.decode(T.self, from: data)
+            print("✅ Successfully decoded response")
+            
+            print("#################end###################\n\n")
+            return response
+        } catch {
+            print("❌ Decoding error: \(error)")
+            throw APIError.decodingError(error)
+        }
+    }
+    
     private enum HTTPMethod: String {
         case get = "GET"
         case post = "POST"
@@ -160,4 +209,12 @@ struct APIResponse<T: Decodable>: Decodable {
 
 struct SimpleResponse: Decodable {
     let success: Bool
+}
+
+struct HistoryResponse: Codable {
+    let success: Bool
+    let total: Int
+    let data: [History]
+    let limit: Int
+    let offset: Int
 } 
