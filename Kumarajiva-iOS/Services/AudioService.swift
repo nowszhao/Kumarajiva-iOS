@@ -71,6 +71,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         player?.pause()
         player?.seek(to: .zero)
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
+        NowPlayingService.shared.clearNowPlayingInfo()
     }
     
     private func playNextContent() {
@@ -93,6 +94,9 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             guard let self = self else { return }
             self.onWordChangeWithIndex?(history.word, self.currentIndex)
         }
+        
+        // 更新锁屏显示
+        updateNowPlayingInfo(for: history)
         
         switch playbackMode {
         case .wordOnly:
@@ -129,6 +133,48 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             guard let self = self else { return }
             self.playNextContent()
         }
+    }
+    
+    func playNextWord() {
+        guard isLooping else { return }
+        currentIndex += 1
+        playNextContent()
+    }
+    
+    func playPreviousWord() {
+        guard isLooping else { return }
+        currentIndex = max(0, currentIndex - 1)
+        playNextContent()
+    }
+    
+    func pausePlayback() {
+        player?.pause()
+    }
+    
+    func resumePlayback() {
+        player?.play()
+    }
+    
+    private func updateNowPlayingInfo(for history: History) {
+        print("Debug - History object: \(history)")
+        
+        // 获取所有释义并组合
+        let definition = history.definitions
+            .map { "\($0.pos) \($0.meaning)" }
+            .joined(separator: "\n")
+        
+        print("Debug - Combined definition: \(definition)")
+        
+        let phonetic = history.pronunciation?.American
+        print("Debug - Phonetic: \(String(describing: phonetic))")
+        print("Debug - Memory method: \(String(describing: history.memoryMethod))")
+        
+        NowPlayingService.shared.updateNowPlayingInfo(
+            word: history.word,
+            definition: definition,
+            phonetic: phonetic,
+            memoryMethod: history.memoryMethod
+        )
     }
     
     deinit {

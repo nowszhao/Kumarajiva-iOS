@@ -195,6 +195,23 @@ struct HistoryView: View {
             await viewModel.loadHistory(filter: selectedFilter, wordType: filterType)
         }
     }
+    
+    private func startBatchPlayback() {
+        isPlayingBatch = true
+        AudioService.shared.startBatchPlayback(
+            words: filteredHistories,
+            startIndex: lastPlaybackIndex
+        ) { word, index in
+            currentPlayingWord = word
+            lastPlaybackIndex = index
+        }
+    }
+    
+    private func stopBatchPlayback() {
+        isPlayingBatch = false
+        currentPlayingWord = nil
+        AudioService.shared.stopPlayback()
+    }
 }
 
 // 历史记录项组件
