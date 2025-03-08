@@ -64,16 +64,16 @@ class NowPlayingService {
 
         // 专辑标题：记忆方法（如果存在）
         if let memoryMethod = memoryMethod, !memoryMethod.isEmpty {
-            nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = "记忆方法：\(memoryMethod)"
+            nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = "\(memoryMethod)"
         }
 
         // 歌词：完整描述（需用户主动查看）
         var description = ""
         if let definition = definition {
-            description += "释义：\(definition)"
+            description += "\(definition)"
         }
         if let memoryMethod = memoryMethod, !memoryMethod.isEmpty {
-            description += "\n\n记忆方法：\(memoryMethod)"
+            description += "\n\n\(memoryMethod)"
         }
         if !description.isEmpty {
             nowPlayingInfo[MPMediaItemPropertyLyrics] = description
