@@ -1,84 +1,81 @@
 # Kumarajiva-iOS
 
-Kumarajiva is an intelligent English learning application designed to help users effectively memorize and review English vocabulary through spaced repetition and memory techniques.
-
+Kumarajiva 是一款智能英语学习应用，通过间隔重复和记忆技巧帮助用户有效地记忆和复习英语词汇。
 
 |  |  |  | 
 | :---: | :---: | :---: | 
 | ![image](./images/screen1.jpg) | ![image](./images/screen2.jpg) | ![image](./images/screen3.jpg) | 
 | ![image](./images/screen4.jpg) | ![image](./images/screen5.jpg) |  | 
 
+## 主要功能
 
-## Features
+### 1. 智能复习系统
+- 个性化测验系统的每日词汇复习
+- 采用间隔重复算法，确保最佳学习效果
+- 交互式测验界面，即时反馈
+- 追踪每次复习的学习进度
 
-### 1. Smart Review System
-- Daily vocabulary review with personalized quiz system
-- Spaced repetition algorithm for optimal learning efficiency
-- Interactive quiz interface with instant feedback
-- Progress tracking for each review session
+### 2. 记忆增强
+- 为每个单词提供记忆技巧和情境例句
+- 支持单词和记忆提示的语音发音
+- 多种学习模式加强记忆：
+  - 仅单词发音
+  - 仅记忆方法
+  - 单词和记忆方法结合
 
-### 2. Memory Enhancement
-- Memory techniques and contextual examples for each word
-- Audio pronunciation support for both words and memory aids
-- Multiple learning modes to reinforce memory:
-  - Word pronunciation only
-  - Memory method only
-  - Combined word and memory method
+### 3. 全面的历史记录
+- 详细的学习历史和复习统计
+- 多种筛选选项：
+  - 新学单词
+  - 已掌握单词
+  - 复习中的单词
+  - 答错的单词
+- 可视化进度展示，包含正确率
+- 批量音频播放，提高复习效率
 
-### 3. Comprehensive History Tracking
-- Detailed learning history with review statistics
-- Multiple filtering options:
-  - New words
-  - Mastered words
-  - Words under review
-  - Incorrectly answered words
-- Progress visualization with accuracy rates
-- Batch audio playback for efficient review
+### 4. 个人进度面板
+- 学习数据总览
+- 进度追踪：
+  - 新学单词数
+  - 复习中的单词数
+  - 已掌握的单词数
+  - 总词汇量
 
-### 4. Personal Progress Dashboard
-- Overview of learning statistics
-- Progress tracking for:
-  - New words learned
-  - Words under review
-  - Mastered words
-  - Total vocabulary count
+## 技术要求
 
-## Technical Requirements
+- iOS 15.0 或更高版本
+- 支持 iPhone 和 iPad
+- 需要网络连接用于单词发音和数据同步
 
-- iOS 15.0 or later
-- iPhone and iPad compatible
-- Internet connection required for word pronunciation and data synchronization
+## 安装步骤
 
-## Installation
-
-1. Clone the repository
+1. 克隆代码仓库
 ```
 git clone https://github.com/yourusername/Kumarajiva-iOS.git
 ```
 
-2. Open the project in Xcode
+2. 在 Xcode 中打开项目
 cd Kumarajiva-iOS
 open Kumarajiva-iOS.xcodeproj
 
+3. 构建并运行应用
 
-3. Build and run the application
+## 使用指南
 
-## Usage
+1. **每日复习**
+   - 在"今日回顾"标签页进行每日复习
+   - 完成每个单词的测验
+   - 查看本次学习进度和正确率
 
-1. **Daily Review**
-   - Access your daily review session from the "今日回顾" tab
-   - Complete the quiz for each word
-   - View your session progress and accuracy
+2. **历史记录**
+   - 进入"历史记录"标签页
+   - 按不同类别筛选单词
+   - 使用批量播放功能进行音频复习
+   - 查看每个单词的详细统计数据
 
-2. **History Review**
-   - Navigate to the "历史记录" tab
-   - Filter words by different categories
-   - Use batch playback for audio review
-   - Check detailed statistics for each word
-
-3. **Profile and Settings**
-   - View learning statistics in the "我的" tab
-   - Customize playback settings
-   - Track overall learning progress
+3. **个人资料与设置**
+   - 在"我的"标签页查看学习统计
+   - 自定义播放设置
+   - 追踪总体学习进度
 
 
