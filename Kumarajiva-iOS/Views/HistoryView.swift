@@ -99,15 +99,17 @@ struct HistoryView: View {
                         ForEach(groupedHistories.keys.sorted(by: >), id: \.self) { date in
                             Section(header: Text(formatSectionDate(date)).foregroundColor(.secondary)) {
                                 ForEach(groupedHistories[date] ?? [], id: \.word) { history in
-                                    HistoryItemView(
-                                        history: history,
-                                        isPlaying: history.word == currentPlayingWord
-                                    )
-                                    .id(history.word)
-                                    .listRowBackground(
-                                        history.word == currentPlayingWord ?
-                                            Color.blue.opacity(0.1) : Color(.systemBackground)
-                                    )
+                                    NavigationLink(destination: SpeechPracticeView(history: history)) {
+                                        HistoryItemView(
+                                            history: history,
+                                            isPlaying: history.word == currentPlayingWord
+                                        )
+                                        .id(history.word)
+                                        .listRowBackground(
+                                            history.word == currentPlayingWord ?
+                                                Color.blue.opacity(0.1) : Color(.systemBackground)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -225,33 +227,64 @@ struct HistoryItemView: View {
         return pronunciation.American.isEmpty ? pronunciation.British : pronunciation.American
     }
     
+    // 获取该单词的口语练习记录数量
+    private var speechPracticeCount: Int {
+        let allRecords = UserDefaults.standard.data(forKey: "speechPracticeRecords")
+        if let data = allRecords {
+            do {
+                let decoder = JSONDecoder()
+                let records = try decoder.decode([SpeechPracticeRecord].self, from: data)
+                return records.filter { $0.word == history.word }.count
+            } catch {
+                print("Failed to load speech practice records: \(error)")
+            }
+        }
+        return 0
+    }
+    
+    // 获取该单词的口语练习最高分
+    private var highestScore: Int {
+        let allRecords = UserDefaults.standard.data(forKey: "speechPracticeRecords")
+        if let data = allRecords {
+            do {
+                let decoder = JSONDecoder()
+                let records = try decoder.decode([SpeechPracticeRecord].self, from: data)
+                let wordRecords = records.filter { $0.word == history.word }
+                if !wordRecords.isEmpty {
+                    return wordRecords.map { $0.score }.max() ?? 0
+                }
+            } catch {
+                print("Failed to load speech practice records: \(error)")
+            }
+        }
+        return 0
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // 单词和音标
-            HStack(alignment: .center, spacing: 12) {
-                Text(history.word)
-                    .font(.title3.bold())
-                
-                if let pronunciation = getPronunciation(history.pronunciation) {
-                    Text(pronunciation)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
+            // 单词行
+            Text(history.word)
+                .font(.system(size: 18, weight: .semibold))
+                .lineLimit(1)
+            
+            // 音标独立行
+            if let pronunciation = getPronunciation(history.pronunciation) {
+                Text(pronunciation)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 4)
             }
             
             // 释义
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(history.definitions, id: \.meaning) { definition in
                     HStack(alignment: .top, spacing: 8) {
+                        // 词性标签固定宽度
                         Text(definition.pos)
-                            .font(.system(size: 13))
+                            .font(.system(size: 12))
                             .foregroundColor(.secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color(.systemGray6))
-                            )
+                            .frame(width: 24, alignment: .leading)
+                            .lineLimit(1)
                         
                         Text(definition.meaning)
                             .font(.system(size: 15))
@@ -265,31 +298,52 @@ struct HistoryItemView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("记忆方法")
-                            .font(.subheadline)
+                            .font(.system(size: 13))
                             .foregroundColor(.secondary)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
                             .background(Color.orange.opacity(0.1))
-                            .cornerRadius(8)
+                            .cornerRadius(6)
                         
                         Button(action: {
                             isPlayingMemory.toggle()
                             if isPlayingMemory {
-                                AudioService.shared.playPronunciation(word: history.word)
+                                AudioService.shared.playPronunciation(word: method, le: "zh", onCompletion: {
+                                    DispatchQueue.main.async {
+                                        self.isPlayingMemory = false
+                                    }
+                                })
                             } else {
                                 AudioService.shared.stopPlayback()
                             }
                         }) {
                             Image(systemName: isPlayingMemory ? "stop.circle.fill" : "play.circle.fill")
-                                .font(.system(size: 20))
+                                .font(.system(size: 18))
                                 .foregroundColor(isPlayingMemory ? .red : .blue)
+                        }
+                        
+                        Spacer()
+                        
+                        // 口语练习信息
+                        if speechPracticeCount > 0 {
+                            HStack(spacing: 4) {
+                                Image(systemName: "mic")
+                                    .font(.system(size: 12))
+                                Text("\(speechPracticeCount)次")
+                                    .font(.system(size: 13))
+                                if highestScore > 0 {
+                                    Text("最高\(highestScore)分")
+                                        .font(.system(size: 13))
+                                }
+                            }
+                            .foregroundColor(.blue.opacity(0.8))
                         }
                     }
                     
                     Text(method)
-                        .font(.system(size: 15))
+                        .font(.system(size: 14))
                         .foregroundColor(.secondary)
-                        .padding(12)
+                        .padding(10)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
@@ -299,7 +353,7 @@ struct HistoryItemView: View {
             }
             
             Divider()
-                .padding(.vertical, 4)
+                .padding(.vertical, 2)
             
             // 统计信息
             HStack {

@@ -57,7 +57,7 @@ struct QuizView: View {
                                currentIndex + 1 < totalWords,
                                viewModel.words.count > currentIndex + 1 {
                                 // 切换题目时自动播放单词发音
-                                AudioService.shared.playPronunciation(word: viewModel.words[currentIndex + 1].word)
+                                AudioService.shared.playPronunciation(word: viewModel.words[currentIndex + 1].word,le: "en")
                             }
                         }
                         .id("nextButton") // 添加 ID 用于滚动定位
@@ -77,7 +77,7 @@ struct QuizView: View {
         .background(Color(.systemGray6))
         .onAppear {
             // 页面加载时自动播放当前单词发音
-            AudioService.shared.playPronunciation(word: viewModel.words[progress?.currentWordIndex ?? 0].word)
+            AudioService.shared.playPronunciation(word: viewModel.words[progress?.currentWordIndex ?? 0].word,le: "en")
         }
     }
 }
@@ -351,7 +351,7 @@ struct WordCard: View {
                 
                 if let phonetic = quiz.phonetic {
                     Button(action: {
-                        AudioService.shared.playPronunciation(word: quiz.word)
+                        AudioService.shared.playPronunciation(word: quiz.word,le: "en")
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: "speaker.wave.2.fill")

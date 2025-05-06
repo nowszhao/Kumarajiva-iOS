@@ -9,6 +9,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     private var currentIndex = 0
     private var shouldPlayMemory = false
     private var onWordChangeWithIndex: ((String, Int) -> Void)?
+    private var completionHandler: (() -> Void)?
     
     private override init() {
         super.init()
@@ -24,11 +25,14 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         }
     }
     
-    func playPronunciation(word: String) {
-        let url = PronounceURLGenerator.generatePronounceUrl(word: word, type: "2")
+    func playPronunciation(word: String, le: String = "zh", onCompletion: (() -> Void)? = nil) {
+        let url = PronounceURLGenerator.generatePronounceUrl(word: word, le: le)
         guard let audioUrl = URL(string: url) else { return }
         
         let playerItem = AVPlayerItem(url: audioUrl)
+        
+        // 保存完成回调
+        self.completionHandler = onCompletion
         
         // 添加播放完成通知
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
@@ -68,6 +72,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         currentWords = nil
         currentIndex = 0
         shouldPlayMemory = false
+        completionHandler = nil
         player?.pause()
         player?.seek(to: .zero)
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
@@ -100,7 +105,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         
         switch playbackMode {
         case .wordOnly:
-            playPronunciation(word: history.word)
+            playPronunciation(word: history.word, le: "en")
             currentIndex += 1
             
         case .memoryOnly:
@@ -127,6 +132,16 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     }
     
     @objc private func playerDidFinishPlaying(_ notification: Notification) {
+        // 如果有单独的完成回调，则执行
+        if let completion = completionHandler, !isLooping {
+            DispatchQueue.main.async {
+                completion()
+                self.completionHandler = nil
+            }
+            return
+        }
+        
+        // 如果是循环播放，则继续下一条
         guard isLooping else { return }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in

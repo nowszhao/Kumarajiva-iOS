@@ -18,11 +18,11 @@ class PronounceURLGenerator {
         let keyid = "voiceDictWeb"
         let mysticTime: Int64
         let yduuid = "abcdefg"
-        let le = "zh"
         let phonetic = ""
         let rate = 4
         let word: String
-        let type: String
+        let le: String
+        let type = "2"
         let id = ""
     }
     
@@ -42,11 +42,11 @@ class PronounceURLGenerator {
         return result
     }
     
-    static func generatePronounceUrl(word: String, type: String) -> String {
+    static func generatePronounceUrl(word: String, le: String) -> String {
         let inputData = PronounceInput(
             mysticTime: Int64(Date().timeIntervalSince1970 * 1000),
             word: word,
-            type: type
+            le: le
         )
         
         // Convert struct to dictionary
