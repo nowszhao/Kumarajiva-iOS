@@ -374,14 +374,14 @@ struct PracticeTabView: View {
                 dismissButton: .default(Text("确定"))
             )
         }
-        .alert(isPresented: $showCancelAlert) {
-            Alert(
-                title: Text("已取消录音"),
-                message: Text("您已放弃本次录音"),
-                dismissButton: .default(Text("确定"))
-            )
+//        .alert(isPresented: $showCancelAlert) {
+//            Alert(
+//                title: Text("已取消录音"),
+//                message: Text("您已放弃本次录音"),
+//                dismissButton: .default(Text("确定"))
+//            )
 
-        }
+//        }
         .onDisappear {
             // Stop playing example when tab disappears
             if isExamplePlaying {

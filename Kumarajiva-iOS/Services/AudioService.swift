@@ -161,20 +161,26 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             if let highestScoreRecording = SpeechRecordService.shared.findHighestScoreRecording(for: history.word) {
                 // 如果找到最高分录音，播放录音
                 playLocalAudio(url: highestScoreRecording.audioURL) {
-                    self.currentIndex += 1
-                    self.playNextContent()
+                    DispatchQueue.main.async {
+                        self.currentIndex += 1
+                        self.playNextContent()
+                    }
                 }
             } else {
                 // 如果没有录音，播放单词发音
-                playPronunciation(word: history.word, le: "en")
-                currentIndex += 1
+                playPronunciation(word: history.word, le: "en") {
+                    DispatchQueue.main.async {
+                        self.currentIndex += 1
+                        self.playNextContent()
+                    }
+                }
             }
         }
     }
     
     @objc private func playerDidFinishPlaying(_ notification: Notification) {
         // 如果有单独的完成回调，则执行
-        if let completion = completionHandler, !isLooping {
+        if let completion = completionHandler {
             DispatchQueue.main.async {
                 completion()
                 self.completionHandler = nil

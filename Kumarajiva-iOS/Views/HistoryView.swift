@@ -372,6 +372,8 @@ struct HistoryItemView: View {
                                             .foregroundColor(.white)
                                             .frame(width: 40, height: 20)
                                             .background(scoreColor(highestScore))
+                                            .opacity(0.7)
+                                            .cornerRadius(8)
                                     }
                                 }
                             }
