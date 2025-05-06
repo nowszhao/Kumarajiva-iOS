@@ -182,11 +182,15 @@ struct PracticeTabView: View {
                     Button(action: {
                         isExamplePlaying.toggle()
                         if isExamplePlaying {
-                            AudioService.shared.playPronunciation(word: exampleToShow, le: "en", onCompletion: {
-                                DispatchQueue.main.async {
-                                    self.isExamplePlaying = false
-                                }
-                            })
+                            // Setup audio session properly before playing
+                            let dispatchTime = DispatchTime.now() + 0.1
+                            DispatchQueue.main.asyncAfter(deadline: dispatchTime) {
+                                AudioService.shared.playPronunciation(word: exampleToShow, le: "en", onCompletion: {
+                                    DispatchQueue.main.async {
+                                        self.isExamplePlaying = false
+                                    }
+                                })
+                            }
                         } else {
                             AudioService.shared.stopPlayback()
                         }

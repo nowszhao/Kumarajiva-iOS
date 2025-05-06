@@ -150,6 +150,14 @@ class SpeechRecognitionService: NSObject, ObservableObject {
         recordingTimer?.invalidate()
         recordingTimer = nil
         
+        // Reset audio session back to playback mode
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("Failed to reset audio session: \(error)")
+        }
+        
         return recordingURL
     }
     

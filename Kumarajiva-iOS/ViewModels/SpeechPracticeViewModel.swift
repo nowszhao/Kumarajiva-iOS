@@ -30,13 +30,20 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
     func startRecording() {
         // Stop any audio playback first
         AudioService.shared.stopPlayback()
-        audioPlayer?.stop()
+        
+        if audioPlayer != nil {
+            audioPlayer?.stop()
+            audioPlayer = nil
+        }
         
         // Reset state for new recording
         recognizedText = ""
         wordResults = []
         
-        speechService.startRecording()
+        // Ensure audio session is properly reset before starting new recording
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.speechService.startRecording()
+        }
     }
     
     // Stop recording and save the record
