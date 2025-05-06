@@ -4,6 +4,7 @@ import AVFoundation
 class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     static let shared = AudioService()
     private var player: AVPlayer?
+    private var audioPlayer: AVAudioPlayer?
     private var isLooping = false
     private var currentWords: [History]?
     private var currentIndex = 0
@@ -53,6 +54,31 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         player?.play()
     }
     
+    // 播放本地音频文件
+    func playLocalAudio(url: URL, onCompletion: (() -> Void)? = nil) {
+        do {
+            // 停止当前播放
+            player?.pause()
+            audioPlayer?.stop()
+            
+            // 保存完成回调
+            self.completionHandler = onCompletion
+            
+            // 设置音频会话
+            try AVAudioSession.sharedInstance().setCategory(.playback)
+            try AVAudioSession.sharedInstance().setActive(true)
+            
+            // 创建并播放
+            audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.delegate = self
+            audioPlayer?.prepareToPlay()
+            audioPlayer?.play()
+        } catch {
+            print("Failed to play local audio: \(error)")
+            onCompletion?()
+        }
+    }
+    
     func startBatchPlayback(
         words: [History],
         startIndex: Int = 0,
@@ -75,6 +101,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         completionHandler = nil
         player?.pause()
         player?.seek(to: .zero)
+        audioPlayer?.stop()
         NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: nil)
         NowPlayingService.shared.clearNowPlayingInfo()
     }
@@ -128,6 +155,20 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
                 currentIndex += 1
                 shouldPlayMemory = false
             }
+            
+        case .highestScoreSpeech:
+            // 查找该单词的最高分录音
+            if let highestScoreRecording = SpeechRecordService.shared.findHighestScoreRecording(for: history.word) {
+                // 如果找到最高分录音，播放录音
+                playLocalAudio(url: highestScoreRecording.audioURL) {
+                    self.currentIndex += 1
+                    self.playNextContent()
+                }
+            } else {
+                // 如果没有录音，播放单词发音
+                playPronunciation(word: history.word, le: "en")
+                currentIndex += 1
+            }
         }
     }
     
@@ -164,10 +205,12 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     
     func pausePlayback() {
         player?.pause()
+        audioPlayer?.pause()
     }
     
     func resumePlayback() {
         player?.play()
+        audioPlayer?.play()
     }
     
     private func updateNowPlayingInfo(for history: History) {
@@ -194,5 +237,19 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+}
+
+// MARK: - AVAudioPlayerDelegate
+extension AudioService: AVAudioPlayerDelegate {
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Call completion handler
+            self.completionHandler?()
+            self.completionHandler = nil
+            self.audioPlayer = nil
+        }
     }
 } 

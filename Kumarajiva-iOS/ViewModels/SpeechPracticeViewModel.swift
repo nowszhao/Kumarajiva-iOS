@@ -32,13 +32,34 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
         AudioService.shared.stopPlayback()
         audioPlayer?.stop()
         
+        // Reset state for new recording
+        recognizedText = ""
+        wordResults = []
+        
         speechService.startRecording()
     }
     
     // Stop recording and save the record
-    func stopRecording(word: String, example: String) {
+    func stopRecording(word: String, example: String, shouldSave: Bool = true) {
         guard let audioURL = speechService.stopRecording() else { return }
         
+        // 如果选择放弃，则不保存记录
+        if !shouldSave {
+            // 删除临时录音文件
+            do {
+                try FileManager.default.removeItem(at: audioURL)
+            } catch {
+                print("Failed to delete canceled recording file: \(error)")
+            }
+            
+            // 重置状态
+            recognizedText = ""
+            wordResults = []
+            currentScore = 0
+            return
+        }
+        
+        // 正常保存记录的逻辑
         // Calculate score based on the example text
         let score = speechService.calculateScore(expectedText: example)
         currentScore = score
@@ -54,6 +75,16 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
         
         records.insert(record, at: 0)
         saveRecordsToDisk()
+    }
+    
+    // 取消录音并清除状态
+    func cancelRecording() {
+        speechService.stopRecording()
+        
+        // 重置状态
+        recognizedText = ""
+        wordResults = []
+        currentScore = 0
     }
     
     // Play a recording
@@ -150,9 +181,7 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
         case .matched:
             return .green      // 匹配的词 - 绿色
         case .missing:
-            return .black      // 缺失的词 - 黑色
-        case .incorrect:
-            return .red        // 错误的词 - 红色
+            return .red        // 缺失的词 - 红色
         case .extra:
             return .gray       // 多余的词 - 灰色
         }
@@ -168,7 +197,10 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
                 // Return existing text without highlighting
                 return recognizedText.components(separatedBy: .whitespaces)
                     .filter { !$0.isEmpty }
-                    .map { WordMatchResult(word: $0, type: .extra) }
+                    .enumerated()
+                    .map { index, word in 
+                        WordMatchResult(word: word, type: .extra, originalIndex: index) 
+                    }
             }
         }
         

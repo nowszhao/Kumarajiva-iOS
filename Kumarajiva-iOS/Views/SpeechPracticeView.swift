@@ -101,6 +101,9 @@ struct PracticeTabView: View {
     @State private var isExamplePlaying = false
     @State private var showScoreAlert = false
     @State private var isLongPressing = false
+    @State private var dragOffset = CGSize.zero
+    @State private var isCompleting = false
+    @State private var showCancelAlert = false
     
     private var exampleToShow: String {
         if let method = history.memoryMethod, !method.isEmpty {
@@ -219,11 +222,11 @@ struct PracticeTabView: View {
                             .foregroundColor(.primary)
                         
                         if viewModel.wordResults.isEmpty && viewModel.recognizedText.isEmpty {
-                            Text("等待录音...")
+                            Text("点击录音按钮开始口语练习...")
                                 .font(.system(size: 15))
                                 .foregroundColor(.secondary)
                                 .padding()
-                                .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
+                                .frame(maxWidth: .infinity, minHeight: 70, alignment: .center)
                                 .background(Color(.systemGray6).opacity(0.8))
                                 .cornerRadius(8)
                         } else {
@@ -244,6 +247,15 @@ struct PracticeTabView: View {
                             
                             Spacer()
                             
+                            if isLongPressing {
+                                Text("向右滑动完成，其他方向放弃")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 10)
+                            }
+                            
+                            Spacer()
+                            
                             Text(viewModel.formatRecordingTime(viewModel.recordingTime))
                                 .font(.system(size: 14, weight: .medium))
                                 .monospacedDigit()
@@ -251,52 +263,98 @@ struct PracticeTabView: View {
                     }
                     
                     // Legend
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .center, spacing: 6) {
                         Text("颜色说明")
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                         
                         HStack(spacing: 16) {
                             LegendItem(color: .green, text: "匹配")
-                            LegendItem(color: .black, text: "缺失")
-                            LegendItem(color: .red, text: "错误")
+                            LegendItem(color: .red, text: "缺失")
                             LegendItem(color: .gray, text: "多余")
                         }
                     }
                     .padding(.top, 4)
                     
-                    // Recording button with long press gesture
+                    // Recording button with gesture
                     ZStack {
                         Circle()
-                            .fill(isLongPressing ? Color.red : Color.blue)
+                            .fill(isLongPressing ? (isCompleting ? Color.green : Color.red) : Color.blue)
                             .frame(width: 64, height: 64)
                             .shadow(color: Color.black.opacity(0.15), radius: 3, x: 0, y: 1)
                         
                         if isLongPressing {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.white)
-                                .frame(width: 20, height: 20)
+                            if isCompleting {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 26))
+                                    .foregroundColor(.white)
+                            } else {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color.white)
+                                    .frame(width: 20, height: 20)
+                            }
                         } else {
                             Image(systemName: "mic.fill")
                                 .font(.system(size: 26))
                                 .foregroundColor(.white)
                         }
-                    }
-                    .padding(.vertical, 12)
-                    .onLongPressGesture(minimumDuration: .infinity, maximumDistance: .infinity, pressing: { pressing in
-                        if pressing {
-                            if !isLongPressing {
-                                isLongPressing = true
-                                viewModel.startRecording()
+                        
+                        // 添加向右滑动箭头指示(当录音开始时)
+                        if isLongPressing && !isCompleting {
+                            HStack {
+                                Spacer()
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.white)
+                                    .offset(x: 40)
                             }
-                        } else {
-                            if isLongPressing {
-                                isLongPressing = false
-                                viewModel.stopRecording(word: history.word, example: exampleToShow)
-                                showScoreAlert = true
-                            }
+                            .frame(width: 120)
                         }
-                    }, perform: {})
+                    }
+                    .offset(dragOffset)
+                    .gesture(
+                        DragGesture()
+                            .onChanged { gesture in
+                                if isLongPressing {
+                                    // 只允许水平方向的滑动
+                                    let horizontalDrag = CGSize(width: gesture.translation.width, height: 0)
+                                    dragOffset = horizontalDrag
+                                    
+                                    // 如果向右滑动超过50，则标记为完成状态
+                                    isCompleting = gesture.translation.width > 50
+                                }
+                            }
+                            .onEnded { _ in
+                                if isLongPressing {
+                                    if isCompleting {
+                                        // 向右滑动完成录音并保存
+                                        viewModel.stopRecording(word: history.word, example: exampleToShow, shouldSave: true)
+                                        showScoreAlert = true
+                                    } else {
+                                        // 其他方向滑动或就地松手，取消录音
+                                        viewModel.stopRecording(word: history.word, example: exampleToShow, shouldSave: false)
+                                        showCancelAlert = true
+                                    }
+                                    
+                                    // 重置状态
+                                    isLongPressing = false
+                                    dragOffset = .zero
+                                    isCompleting = false
+                                }
+                            }
+                    )
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 0.3)
+                            .onEnded { _ in
+                                if !isLongPressing {
+                                    isLongPressing = true
+                                    dragOffset = .zero
+                                    isCompleting = false
+                                    viewModel.startRecording()
+                                }
+                            }
+                    )
+                    .padding(.vertical, 12)
                 }
                 .padding(16)
                 .background(
@@ -315,6 +373,14 @@ struct PracticeTabView: View {
                 message: Text("您的发音得分: \(viewModel.currentScore)"),
                 dismissButton: .default(Text("确定"))
             )
+        }
+        .alert(isPresented: $showCancelAlert) {
+            Alert(
+                title: Text("已取消录音"),
+                message: Text("您已放弃本次录音"),
+                dismissButton: .default(Text("确定"))
+            )
+
         }
         .onDisappear {
             // Stop playing example when tab disappears

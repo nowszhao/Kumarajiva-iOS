@@ -5,14 +5,14 @@ import AVFoundation
 struct WordMatchResult: Identifiable {
     enum MatchType {
         case matched    // 匹配的词 (绿色)
-        case missing    // 缺失的词 (黑色)
-        case incorrect  // 错误的词 (红色)
+        case missing    // 缺失的词 (红色)
         case extra      // 多余的词 (灰色)
     }
     
     let id = UUID() // 添加id属性以符合Identifiable协议
     let word: String
     let type: MatchType
+    let originalIndex: Int  // 记录单词在原句中的位置，用于排序
 }
 
 class SpeechRecognitionService: NSObject, ObservableObject {
@@ -230,31 +230,65 @@ class SpeechRecognitionService: NSObject, ObservableObject {
         let expectedWords = normalizedExpected.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
         let recognizedWords = normalizedRecognized.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
         
-        var results: [WordMatchResult] = []
-        var matchedIndices = Set<Int>()
+        // 创建一个临时数组，用于构建最终的结果
+        var temporaryResults: [WordMatchResult?] = Array(repeating: nil, count: max(expectedWords.count, recognizedWords.count) * 2)
         
-        // First, find all matched words
-        for (index, recognizedWord) in recognizedWords.enumerated() {
-            if expectedWords.contains(recognizedWord) && recognizedWord.count > 1 {
-                results.append(WordMatchResult(word: recognizedWord, type: .matched))
-                matchedIndices.insert(index)
+        // 两个索引
+        var currentRecognizedIndex = 0
+        var expectedWordMatched = Array(repeating: false, count: expectedWords.count)
+        var currentTempIndex = 0
+        
+        // 第一步：处理已识别的单词
+        for (recIndex, recognizedWord) in recognizedWords.enumerated() {
+            if let expIndex = expectedWords.firstIndex(of: recognizedWord), !expectedWordMatched[expIndex] {
+                // 如果是匹配的词
+                expectedWordMatched[expIndex] = true
+                
+                // 检查是否有缺失的词需要先插入
+                for i in 0..<expIndex {
+                    if !expectedWordMatched[i] {
+                        temporaryResults[currentTempIndex] = WordMatchResult(
+                            word: expectedWords[i],
+                            type: .missing,
+                            originalIndex: currentTempIndex
+                        )
+                        expectedWordMatched[i] = true
+                        currentTempIndex += 1
+                    }
+                }
+                
+                // 添加匹配的词
+                temporaryResults[currentTempIndex] = WordMatchResult(
+                    word: recognizedWord,
+                    type: .matched,
+                    originalIndex: currentTempIndex
+                )
+                currentTempIndex += 1
+            } else {
+                // 如果是额外的词
+                temporaryResults[currentTempIndex] = WordMatchResult(
+                    word: recognizedWord,
+                    type: .extra,
+                    originalIndex: currentTempIndex
+                )
+                currentTempIndex += 1
             }
         }
         
-        // Then, identify extra words
-        for (index, recognizedWord) in recognizedWords.enumerated() {
-            if !matchedIndices.contains(index) {
-                results.append(WordMatchResult(word: recognizedWord, type: .extra))
+        // 第二步：添加所有剩余缺失的词
+        for (expIndex, expectedWord) in expectedWords.enumerated() {
+            if !expectedWordMatched[expIndex] {
+                temporaryResults[currentTempIndex] = WordMatchResult(
+                    word: expectedWord,
+                    type: .missing,
+                    originalIndex: currentTempIndex
+                )
+                currentTempIndex += 1
             }
         }
         
-        // Finally, identify missing words
-        for expectedWord in expectedWords {
-            if !recognizedWords.contains(expectedWord) && expectedWord.count > 1 {
-                results.append(WordMatchResult(word: expectedWord, type: .missing))
-            }
-        }
-        
+        // 过滤掉空值并返回结果
+        let results = temporaryResults.compactMap { $0 }
         return results
     }
     

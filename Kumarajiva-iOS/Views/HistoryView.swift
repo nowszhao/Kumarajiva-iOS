@@ -80,6 +80,25 @@ struct HistoryView: View {
                 FilterLabel(text: selectedFilter.title)
             }
             
+            // 添加刷新按钮
+            Button(action: {
+                // 刷新数据，保持现有筛选条件
+                viewModel.reset()
+                Task {
+                    let filterType = selectedWordTypes.first { $0 != .all } ?? .all
+                    await viewModel.loadHistory(filter: selectedFilter, wordType: filterType)
+                }
+            }) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.blue)
+                    .padding(8)
+                    .background(
+                        Circle()
+                            .fill(Color.blue.opacity(0.1))
+                    )
+            }
+            
             Spacer()
         }
         .padding(.horizontal)
@@ -260,6 +279,19 @@ struct HistoryItemView: View {
         return 0
     }
     
+    // 根据分数返回颜色
+    private func scoreColor(_ score: Int) -> Color {
+        if score >= 90 {
+            return .green
+        } else if score >= 70 {
+            return .blue
+        } else if score >= 50 {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // 单词行
@@ -332,8 +364,15 @@ struct HistoryItemView: View {
                                 Text("\(speechPracticeCount)次")
                                     .font(.system(size: 13))
                                 if highestScore > 0 {
-                                    Text("最高\(highestScore)分")
-                                        .font(.system(size: 13))
+                                    // 添加彩色分数徽章
+                                    HStack(spacing: 2) {
+                                        
+                                        Text("\(highestScore)")
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundColor(.white)
+                                            .frame(width: 40, height: 20)
+                                            .background(scoreColor(highestScore))
+                                    }
                                 }
                             }
                             .foregroundColor(.blue.opacity(0.8))
