@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
     @State private var playbackMode: PlaybackMode = UserSettings.shared.playbackMode
+    @State private var ttsServiceType: TTSServiceType = UserSettings.shared.ttsServiceType
     
     var body: some View {
         NavigationView {
@@ -105,6 +106,7 @@ struct StatItemView: View {
 
 struct SettingsView: View {
     @State private var playbackMode: PlaybackMode = UserSettings.shared.playbackMode
+    @State private var ttsServiceType: TTSServiceType = UserSettings.shared.ttsServiceType
     
     var body: some View {
         NavigationView {
@@ -126,14 +128,43 @@ struct SettingsView: View {
                             .onChange(of: playbackMode) { newValue in
                                 UserSettings.shared.playbackMode = newValue
                             }
+                            
+                            Picker("语音服务", selection: $ttsServiceType) {
+                                ForEach(TTSServiceType.allCases, id: \.self) { service in
+                                    Text(service.title).tag(service)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .onChange(of: ttsServiceType) { newValue in
+                                UserSettings.shared.ttsServiceType = newValue
+                            }
                         } header: {
                             Text("播放设置")
+                        } footer: {
+                            Text("Edge TTS提供更自然的语音效果。高分录音模式将继续使用原有语音服务。")
+                        }
+                        
+                        Section {
+                            Button(action: {
+                                EdgeTTSService.shared.clearCache()
+                            }) {
+                                HStack {
+                                    Text("清除语音缓存")
+                                    Spacer()
+                                    Image(systemName: "trash")
+                                }
+                            }
+                            .foregroundColor(.red)
+                        } header: {
+                            Text("缓存管理")
+                        } footer: {
+                            Text("清除已缓存的语音文件以释放存储空间")
                         }
                     }
                 }
                 .background(Color(.systemBackground))
                 .cornerRadius(10)
                 .padding(.horizontal)
-        }.frame(height: 200)
+        }.frame(height: 350)
     }
 }

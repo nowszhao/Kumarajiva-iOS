@@ -5,6 +5,7 @@ class UserSettings {
     
     private let defaults = UserDefaults.standard
     private let playbackModeKey = "playback_mode"
+    private let ttsServiceTypeKey = "tts_service_type"
     
     private init() {}
     
@@ -14,6 +15,15 @@ class UserSettings {
         }
         set {
             defaults.set(newValue.rawValue, forKey: playbackModeKey)
+        }
+    }
+    
+    var ttsServiceType: TTSServiceType {
+        get {
+            TTSServiceType(rawValue: defaults.integer(forKey: ttsServiceTypeKey)) ?? .edgeTTS
+        }
+        set {
+            defaults.set(newValue.rawValue, forKey: ttsServiceTypeKey)
         }
     }
 } 

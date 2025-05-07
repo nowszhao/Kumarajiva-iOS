@@ -27,6 +27,20 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     }
     
     func playPronunciation(word: String, le: String = "zh", onCompletion: (() -> Void)? = nil) {
+        // Determine which TTS service to use
+        let ttsService = UserSettings.shared.ttsServiceType
+        let playbackMode = UserSettings.shared.playbackMode
+        
+        // If playback mode is highestScoreSpeech, always use Youdao TTS
+        if playbackMode == .highestScoreSpeech || ttsService == .youdaoTTS {
+            playYoudaoPronunciation(word: word, le: le, onCompletion: onCompletion)
+        } else {
+            // Use Edge TTS for other modes if selected
+            playEdgePronunciation(word: word, onCompletion: onCompletion)
+        }
+    }
+    
+    private func playYoudaoPronunciation(word: String, le: String = "zh", onCompletion: (() -> Void)? = nil) {
         let url = PronounceURLGenerator.generatePronounceUrl(word: word, le: le)
         guard let audioUrl = URL(string: url) else { return }
         
@@ -52,6 +66,41 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         
         player?.seek(to: .zero)
         player?.play()
+    }
+    
+    private func playEdgePronunciation(word: String, onCompletion: (() -> Void)? = nil) {
+        // Determine voice based on the content
+        // Check if the text contains Chinese characters
+        let isChineseText = word.contains { char in
+            let scalars = char.unicodeScalars
+            return scalars.contains { scalar in
+                // Chinese character ranges
+                (scalar.value >= 0x4E00 && scalar.value <= 0x9FFF) ||
+                (scalar.value >= 0x3400 && scalar.value <= 0x4DBF) ||
+                (scalar.value >= 0x20000 && scalar.value <= 0x2A6DF) ||
+                (scalar.value >= 0x2A700 && scalar.value <= 0x2B73F) ||
+                (scalar.value >= 0x2B740 && scalar.value <= 0x2B81F) ||
+                (scalar.value >= 0x2B820 && scalar.value <= 0x2CEAF)
+            }
+        }
+        
+        var voice = isChineseText ? "zh-CN-XiaoxiaoNeural" : "en-US-AvaMultilingualNeural"
+        voice = "en-US-AndrewMultilingualNeural"
+        
+        // Call Edge TTS Service
+        EdgeTTSService.shared.synthesize(text: word, voice: voice) { [weak self] fileURL in
+            guard let self = self, let url = fileURL else {
+                DispatchQueue.main.async {
+                    print("Failed to get Edge TTS audio, falling back to Youdao TTS")
+                    self?.playYoudaoPronunciation(word: word, onCompletion: onCompletion)
+                }
+                return
+            }
+            
+            DispatchQueue.main.async {
+                self.playLocalAudio(url: url, onCompletion: onCompletion)
+            }
+        }
     }
     
     // 播放本地音频文件
@@ -132,13 +181,23 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         
         switch playbackMode {
         case .wordOnly:
-            playPronunciation(word: history.word, le: "en")
-            currentIndex += 1
+            playPronunciation(word: history.word, le: "en") { [weak self] in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    self.currentIndex += 1
+                    self.playNextContent()
+                }
+            }
             
         case .memoryOnly:
             if let method = history.memoryMethod {
-                playPronunciation(word: method)
-                currentIndex += 1
+                playPronunciation(word: method) { [weak self] in
+                    DispatchQueue.main.async {
+                        guard let self = self else { return }
+                        self.currentIndex += 1
+                        self.playNextContent()
+                    }
+                }
             } else {
                 currentIndex += 1
                 playNextContent()
@@ -146,14 +205,28 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             
         case .wordAndMemory:
             if !shouldPlayMemory {
-                playPronunciation(word: history.word)
-                shouldPlayMemory = true
+                playPronunciation(word: history.word) { [weak self] in
+                    DispatchQueue.main.async {
+                        guard let self = self else { return }
+                        self.shouldPlayMemory = true
+                        self.playNextContent()
+                    }
+                }
             } else {
                 if let method = history.memoryMethod {
-                    playPronunciation(word: method)
+                    playPronunciation(word: method) { [weak self] in
+                        DispatchQueue.main.async {
+                            guard let self = self else { return }
+                            self.currentIndex += 1
+                            self.shouldPlayMemory = false
+                            self.playNextContent()
+                        }
+                    }
+                } else {
+                    currentIndex += 1
+                    shouldPlayMemory = false
+                    playNextContent()
                 }
-                currentIndex += 1
-                shouldPlayMemory = false
             }
             
         case .highestScoreSpeech:
@@ -179,6 +252,9 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     }
     
     @objc private func playerDidFinishPlaying(_ notification: Notification) {
+        // 只处理有道TTS的回调（AVPlayer通知）
+        // Edge TTS通过audioPlayerDidFinishPlaying处理
+        
         // 如果有单独的完成回调，则执行
         if let completion = completionHandler {
             DispatchQueue.main.async {
@@ -188,12 +264,15 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             return
         }
         
-        // 如果是循环播放，则继续下一条
-        guard isLooping else { return }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-            guard let self = self else { return }
-            self.playNextContent()
+        // 当前处理循环模式下的Youdao TTS
+        // Edge TTS已在各自的方法中处理，这里不需要重复处理
+        if UserSettings.shared.ttsServiceType == .youdaoTTS {
+            guard isLooping else { return }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                guard let self = self else { return }
+                self.playNextContent()
+            }
         }
     }
     
@@ -252,9 +331,13 @@ extension AudioService: AVAudioPlayerDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            // Call completion handler
-            self.completionHandler?()
-            self.completionHandler = nil
+            // 处理完成回调
+            if let completion = self.completionHandler {
+                completion()
+                self.completionHandler = nil
+            }
+            
+            // 清理
             self.audioPlayer = nil
         }
     }
