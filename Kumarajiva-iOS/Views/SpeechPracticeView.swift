@@ -106,12 +106,34 @@ struct PracticeTabView: View {
     @State private var showCancelAlert = false
     
     private var exampleToShow: String {
+        var exampleToShow = "No example available."
         if let method = history.memoryMethod, !method.isEmpty {
-            return method
+            exampleToShow =  method
         } else if !history.examples.isEmpty {
-            return history.examples[0]
+            exampleToShow =  history.examples[0]
         }
-        return "No example available."
+        exampleToShow = extractEnglishSentence(exampleToShow) ?? "No example available."
+        return exampleToShow
+    }
+    
+    private func extractEnglishSentence(_ input: String) -> String? {
+        // 定义兼容中英文括号的正则表达式模式
+        let pattern = #"[(（]([A-Za-z ,.'-]+.*?)[)）]"#
+        
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+        
+        // 在输入字符串中查找所有匹配项
+        let matches = regex.matches(in: input, range: NSRange(input.startIndex..., in: input))
+        
+        // 取最后一个匹配项（通常英文句子在末尾括号）
+        guard let lastMatch = matches.last else { return nil }
+        
+        // 提取捕获组内容并去除前后空格
+        let range = lastMatch.range(at: 1)
+        guard let swiftRange = Range(range, in: input) else { return nil }
+        return String(input[swiftRange]).trimmingCharacters(in: .whitespaces)
     }
     
     var body: some View {
@@ -181,7 +203,7 @@ struct PracticeTabView: View {
                     // Play example button
                     Button(action: {
                         isExamplePlaying.toggle()
-                        if isExamplePlaying {
+                        if isExamplePlaying  {
                             // Setup audio session properly before playing
                             let dispatchTime = DispatchTime.now() + 0.1
                             DispatchQueue.main.asyncAfter(deadline: dispatchTime) {
@@ -399,6 +421,7 @@ struct PracticeTabView: View {
         guard let pronunciation = pronunciation else { return nil }
         return pronunciation.American.isEmpty ? pronunciation.British : pronunciation.American
     }
+    
 }
 
 // Records tab content
