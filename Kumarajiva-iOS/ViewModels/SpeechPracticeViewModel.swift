@@ -157,7 +157,19 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
         if let data = userDefaults.data(forKey: "speechPracticeRecords") {
             do {
                 let decoder = JSONDecoder()
-                records = try decoder.decode([SpeechPracticeRecord].self, from: data)
+                let savedRecords = try decoder.decode([SpeechPracticeRecord].self, from: data)
+                
+                // Filter out records with invalid URLs
+                records = savedRecords.filter { record in
+                    // Verify if the file exists
+                    return FileManager.default.fileExists(atPath: record.audioURL.path)
+                }
+                
+                // If we filtered some records, update the saved records
+                if records.count != savedRecords.count {
+                    print("Removed \(savedRecords.count - records.count) records with missing audio files")
+                    saveRecordsToDisk()
+                }
             } catch {
                 print("Failed to load speech practice records: \(error)")
             }

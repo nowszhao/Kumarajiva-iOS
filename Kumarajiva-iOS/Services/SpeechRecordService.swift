@@ -12,8 +12,10 @@ class SpeechRecordService {
     func findHighestScoreRecording(for word: String) -> SpeechPracticeRecord? {
         let records = loadAllRecordsFromDisk()
         
-        // Filter recordings for this specific word
-        let wordRecords = records.filter { $0.word.lowercased() == word.lowercased() }
+        // Filter recordings for this specific word and ensure audio file exists
+        let wordRecords = records
+            .filter { $0.word.lowercased() == word.lowercased() }
+            .filter { FileManager.default.fileExists(atPath: $0.audioURL.path) }
         
         // Find the recording with the highest score
         return wordRecords.max(by: { $0.score < $1.score })
@@ -26,7 +28,10 @@ class SpeechRecordService {
         if let data = userDefaults.data(forKey: "speechPracticeRecords") {
             do {
                 let decoder = JSONDecoder()
-                return try decoder.decode([SpeechPracticeRecord].self, from: data)
+                let allRecords = try decoder.decode([SpeechPracticeRecord].self, from: data)
+                
+                // Return only records with valid audio files
+                return allRecords.filter { FileManager.default.fileExists(atPath: $0.audioURL.path) }
             } catch {
                 print("Failed to load speech practice records: \(error)")
                 return []

@@ -10,14 +10,24 @@ class EdgeTTSService {
     private var audioCache = [String: URL]()
     
     private init() {
-        // Create cache directory in the Documents folder
-        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        cacheDirectory = documentsDirectory.appendingPathComponent("EdgeTTSCache")
+        // Create cache directory in the app's shared container that is accessible via Files app
+        let containerURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let edgeTTSDirectory = containerURL.appendingPathComponent("KumarajivaEdgeTTS", isDirectory: true)
+        cacheDirectory = edgeTTSDirectory
         
         do {
+            // Create directory if it doesn't exist
             if !FileManager.default.fileExists(atPath: cacheDirectory.path) {
-                try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+                try FileManager.default.createDirectory(at: cacheDirectory, 
+                                                       withIntermediateDirectories: true, 
+                                                       attributes: nil)
             }
+            
+            // Make directory visible in Files app
+            var resourceValues = URLResourceValues()
+            resourceValues.isExcludedFromBackup = false
+            var mutableURL = cacheDirectory as URL
+            try mutableURL.setResourceValues(resourceValues)
             
             // Load existing cache entries
             loadCacheEntries()
@@ -105,8 +115,17 @@ class EdgeTTSService {
                 return
             }
             
-            // Save to cache
-            let fileURL = self.cacheDirectory.appendingPathComponent("\(cacheKey).mp3")
+            // Create a more readable filename with timestamp
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
+            let timestamp = dateFormatter.string(from: Date())
+            let displayableText = String(limitedText.prefix(20))
+                .replacingOccurrences(of: " ", with: "_")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: ":", with: "_")
+            
+            // Save to cache with a more user-friendly name (but still use hash as part of filename for uniqueness)
+            let fileURL = self.cacheDirectory.appendingPathComponent("\(displayableText)_\(timestamp)_\(cacheKey.prefix(8)).mp3")
             
             do {
                 try data.write(to: fileURL)

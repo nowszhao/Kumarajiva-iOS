@@ -65,10 +65,33 @@ class SpeechRecognitionService: NSObject, ObservableObject {
         try? audioSession.setCategory(.record, mode: .default)
         try? audioSession.setActive(true, options: .notifyOthersOnDeactivation)
         
-        // Create recording URL in documents directory
-        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let fileName = "speech_practice_\(Date().timeIntervalSince1970).m4a"
-        recordingURL = documentsDirectory.appendingPathComponent(fileName)
+        // Get persistent storage directory for recordings
+        let containerURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let recordingsDirectory = containerURL.appendingPathComponent("KumarajivaSpeechRecordings", isDirectory: true)
+        
+        // Create recordings directory if it doesn't exist
+        if !FileManager.default.fileExists(atPath: recordingsDirectory.path) {
+            do {
+                try FileManager.default.createDirectory(at: recordingsDirectory, 
+                                                      withIntermediateDirectories: true,
+                                                      attributes: nil)
+                
+                // Make directory visible in Files app
+                var resourceValues = URLResourceValues()
+                resourceValues.isExcludedFromBackup = false
+                var mutableURL = recordingsDirectory as URL
+                try mutableURL.setResourceValues(resourceValues)
+            } catch {
+                print("Failed to create recordings directory: \(error)")
+            }
+        }
+        
+        // Create recording file with readable name and timestamp
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
+        let timestamp = dateFormatter.string(from: Date())
+        let fileName = "speech_recording_\(timestamp).m4a"
+        recordingURL = recordingsDirectory.appendingPathComponent(fileName)
         
         // Configure audio recorder
         let settings: [String: Any] = [

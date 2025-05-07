@@ -15,5 +15,11 @@
 	<string>We need to access speech recognition to analyze your pronunciation for practice.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>We need to access your microphone to record your speech for pronunciation practice.</string>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>
