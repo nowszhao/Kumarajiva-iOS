@@ -2,7 +2,9 @@ import SwiftUI
 
 struct WordCollocationView: View {
     let word: String
-    @StateObject private var collocationService = WordCollocationService.shared
+    @State private var collocation: WordCollocation?
+    @State private var isLoading = false
+    @State private var error: String?
     @State private var isExpanded = false
     
     var body: some View {
@@ -13,9 +15,9 @@ struct WordCollocationView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.blue)
                 
-                if let collocation = collocationService.currentCollocation,
-                   !collocation.chunks.isEmpty,
-                   !collocationService.isLoading {
+                if let wordCollocation = collocation,
+                   !wordCollocation.chunks.isEmpty,
+                   !isLoading {
                     
                     // 添加折叠/展开按钮
                     Button(action: { 
@@ -34,23 +36,26 @@ struct WordCollocationView: View {
                 Button(action: {
                     Task {
                         // 如果已有解析结果，清除后重新解析
-                        if collocationService.currentCollocation != nil {
-                            collocationService.clearCache(for: word)
-                            collocationService.currentCollocation = nil
+                        if collocation != nil {
+                            WordCollocationService.shared.clearCache(for: word)
+                            collocation = nil
                         }
-                        await collocationService.getCollocations(for: word)
+                        isLoading = true
+                        error = nil
+                        collocation = await WordCollocationService.shared.getCollocations(for: word)
+                        isLoading = false
                         withAnimation { isExpanded = true }
                     }
                 }) {
-                    if collocationService.isLoading {
+                    if isLoading {
                         ProgressView()
                             .frame(width: 18, height: 18)
                     } else {
                         HStack(spacing: 4) {
-                            Image(systemName: collocationService.currentCollocation == nil ? "sparkles" : "arrow.clockwise")
+                            Image(systemName: collocation == nil ? "sparkles" : "arrow.clockwise")
                                 .font(.system(size: 11))
                             
-                            Text(collocationService.currentCollocation == nil ? "解析" : "重新解析")
+                            Text(collocation == nil ? "解析" : "重新解析")
                                 .font(.system(size: 13, weight: .medium))
                         }
                         .padding(.horizontal, 10)
@@ -63,7 +68,7 @@ struct WordCollocationView: View {
             }
             
             // Content area
-            if collocationService.isLoading {
+            if isLoading {
                 HStack {
                     Spacer()
                     VStack(spacing: 6) {
@@ -77,11 +82,11 @@ struct WordCollocationView: View {
                 .padding(.vertical, 12)
                 .background(Color(.systemGray6).opacity(0.3))
                 .cornerRadius(8)
-            } else if let error = collocationService.error {
+            } else if let errorMessage = error {
                 HStack {
                     Image(systemName: "exclamationmark.triangle")
                         .foregroundColor(.orange)
-                    Text(error)
+                    Text(errorMessage)
                         .font(.system(size: 14))
                         .foregroundColor(.red)
                 }
@@ -89,8 +94,8 @@ struct WordCollocationView: View {
                 .padding(.horizontal, 12)
                 .background(Color(.systemGray6).opacity(0.3))
                 .cornerRadius(8)
-            } else if let collocation = collocationService.currentCollocation {
-                if collocation.chunks.isEmpty {
+            } else if let wordCollocation = collocation {
+                if wordCollocation.chunks.isEmpty {
                     Text("无法找到相关词语搭配")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
@@ -98,23 +103,23 @@ struct WordCollocationView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
                         // 显示第一个词块，总是可见
-                        if !collocation.chunks.isEmpty {
-                            ImprovedChunkView(chunk: collocation.chunks[0], isFirst: true)
+                        if !wordCollocation.chunks.isEmpty {
+                            ImprovedChunkView(chunk: wordCollocation.chunks[0], isFirst: true)
                                 .padding(.vertical, 8)
                                 .padding(.horizontal, 8)
                         }
                         
                         // 展开时显示额外的词块
-                        if isExpanded && collocation.chunks.count > 1 {
+                        if isExpanded && wordCollocation.chunks.count > 1 {
                             Divider()
                             
                             VStack(alignment: .leading, spacing: 0) {
-                                ForEach(Array(collocation.chunks.dropFirst().enumerated()), id: \.element.id) { index, chunk in
+                                ForEach(Array(wordCollocation.chunks.dropFirst().enumerated()), id: \.element.id) { index, chunk in
                                     ImprovedChunkView(chunk: chunk, isFirst: false)
                                         .padding(.vertical, 8)
                                         .padding(.horizontal, 8)
                                     
-                                    if index < collocation.chunks.count - 2 {
+                                    if index < wordCollocation.chunks.count - 2 {
                                         Divider()
                                     }
                                 }
@@ -136,6 +141,7 @@ struct WordCollocationView: View {
                     .cornerRadius(8)
             }
         }
+        // 移除自动加载，需要用户手动点击解析按钮
     }
 }
 
@@ -208,4 +214,4 @@ struct ChunkView: View {
         }
         .padding(.vertical, 4)
     }
-} 
+}

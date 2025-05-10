@@ -12,7 +12,7 @@ struct PracticeTabView: View {
     @State private var dragOffset = CGSize.zero
     @State private var isCompleting = false
     @State private var showCancelAlert = false
-    @State private var playbackRate: Float = 1.0
+    @State private var playbackRate: Float = 0.75
     
     private var exampleToShow: String {
         var exampleToShow = "No example available."
@@ -98,16 +98,16 @@ struct PracticeTabView: View {
                     }
                     
                     // Example section
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("「例句」")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.blue)
-                        
-                        Text("\(exampleToShow)")
-                            .font(.system(size: 15))
-                            .foregroundColor(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+//                    HStack(alignment: .top, spacing: 8) {
+//                        Text("「例句」")
+//                            .font(.system(size: 14, weight: .medium))
+//                            .foregroundColor(.blue)
+//                        
+//                        Text("\(exampleToShow)")
+//                            .font(.system(size: 15))
+//                            .foregroundColor(.primary)
+//                            .fixedSize(horizontal: false, vertical: true)
+//                    }
                     
                     // Add Word Collocation section
                     WordCollocationView(word: history.word)
@@ -387,18 +387,18 @@ struct PracticeTabView: View {
             }
             .padding(.vertical)
         }
-        .alert(isPresented: $showScoreAlert) {
-            // Extract score message to reduce complexity
-            let scoreTitle = "发音评分"
-            let scoreMessage = "您的发音得分: \(viewModel.currentScore)"
-            let dismissText = "确定"
-            
-            return Alert(
-                title: Text(scoreTitle),
-                message: Text(scoreMessage),
-                dismissButton: .default(Text(dismissText))
-            )
-        }
+//        .alert(isPresented: $showScoreAlert) {
+//            // Extract score message to reduce complexity
+//            let scoreTitle = "发音评分"
+//            let scoreMessage = "您的发音得分: \(viewModel.currentScore)"
+//            let dismissText = "确定"
+//            
+//            return Alert(
+//                title: Text(scoreTitle),
+//                message: Text(scoreMessage),
+//                dismissButton: .default(Text(dismissText))
+//            )
+//        }
         .onDisappear {
             // Stop playing example when tab disappears
             if isExamplePlaying {
