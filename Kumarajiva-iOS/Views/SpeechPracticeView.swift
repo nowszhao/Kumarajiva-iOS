@@ -248,13 +248,37 @@ struct PracticeTabView: View {
                             .foregroundColor(.primary)
                         
                         if viewModel.wordResults.isEmpty && viewModel.recognizedText.isEmpty {
-                            Text("点击录音按钮开始口语练习...")
-                                .font(.system(size: 15))
-                                .foregroundColor(.secondary)
+                            if viewModel.isTranscribing || !viewModel.interimResult.isEmpty {
+                                VStack(spacing: 8) {
+                                    if !viewModel.interimResult.isEmpty {
+                                        Text(viewModel.interimResult)
+                                            .font(.system(size: 15))
+                                            .foregroundColor(.secondary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    } else {
+                                        Text("正在识别...")
+                                            .font(.system(size: 15))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    if viewModel.isTranscribing {
+                                        ProgressView(value: viewModel.transcriptionProgress)
+                                            .progressViewStyle(LinearProgressViewStyle())
+                                    }
+                                }
                                 .padding()
-                                .frame(maxWidth: .infinity, minHeight: 70, alignment: .center)
+                                .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
                                 .background(Color(.systemGray6).opacity(0.8))
                                 .cornerRadius(8)
+                            } else {
+                                Text("点击录音按钮开始口语练习...")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.secondary)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, minHeight: 70, alignment: .center)
+                                    .background(Color(.systemGray6).opacity(0.8))
+                                    .cornerRadius(8)
+                            }
                         } else {
                             HighlightedTextView(results: viewModel.formattedRecognizedText(), viewModel: viewModel)
                                 .padding()
@@ -356,16 +380,25 @@ struct PracticeTabView: View {
                                         // 向右滑动完成录音并保存
                                         viewModel.stopRecording(word: history.word, example: exampleToShow, shouldSave: true)
                                         showScoreAlert = true
+                                        
+                                        // 添加延迟以确保状态更新
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                            isLongPressing = false
+                                            dragOffset = .zero
+                                            isCompleting = false
+                                        }
                                     } else {
                                         // 其他方向滑动或就地松手，取消录音
                                         viewModel.stopRecording(word: history.word, example: exampleToShow, shouldSave: false)
                                         showCancelAlert = true
+                                        
+                                        // 添加延迟以确保状态更新
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                            isLongPressing = false
+                                            dragOffset = .zero
+                                            isCompleting = false
+                                        }
                                     }
-                                    
-                                    // 重置状态
-                                    isLongPressing = false
-                                    dragOffset = .zero
-                                    isCompleting = false
                                 }
                             }
                     )

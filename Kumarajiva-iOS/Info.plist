@@ -12,9 +12,9 @@
 		<string>audio</string>
 	</array>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>We need to access speech recognition to analyze your pronunciation for practice.</string>
+	<string>需要使用语音识别功能来评估您的口语表现</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>We need to access your microphone to record your speech for pronunciation practice.</string>
+	<string>需要使用麦克风录制您的发音进行语音识别</string>
 	<key>UISupportsDocumentBrowser</key>
 	<true/>
 	<key>UIFileSharingEnabled</key>

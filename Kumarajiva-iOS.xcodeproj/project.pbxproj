@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7ED405E02DCE4ECD005B89F9 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 7ED405DF2DCE4ECD005B89F9 /* WhisperKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		7E69EBDE2D58B28A00CECFDC /* Kumarajiva-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Kumarajiva-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7ED405E02DCE4ECD005B89F9 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 			);
 			name = "Kumarajiva-iOS";
 			packageProductDependencies = (
+				7ED405DF2DCE4ECD005B89F9 /* WhisperKit */,
 			);
 			productName = "Kumarajiva-iOS";
 			productReference = 7E69EBDE2D58B28A00CECFDC /* Kumarajiva-iOS.app */;
@@ -107,6 +113,9 @@
 			);
 			mainGroup = 7E69EBD52D58B28A00CECFDC;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7ED405DE2DCE4ECD005B89F9 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7E69EBDF2D58B28A00CECFDC /* Products */;
 			projectDirPath = "";
@@ -347,6 +356,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7ED405DE2DCE4ECD005B89F9 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7ED405DF2DCE4ECD005B89F9 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7ED405DE2DCE4ECD005B89F9 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7E69EBD62D58B28A00CECFDC /* Project object */;
 }

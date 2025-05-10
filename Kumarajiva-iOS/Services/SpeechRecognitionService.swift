@@ -15,6 +15,7 @@ struct WordMatchResult: Identifiable {
     let originalIndex: Int  // 记录单词在原句中的位置，用于排序
 }
 
+@MainActor
 class SpeechRecognitionService: NSObject, ObservableObject {
     static let shared = SpeechRecognitionService()
     
@@ -32,6 +33,11 @@ class SpeechRecognitionService: NSObject, ObservableObject {
     @Published var recognizedText = ""
     @Published var recordingTime: TimeInterval = 0
     @Published var wordResults: [WordMatchResult] = []
+    
+    // 添加实时识别相关属性
+    @Published var isTranscribing = false
+    @Published var interimResult = ""
+    @Published var transcriptionProgress: Float = 0.0
     
     private var recordingTimer: Timer?
     
@@ -60,6 +66,21 @@ class SpeechRecognitionService: NSObject, ObservableObject {
     
     // Start recording and speech recognition
     func startRecording() {
+        // Check which service to use
+        let recognitionService = UserSettings.shared.speechRecognitionServiceType
+        
+        switch recognitionService {
+        case .nativeSpeech:
+            startNativeRecording()
+        case .whisperKit:
+            Task {
+                await startWhisperKitRecording()
+            }
+        }
+    }
+    
+    // Start recording with the native iOS Speech Recognition framework
+    private func startNativeRecording() {
         // Set up audio session for recording
         let audioSession = AVAudioSession.sharedInstance()
         try? audioSession.setCategory(.record, mode: .default)
@@ -160,8 +181,83 @@ class SpeechRecognitionService: NSObject, ObservableObject {
         }
     }
     
+    // Start recording with WhisperKit
+    private func startWhisperKitRecording() async {
+        // Delegate to WhisperKit service
+        await WhisperKitService.shared.startRecording()
+        
+        // Observe WhisperKit service properties
+        observeWhisperKitProperties()
+    }
+    
+    // Set up property observations for WhisperKit service
+    private func observeWhisperKitProperties() {
+        // We need to manually update our properties when WhisperKit's properties change
+        // since we can't use property wrappers across actors
+        Task { @MainActor in
+            self.isRecording = WhisperKitService.shared.isRecording
+            self.recognizedText = WhisperKitService.shared.recognizedText
+            self.recordingTime = WhisperKitService.shared.recordingTime
+            self.wordResults = WhisperKitService.shared.wordResults
+            
+            // 添加新属性的观察
+            self.isTranscribing = WhisperKitService.shared.isTranscribing
+            self.interimResult = WhisperKitService.shared.interimResult
+            self.transcriptionProgress = WhisperKitService.shared.transcriptionProgress
+            
+            // Set up a timer to observe changes
+            Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
+                guard let self = self else {
+                    timer.invalidate()
+                    return
+                }
+                
+                // Only continue observing while recording or transcribing
+                if !WhisperKitService.shared.isRecording && !WhisperKitService.shared.isTranscribing {
+                    timer.invalidate()
+                    return
+                }
+                
+                // Update properties
+                self.isRecording = WhisperKitService.shared.isRecording
+                self.recognizedText = WhisperKitService.shared.recognizedText
+                self.recordingTime = WhisperKitService.shared.recordingTime
+                self.wordResults = WhisperKitService.shared.wordResults
+                
+                // 更新新属性
+                self.isTranscribing = WhisperKitService.shared.isTranscribing
+                self.interimResult = WhisperKitService.shared.interimResult
+                self.transcriptionProgress = WhisperKitService.shared.transcriptionProgress
+            }
+        }
+    }
+    
     // Stop recording and speech recognition
     func stopRecording() -> URL? {
+        // Check which service to use
+        let recognitionService = UserSettings.shared.speechRecognitionServiceType
+        
+        switch recognitionService {
+        case .nativeSpeech:
+            return stopNativeRecording()
+        case .whisperKit:
+            // Create a semaphore to wait for the async operation
+            let semaphore = DispatchSemaphore(value: 0)
+            var resultURL: URL? = nil
+            
+            Task { @MainActor in
+                resultURL = await stopWhisperKitRecording()
+                semaphore.signal()
+            }
+            
+            // Wait for the async operation to complete (with timeout)
+            _ = semaphore.wait(timeout: .now() + 2.0)
+            return resultURL
+        }
+    }
+    
+    // Stop native recording
+    private func stopNativeRecording() -> URL? {
         audioEngine.stop()
         recognitionRequest?.endAudio()
         audioEngine.inputNode.removeTap(onBus: 0)
@@ -182,6 +278,11 @@ class SpeechRecognitionService: NSObject, ObservableObject {
         }
         
         return recordingURL
+    }
+    
+    // Stop WhisperKit recording
+    private func stopWhisperKitRecording() async -> URL? {
+        return await WhisperKitService.shared.stopRecording()
     }
     
     // Normalize text for comparison by removing punctuation, extra spaces, and lowercasing
@@ -251,6 +352,12 @@ class SpeechRecognitionService: NSObject, ObservableObject {
     
     // Analyze word matching for highlighting
     func analyzeWordMatching(expectedText: String) -> [WordMatchResult] {
+        // Check which service to use
+        if UserSettings.shared.speechRecognitionServiceType == .whisperKit {
+            // If WhisperKit is being used, get from the latest wordResults
+            return wordResults
+        }
+        
         // Extract English text if needed and normalize
         let englishExpectedText = extractEnglishText(expectedText)
         let finalExpectedText = englishExpectedText.isEmpty ? expectedText : englishExpectedText
@@ -325,15 +432,48 @@ class SpeechRecognitionService: NSObject, ObservableObject {
     
     // Calculate speech recognition score by comparing recognized text with the expected text
     func calculateScore(expectedText: String) -> Int {
-        guard !recognizedText.isEmpty else { return 0 }
+        print("SpeechRecognitionService: 开始计算得分，预期文本: \(expectedText)")
+        
+        // Check which service to use
+        if UserSettings.shared.speechRecognitionServiceType == .whisperKit {
+            print("SpeechRecognitionService: 使用WhisperKit计算得分")
+            
+            // Use a semaphore to make the async call behave synchronously
+            let semaphore = DispatchSemaphore(value: 0)
+            var whisperScore = 0
+            
+            Task { @MainActor in
+                print("SpeechRecognitionService: 调用WhisperKit.calculateScore")
+                whisperScore = await WhisperKitService.shared.calculateScore(expectedText: expectedText)
+                self.wordResults = WhisperKitService.shared.wordResults
+                self.recognizedText = WhisperKitService.shared.recognizedText
+                print("SpeechRecognitionService: WhisperKit得分: \(whisperScore)")
+                print("SpeechRecognitionService: WhisperKit识别文本: \(self.recognizedText)")
+                semaphore.signal()
+            }
+            
+            // Wait with timeout
+            print("SpeechRecognitionService: 等待WhisperKit计算结果")
+            _ = semaphore.wait(timeout: .now() + 3.0) // 增加超时时间到3秒
+            print("SpeechRecognitionService: WhisperKit计算完成，得分: \(whisperScore)")
+            return whisperScore
+        }
+        
+        guard !recognizedText.isEmpty else { 
+            print("SpeechRecognitionService: 识别文本为空，返回0分")
+            return 0 
+        }
+        
+        // Update word results
+        wordResults = analyzeWordMatching(expectedText: expectedText)
         
         // Extract English text if needed and normalize
         let englishExpectedText = extractEnglishText(expectedText)
         let normalizedExpected = normalizeText(englishExpectedText.isEmpty ? expectedText : englishExpectedText)
         let normalizedRecognized = normalizeText(recognizedText)
         
-        print("Expected: \(normalizedExpected)")
-        print("Recognized: \(normalizedRecognized)")
+        print("SpeechRecognitionService: 预期文本(标准化): \(normalizedExpected)")
+        print("SpeechRecognitionService: 识别文本(标准化): \(normalizedRecognized)")
         
         // Simple word matching algorithm
         let expectedWords = normalizedExpected.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
@@ -362,12 +502,12 @@ class SpeechRecognitionService: NSObject, ObservableObject {
             }
         }
         
-        // Calculate percentage score
-        let scorePercentage = (Double(matchedWords) / Double(max(1, totalWords))) * 100
+        // Calculate score as a percentage from 0-100
+        let score = Int((Double(matchedWords) / Double(totalWords)) * 100)
         
-        // Analyze word matching for highlighting
-        wordResults = analyzeWordMatching(expectedText: expectedText)
-        
-        return Int(scorePercentage)
+        // Ensure the score is within 0-100 range
+        let finalScore = min(100, max(0, score))
+        print("SpeechRecognitionService: 最终得分: \(finalScore)")
+        return finalScore
     }
 } 

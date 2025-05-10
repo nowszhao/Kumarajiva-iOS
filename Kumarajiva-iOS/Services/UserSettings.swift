@@ -6,6 +6,8 @@ class UserSettings {
     private let defaults = UserDefaults.standard
     private let playbackModeKey = "playback_mode"
     private let ttsServiceTypeKey = "tts_service_type"
+    private let speechRecognitionServiceTypeKey = "speech_recognition_service_type"
+    private let whisperModelSizeKey = "whisper_model_size"
     
     private init() {}
     
@@ -24,6 +26,28 @@ class UserSettings {
         }
         set {
             defaults.set(newValue.rawValue, forKey: ttsServiceTypeKey)
+        }
+    }
+    
+    var speechRecognitionServiceType: SpeechRecognitionServiceType {
+        get {
+            SpeechRecognitionServiceType(rawValue: defaults.integer(forKey: speechRecognitionServiceTypeKey)) ?? .nativeSpeech
+        }
+        set {
+            defaults.set(newValue.rawValue, forKey: speechRecognitionServiceTypeKey)
+        }
+    }
+    
+    var whisperModelSize: WhisperModelSize {
+        get {
+            if let storedValue = defaults.string(forKey: whisperModelSizeKey),
+               let modelSize = WhisperModelSize(rawValue: storedValue) {
+                return modelSize
+            }
+            return .small
+        }
+        set {
+            defaults.set(newValue.rawValue, forKey: whisperModelSizeKey)
         }
     }
 } 
