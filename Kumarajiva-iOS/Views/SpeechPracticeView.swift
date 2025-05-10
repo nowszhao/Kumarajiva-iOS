@@ -243,13 +243,20 @@ struct PracticeTabView: View {
                 VStack(spacing: 16) {
                     // Recognized text area
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("识别结果")
+                        Text("请朗读：")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.primary)
                         
                         if viewModel.wordResults.isEmpty && viewModel.recognizedText.isEmpty {
                             if viewModel.isTranscribing || !viewModel.interimResult.isEmpty {
                                 VStack(spacing: 8) {
+                                    // Show example sentence in gray
+                                    Text(exampleToShow)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.bottom, 4)
+                                    
                                     if !viewModel.interimResult.isEmpty {
                                         Text(viewModel.interimResult)
                                             .font(.system(size: 15))
@@ -271,20 +278,33 @@ struct PracticeTabView: View {
                                 .background(Color(.systemGray6).opacity(0.8))
                                 .cornerRadius(8)
                             } else {
-                                Text("点击录音按钮开始口语练习...")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.secondary)
-                                    .padding()
-                                    .frame(maxWidth: .infinity, minHeight: 70, alignment: .center)
-                                    .background(Color(.systemGray6).opacity(0.8))
-                                    .cornerRadius(8)
-                            }
-                        } else {
-                            HighlightedTextView(results: viewModel.formattedRecognizedText(), viewModel: viewModel)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    // Show example sentence in gray
+                                    Text(exampleToShow)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    
+                                }
                                 .padding()
                                 .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
                                 .background(Color(.systemGray6).opacity(0.8))
                                 .cornerRadius(8)
+                            }
+                        } else {
+                            VStack(alignment: .leading, spacing: 12) {
+                                // Show example sentence with matched words highlighted
+                                ExampleSentenceView(example: exampleToShow, recognizedResults: viewModel.wordResults)
+                                
+                                Divider()
+                                
+                                // Show recognized text with highlighting
+                                HighlightedTextView(results: viewModel.formattedRecognizedText(), viewModel: viewModel)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
+                            .background(Color(.systemGray6).opacity(0.8))
+                            .cornerRadius(8)
                         }
                     }
                     
@@ -311,20 +331,7 @@ struct PracticeTabView: View {
                                 .monospacedDigit()
                         }
                     }
-                    
-                    // Legend
-                    VStack(alignment: .center, spacing: 6) {
-                        Text("颜色说明")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                        
-                        HStack(spacing: 16) {
-                            LegendItem(color: .green, text: "匹配")
-                            LegendItem(color: .red, text: "缺失")
-                            LegendItem(color: .gray, text: "多余")
-                        }
-                    }
-                    .padding(.top, 4)
+               
                     
                     // Recording button with gesture
                     ZStack {
@@ -795,5 +802,58 @@ extension View {
             }
         )
         .onPreferenceChange(SizePreferenceKey.self, perform: onChange)
+    }
+}
+
+// ExampleSentenceView - 显示例句并高亮匹配单词
+struct ExampleSentenceView: View {
+    let example: String
+    let recognizedResults: [WordMatchResult]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            WordWrappedExampleText(example: example, recognizedResults: recognizedResults)
+        }
+    }
+}
+
+// 例句自动换行组件
+struct WordWrappedExampleText: View {
+    let example: String
+    let recognizedResults: [WordMatchResult]
+    
+    @State private var totalWidth: CGFloat = 0
+    
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Color.clear
+                .frame(height: 1)
+                .readSize { size in
+                    totalWidth = size.width
+                }
+            
+            let words = example.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+            
+            TextFlowLayout(width: totalWidth, spacing: 4) {
+                ForEach(Array(words.enumerated()), id: \.offset) { index, word in
+                    let isMatched = isWordMatched(word)
+                    Text(word)
+                        .font(.system(size: 15))
+                        .padding(.horizontal, 3)
+                        .padding(.vertical, 1)
+                        .foregroundColor(isMatched ? .green : .secondary)
+                        .fixedSize()
+                }
+            }
+        }
+    }
+    
+    // 检查单词是否在识别结果中匹配
+    private func isWordMatched(_ word: String) -> Bool {
+        let normalizedWord = word.lowercased().trimmingCharacters(in: .punctuationCharacters)
+        return recognizedResults.contains { result in
+            result.type == .matched && 
+            result.word.lowercased().trimmingCharacters(in: .punctuationCharacters) == normalizedWord
+        }
     }
 } 

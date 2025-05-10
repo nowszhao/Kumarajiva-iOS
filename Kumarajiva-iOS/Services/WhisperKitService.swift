@@ -99,7 +99,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 // 构建模型目录路径
                 let modelStorageDir = "huggingface/models/argmaxinc/whisperkit-coreml"
                 let modelStorageURL = documentsURL.appendingPathComponent(modelStorageDir)
-                let modelDirectoryName = "openai_whisper-\(modelName)"
+                let modelDirectoryName = modelName
                 let modelDirectoryURL = modelStorageURL.appendingPathComponent(modelDirectoryName)
                 
                 // 检查模型完整性
@@ -254,7 +254,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 // 构建模型目录路径
                 let modelStorageDir = "huggingface/models/argmaxinc/whisperkit-coreml"
                 let modelStorageURL = documentsURL.appendingPathComponent(modelStorageDir)
-                let modelDirectoryName = "openai_whisper-\(modelName)"
+                let modelDirectoryName = modelName
                 let modelDirectoryURL = modelStorageURL.appendingPathComponent(modelDirectoryName)
                 
                 print("WhisperKit config: WhisperKit.WhisperKitConfig")
@@ -346,7 +346,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         let modelStorageURL = documentsURL.appendingPathComponent(modelStorageDir)
         
         // 创建模型特定目录
-        let modelDirectoryName = "openai_whisper-\(modelName)"
+        let modelDirectoryName = modelName
         let modelDirectoryURL = modelStorageURL.appendingPathComponent(modelDirectoryName)
         
         // 如果模型目录不存在，创建它
@@ -864,7 +864,7 @@ extension WhisperKit {
         let modelStorageURL = documentsURL.appendingPathComponent(modelStorageDir)
         
         // 创建模型特定目录
-        let modelDirectoryName = "openai_whisper-\(config.model!)"
+        let modelDirectoryName = config.model!
         let modelDirectoryURL = modelStorageURL.appendingPathComponent(modelDirectoryName)
         
         // 创建目录（如果不存在）
