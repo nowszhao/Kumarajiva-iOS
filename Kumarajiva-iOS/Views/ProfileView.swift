@@ -163,9 +163,8 @@ struct SettingsView: View {
                             // If WhisperKit is selected, trigger model check/loading
                             if newValue == .whisperKit {
                                 Task {
-                                    if WhisperKitService.shared.modelDownloadState == .idle {
-                                        WhisperKitService.shared.reloadModel()
-                                    }
+                                    // Always reload the model when WhisperKit is selected
+                                    WhisperKitService.shared.reloadModel()
                                 }
                             }
                         }
@@ -235,6 +234,16 @@ struct SettingsView: View {
             .background(Color(.systemBackground))
             .cornerRadius(10)
             .padding(.horizontal)
+            .onAppear {
+                // When view appears, check if we're using WhisperKit and model status
+                if speechRecognitionServiceType == .whisperKit {
+                    // Check if model is in idle state but should be ready
+                    if WhisperKitService.shared.modelDownloadState == .idle {
+                        // Try to reload the model
+                        WhisperKitService.shared.reloadModel()
+                    }
+                }
+            }
         }.frame(height: 430)
     }
 }
@@ -362,7 +371,7 @@ struct ModelStatusView: View {
                     Spacer()
                     
                     Button(action: {
-                        WhisperKitService.shared.reloadModel()
+                        WhisperKitService.shared.downloadModelManually()
                     }) {
                         Text("下载")
                             .font(.caption)
@@ -381,6 +390,11 @@ struct ModelStatusView: View {
         .onAppear {
             // On appear, update the model size based on current selection
             self.modelSize = UserSettings.shared.whisperModelSize.modelSize
+            
+            // If the model state is idle but we should have a model, try to reload
+            if whisperService.modelDownloadState == .idle {
+                WhisperKitService.shared.reloadModel()
+            }
         }
     }
     

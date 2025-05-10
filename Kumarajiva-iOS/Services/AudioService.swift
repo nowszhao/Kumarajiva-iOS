@@ -11,6 +11,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     private var shouldPlayMemory = false
     private var onWordChangeWithIndex: ((String, Int) -> Void)?
     private var completionHandler: (() -> Void)?
+    private var currentPlaybackRate: Float = 1.0
     
     private override init() {
         super.init()
@@ -26,21 +27,24 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         }
     }
     
-    func playPronunciation(word: String, le: String = "zh", onCompletion: (() -> Void)? = nil) {
+    func playPronunciation(word: String, le: String = "zh", rate: Float = 1.0, onCompletion: (() -> Void)? = nil) {
+        // Save the current playback rate
+        currentPlaybackRate = rate
+        
         // Determine which TTS service to use
         let ttsService = UserSettings.shared.ttsServiceType
         let playbackMode = UserSettings.shared.playbackMode
         
         // If playback mode is highestScoreSpeech, always use Youdao TTS
         if playbackMode == .highestScoreSpeech || ttsService == .youdaoTTS {
-            playYoudaoPronunciation(word: word, le: le, onCompletion: onCompletion)
+            playYoudaoPronunciation(word: word, le: le, rate: rate, onCompletion: onCompletion)
         } else {
             // Use Edge TTS for other modes if selected
-            playEdgePronunciation(word: word, onCompletion: onCompletion)
+            playEdgePronunciation(word: word, rate: rate, onCompletion: onCompletion)
         }
     }
     
-    private func playYoudaoPronunciation(word: String, le: String = "zh", onCompletion: (() -> Void)? = nil) {
+    private func playYoudaoPronunciation(word: String, le: String = "zh", rate: Float = 1.0, onCompletion: (() -> Void)? = nil) {
         let url = PronounceURLGenerator.generatePronounceUrl(word: word, le: le)
         guard let audioUrl = URL(string: url) else { return }
         
@@ -64,11 +68,14 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             player?.replaceCurrentItem(with: playerItem)
         }
         
+        // Apply playback rate
+        player?.rate = rate
+        
         player?.seek(to: .zero)
         player?.play()
     }
     
-    private func playEdgePronunciation(word: String, onCompletion: (() -> Void)? = nil) {
+    private func playEdgePronunciation(word: String, rate: Float = 1.0, onCompletion: (() -> Void)? = nil) {
         // Determine voice based on the content
         // Check if the text contains Chinese characters
         let isChineseText = word.contains { char in
@@ -92,19 +99,19 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             guard let self = self, let url = fileURL else {
                 DispatchQueue.main.async {
                     print("Failed to get Edge TTS audio, falling back to Youdao TTS")
-                    self?.playYoudaoPronunciation(word: word, onCompletion: onCompletion)
+                    self?.playYoudaoPronunciation(word: word, rate: rate, onCompletion: onCompletion)
                 }
                 return
             }
             
             DispatchQueue.main.async {
-                self.playLocalAudio(url: url, onCompletion: onCompletion)
+                self.playLocalAudio(url: url, rate: rate, onCompletion: onCompletion)
             }
         }
     }
     
     // 播放本地音频文件
-    func playLocalAudio(url: URL, onCompletion: (() -> Void)? = nil) {
+    func playLocalAudio(url: URL, rate: Float = 1.0, onCompletion: (() -> Void)? = nil) {
         do {
             // 停止当前播放
             player?.pause()
@@ -120,11 +127,34 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             // 创建并播放
             audioPlayer = try AVAudioPlayer(contentsOf: url)
             audioPlayer?.delegate = self
+            
+            // Apply playback rate
+            audioPlayer?.enableRate = true
+            audioPlayer?.rate = rate
+            
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
         } catch {
             print("Failed to play local audio: \(error)")
             onCompletion?()
+        }
+    }
+    
+    // Get current playback rate
+    func getCurrentPlaybackRate() -> Float {
+        return currentPlaybackRate
+    }
+    
+    // Set playback rate for current player
+    func setPlaybackRate(_ rate: Float) {
+        currentPlaybackRate = rate
+        
+        // Apply to current player if any
+        player?.rate = rate
+        
+        if let audioPlayer = audioPlayer {
+            audioPlayer.enableRate = true
+            audioPlayer.rate = rate
         }
     }
     

@@ -88,6 +88,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
     private func checkModelStatus() {
         Task {
             do {
+                print("WhisperKitService: Checking model status...")
                 // Initialize config to check
                 let modelName = UserSettings.shared.whisperModelSize.rawValue
                 
@@ -102,21 +103,75 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 let modelDirectoryName = modelName
                 let modelDirectoryURL = modelStorageURL.appendingPathComponent(modelDirectoryName)
                 
+                print("WhisperKitService: Checking model at path: \(modelDirectoryURL.path)")
+                
+                // Check if we have a saved model path in UserDefaults
+                if let savedModelPath = UserDefaults.standard.string(forKey: "whisperkit_model_path_\(modelName)") {
+                    print("WhisperKitService: Found saved model path: \(savedModelPath)")
+                    
+                    // Verify the saved path exists and is valid
+                    let savedModelURL = URL(fileURLWithPath: savedModelPath)
+                    if FileManager.default.fileExists(atPath: savedModelPath) {
+                        print("WhisperKitService: Saved model path exists, validating...")
+                        
+                        // If the saved path is valid, use it
+                        if await validateModelIntegrity(at: savedModelURL) {
+                            print("WhisperKitService: Saved model is valid")
+                            downloadedModelSize = UserSettings.shared.whisperModelSize
+                            modelDownloadState = .ready
+                            
+                            // 自动预加载模型，如果用户选择了WhisperKit作为语音识别服务
+                            if UserSettings.shared.speechRecognitionServiceType == .whisperKit {
+                                print("WhisperKitService: WhisperKit is the selected service, preloading model...")
+                                // Load the model if it's not already loaded
+                                if whisperKit == nil && !modelIsReady && !isModelLoading {
+                                    loadWhisperKit()
+                                }
+                            }
+                            return
+                        } else {
+                            print("WhisperKitService: Saved model is invalid, will check standard location")
+                            // Clear invalid saved path
+                            UserDefaults.standard.removeObject(forKey: "whisperkit_model_path_\(modelName)")
+                        }
+                    } else {
+                        print("WhisperKitService: Saved model path doesn't exist, will check standard location")
+                        // Clear invalid saved path
+                        UserDefaults.standard.removeObject(forKey: "whisperkit_model_path_\(modelName)")
+                    }
+                }
+                
+                // Ensure the model storage directory exists
+                if !FileManager.default.fileExists(atPath: modelStorageURL.path) {
+                    try FileManager.default.createDirectory(at: modelStorageURL, withIntermediateDirectories: true)
+                    print("WhisperKitService: Created model storage directory")
+                    modelDownloadState = .idle
+                    return
+                }
+                
                 // 检查模型完整性
                 if await validateModelIntegrity(at: modelDirectoryURL) {
+                    print("WhisperKitService: Model found and validated")
                     downloadedModelSize = UserSettings.shared.whisperModelSize
                     modelDownloadState = .ready
                     
-                    // Load the model if it's not already loaded
-                    if whisperKit == nil && !modelIsReady && !isModelLoading {
-                        loadWhisperKit()
+                    // Save the valid model path
+                    UserDefaults.standard.set(modelDirectoryURL.path, forKey: "whisperkit_model_path_\(modelName)")
+                    
+                    // 自动预加载模型，如果用户选择了WhisperKit作为语音识别服务
+                    if UserSettings.shared.speechRecognitionServiceType == .whisperKit {
+                        print("WhisperKitService: WhisperKit is the selected service, preloading model...")
+                        // Load the model if it's not already loaded
+                        if whisperKit == nil && !modelIsReady && !isModelLoading {
+                            loadWhisperKit()
+                        }
                     }
                 } else {
-                    print("模型文件不完整或已损坏，需要重新下载")
+                    print("WhisperKitService: Model files incomplete or corrupted, need to download")
                     modelDownloadState = .idle
                 }
             } catch {
-                print("Error checking model status: \(error)")
+                print("WhisperKitService: Error checking model status: \(error)")
                 modelDownloadState = .idle
             }
         }
@@ -128,50 +183,73 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         
         // 检查目录是否存在
         guard fileManager.fileExists(atPath: modelDirectoryURL.path) else {
-            print("模型目录不存在")
+            print("WhisperKitService: Model directory does not exist")
             return false
         }
         
         do {
             // 获取目录内容
-            let contents = try fileManager.contentsOfDirectory(atPath: modelDirectoryURL.path)
+            let contents = try fileManager.contentsOfDirectory(at: modelDirectoryURL, includingPropertiesForKeys: nil)
+            
+            // Print detailed directory contents for debugging
+            print("WhisperKitService: Directory contents:")
+            for (index, item) in contents.enumerated() {
+                let attributes = try fileManager.attributesOfItem(atPath: item.path)
+                let fileSize = attributes[.size] as? UInt64 ?? 0
+                print("  \(index). \(item.lastPathComponent) - \(ByteCountFormatter.string(fromByteCount: Int64(fileSize), countStyle: .file))")
+            }
             
             // 检查是否有文件
             if contents.isEmpty {
-                print("模型目录为空")
+                print("WhisperKitService: Model directory is empty")
                 return false
             }
             
-            // 检查必要的模型文件是否存在
-            // 根据WhisperKit的模型结构，检查关键文件
-            let requiredFileExtensions = [".bin", ".json"]
-            var hasRequiredFiles = false
+            print("WhisperKitService: Found \(contents.count) files in model directory")
             
-            for fileExtension in requiredFileExtensions {
-                hasRequiredFiles = contents.contains { $0.hasSuffix(fileExtension) }
-                if !hasRequiredFiles {
-                    print("缺少必要的模型文件: *\(fileExtension)")
-                    break
+            // WhisperKit models use .mlmodelc and .mlpackage files rather than .bin
+            // Check for the expected files in downloaded WhisperKit models
+            let requiredFiles = ["config.json", ".mlmodelc", ".mlpackage"]
+            var missingFiles: [String] = []
+            
+            for filePattern in requiredFiles {
+                let hasFile = contents.contains { $0.path.contains(filePattern) }
+                if !hasFile {
+                    print("WhisperKitService: Missing required model file type: \(filePattern)")
+                    missingFiles.append(filePattern)
                 }
             }
             
-            if !hasRequiredFiles {
+            // Check for specific required components
+            let requiredComponents = ["AudioEncoder", "TextDecoder", "MelSpectrogram"]
+            var missingComponents: [String] = []
+            
+            for component in requiredComponents {
+                let hasComponent = contents.contains { $0.lastPathComponent.contains(component) }
+                if !hasComponent {
+                    print("WhisperKitService: Missing required model component: \(component)")
+                    missingComponents.append(component)
+                }
+            }
+            
+            if !missingFiles.isEmpty {
+                print("WhisperKitService: Missing required file types: \(missingFiles.joined(separator: ", "))")
                 return false
             }
             
-            // 尝试加载模型验证其可用性
-            if await testModelLoading(modelDirectoryURL: modelDirectoryURL) {
-                print("模型验证成功")
-                return true
-            } else {
-                print("模型验证失败，可能已损坏")
-                // 删除损坏的模型文件
-                try? await deleteModelFiles(at: modelDirectoryURL)
+            if !missingComponents.isEmpty {
+                print("WhisperKitService: Missing required components: \(missingComponents.joined(separator: ", "))")
                 return false
             }
             
+            // If the download reported success and we have all required components, trust that
+            // The official WhisperKit download is actually a combined .mlmodelc/.mlpackage format
+            // rather than the traditional .bin format for language models
+            
+            // Since we're using the official download method, we'll try loading the model directly
+            return await testModelLoading(modelDirectoryURL: modelDirectoryURL)
         } catch {
-            print("检查模型完整性时出错: \(error)")
+            print("WhisperKitService: Error checking model integrity: \(error)")
             return false
         }
     }
@@ -188,7 +266,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
             
             // 尝试初始化模型但不完全加载
             // 这里只是测试模型文件是否可以被正确读取
-            print("测试模型加载...")
+            print("WhisperKitService: Testing model loading...")
             
             // 设置超时
             let testTask = Task {
@@ -196,7 +274,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                     _ = try await WhisperKit(testConfig)
                     return true
                 } catch {
-                    print("测试模型加载失败: \(error)")
+                    print("WhisperKitService: Model loading test failed: \(error)")
                     return false
                 }
             }
@@ -220,7 +298,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
             return result
             
         } catch {
-            print("测试模型加载时出错: \(error)")
+            print("WhisperKitService: Error during model loading test: \(error)")
             return false
         }
     }
@@ -230,9 +308,9 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         let fileManager = FileManager.default
         
         if fileManager.fileExists(atPath: modelDirectoryURL.path) {
-            print("删除损坏的模型文件...")
+            print("WhisperKitService: Deleting corrupted model files...")
             try fileManager.removeItem(at: modelDirectoryURL)
-            print("已删除损坏的模型文件")
+            print("WhisperKitService: Corrupted model files deleted")
         }
     }
     
@@ -259,6 +337,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 
                 print("WhisperKit config: WhisperKit.WhisperKitConfig")
                 print("WhisperKit model: \(modelName)")
+                print("WhisperKit model directory: \(modelDirectoryURL.path)")
 
                 // WhisperKit progress updates
                 modelLoadingProgress = 0.3
@@ -271,30 +350,16 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 let modelValid = await validateModelIntegrity(at: modelDirectoryURL)
                 
                 if !modelValid {
-                    // 模型不存在或已损坏，需要下载
-                    isModelDownloading = true
-                    modelDownloadState = .downloading(progress: 0.0)
-                    
-                    // 删除可能存在的损坏文件
-                    if fileManager.fileExists(atPath: modelDirectoryURL.path) {
-                        try fileManager.removeItem(at: modelDirectoryURL)
-                    }
-                    
-                    // 下载模型
-                    try await downloadModel(modelName: modelName) { progress in
-                        self.downloadProgress = progress
-                        self.modelDownloadState = .downloading(progress: progress)
-                    }
-                    
-                    isModelDownloading = false
-                    downloadProgress = 1.0
-                    downloadedModelSize = UserSettings.shared.whisperModelSize
-                    modelDownloadState = .downloadComplete
+                    // 模型不存在或已损坏，需要手动下载，设置状态为待下载
+                    modelDownloadState = .idle
+                    modelError = "Model not found or invalid. Please download it first."
+                    isModelLoading = false
+                    return
                 }
                 
                 // Now that we have the model, initialize WhisperKit
                 modelDownloadState = .loading(progress: 0.5)
-                print("开始初始化WhisperKit...")
+                print("WhisperKitService: Initializing WhisperKit...")
                 
                 // 配置WhisperKit
                 let config = WhisperKitConfig(
@@ -313,18 +378,94 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                     modelDownloadState = .ready
                     downloadedModelSize = UserSettings.shared.whisperModelSize
                     
-                    print("WhisperKit initialized successfully with model: \(modelName)")
+                    print("WhisperKitService: WhisperKit initialized successfully with model: \(modelName)")
+                    
+                    // Save model path to UserDefaults for persistence verification
+                    UserDefaults.standard.set(modelDirectoryURL.path, forKey: "whisperkit_model_path_\(modelName)")
                 } else {
                     throw NSError(domain: "WhisperKitService", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to initialize WhisperKit model"])
                 }
             } catch {
                 modelError = "Failed to load WhisperKit model: \(error.localizedDescription)"
                 modelDownloadState = .failed(error: error.localizedDescription)
-                print("WhisperKit initialization error: \(error)")
+                print("WhisperKitService: Initialization error: \(error)")
             }
             
             isModelLoading = false
             isModelDownloading = false
+        }
+    }
+    
+    // Add a new public method for manual download
+    func downloadModelManually() {
+        Task {
+            do {
+                guard !isModelLoading && !isModelDownloading else {
+                    print("WhisperKitService: Model operation already in progress")
+                    return
+                }
+                
+                isModelDownloading = true
+                modelDownloadState = .downloading(progress: 0.0)
+                
+                // 获取模型名称
+                let modelName = UserSettings.shared.whisperModelSize.rawValue
+                
+                // 获取文档目录URL
+                guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                    throw NSError(domain: "WhisperKitService", code: 1001, userInfo: [NSLocalizedDescriptionKey: "无法获取文档目录"])
+                }
+                
+                // 构建模型目录路径
+                let modelStorageDir = "huggingface/models/argmaxinc/whisperkit-coreml"
+                let modelStorageURL = documentsURL.appendingPathComponent(modelStorageDir)
+                let modelDirectoryName = modelName
+                let modelDirectoryURL = modelStorageURL.appendingPathComponent(modelDirectoryName)
+                
+                // Check if model needs downloading by checking if model files exist locally
+                let fileManager = FileManager.default
+                
+                // 删除可能存在的损坏文件
+                if fileManager.fileExists(atPath: modelDirectoryURL.path) {
+                    try fileManager.removeItem(at: modelDirectoryURL)
+                    print("WhisperKitService: Removed existing invalid model directory")
+                }
+                
+                // 确保模型目录存在
+                if !fileManager.fileExists(atPath: modelStorageURL.path) {
+                    try fileManager.createDirectory(at: modelStorageURL, withIntermediateDirectories: true)
+                    print("WhisperKitService: Created model storage directory")
+                }
+                
+                // 下载模型
+                try await downloadModel(modelName: modelName) { progress in
+                    self.downloadProgress = progress
+                    self.modelDownloadState = .downloading(progress: progress)
+                }
+                
+                isModelDownloading = false
+                downloadProgress = 1.0
+                downloadedModelSize = UserSettings.shared.whisperModelSize
+                modelDownloadState = .downloadComplete
+                
+                // Verify the download was successful
+                let modelIsValid = await validateModelIntegrity(at: modelDirectoryURL)
+                if !modelIsValid {
+                    throw NSError(domain: "WhisperKitService", code: 1003, userInfo: [NSLocalizedDescriptionKey: "Model download failed - files are missing or corrupted"])
+                }
+                
+                // Save model path to UserDefaults for persistence verification
+                UserDefaults.standard.set(modelDirectoryURL.path, forKey: "whisperkit_model_path_\(modelName)")
+                
+                // After successful download, load the model
+                loadWhisperKit()
+                
+            } catch {
+                modelError = "Failed to download WhisperKit model: \(error.localizedDescription)"
+                modelDownloadState = .failed(error: error.localizedDescription)
+                print("WhisperKitService: Download error: \(error)")
+                isModelDownloading = false
+            }
         }
     }
     
@@ -372,21 +513,62 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         } catch {
             print("官方下载方法失败: \(error.localizedDescription)")
         }
-        
-         
     }
-    
     
     // Reload model when user changes model size
     func reloadModel() {
         guard !isModelLoading && !isModelDownloading else {
-            print("Cannot reload model while another operation is in progress")
+            print("WhisperKitService: Cannot reload model while another operation is in progress")
             return
         }
         
-        modelIsReady = false
-        whisperKit = nil
-        loadWhisperKit()
+        // First check if we need to download or if the model is already available
+        Task {
+            do {
+                print("WhisperKitService: Reloading model...")
+                // Initialize config to check
+                let modelName = UserSettings.shared.whisperModelSize.rawValue
+                
+                // 获取文档目录URL
+                guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                    throw NSError(domain: "WhisperKitService", code: 1001, userInfo: [NSLocalizedDescriptionKey: "无法获取文档目录"])
+                }
+                
+                // 构建模型目录路径 - 使用应用程序支持目录而不是文档目录，以确保持久性
+                let modelStorageDir = "huggingface/models/argmaxinc/whisperkit-coreml"
+                let modelStorageURL = documentsURL.appendingPathComponent(modelStorageDir)
+                let modelDirectoryName = modelName
+                let modelDirectoryURL = modelStorageURL.appendingPathComponent(modelDirectoryName)
+                
+                // 确保模型存储目录存在
+                if !FileManager.default.fileExists(atPath: modelStorageURL.path) {
+                    try FileManager.default.createDirectory(at: modelStorageURL, withIntermediateDirectories: true)
+                    print("WhisperKitService: Created model storage directory at \(modelStorageURL.path)")
+                }
+                
+                // Check if the model already exists and is valid
+                if await validateModelIntegrity(at: modelDirectoryURL) {
+                    print("WhisperKitService: Model exists and is valid, loading directly")
+                    downloadedModelSize = UserSettings.shared.whisperModelSize
+                    
+                    // Reset and load the model
+                    modelIsReady = false
+                    whisperKit = nil
+                    loadWhisperKit()
+                } else {
+                    print("WhisperKitService: Model needs to be downloaded manually")
+                    // Set state to idle so user knows they need to download
+                    modelIsReady = false
+                    whisperKit = nil
+                    modelDownloadState = .idle
+                    modelError = "Model not found or invalid. Please download it first."
+                }
+            } catch {
+                print("WhisperKitService: Error checking model before reload: \(error)")
+                modelDownloadState = .idle
+                modelError = "Error checking model status: \(error.localizedDescription)"
+            }
+        }
     }
     
     // Start recording
@@ -395,19 +577,47 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         if whisperKit == nil || !modelIsReady {
             // Only load if not already loading
             if !isModelLoading {
-                print("WhisperKit not ready, loading model first...")
-                loadWhisperKit()
+                print("WhisperKit not ready, checking if model exists...")
                 
-                // Wait for model to load with timeout
-                for _ in 0..<50 { // 5 seconds timeout (100ms * 50)
-                    if modelIsReady {
-                        break
-                    }
-                    try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+                // First check if the model exists
+                let modelName = UserSettings.shared.whisperModelSize.rawValue
+                
+                // 获取文档目录URL
+                guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                    print("WhisperKitService: Failed to get documents directory")
+                    return
                 }
                 
-                if !modelIsReady {
-                    print("Failed to load WhisperKit model in time")
+                // 构建模型目录路径
+                let modelStorageDir = "huggingface/models/argmaxinc/whisperkit-coreml"
+                let modelStorageURL = documentsURL.appendingPathComponent(modelStorageDir)
+                let modelDirectoryURL = modelStorageURL.appendingPathComponent(modelName)
+                
+                // Check model integrity
+                let modelExists = await validateModelIntegrity(at: modelDirectoryURL)
+                
+                if modelExists {
+                    // If model exists, load it
+                    print("WhisperKit: Model exists, loading it...")
+                    loadWhisperKit()
+                    
+                    // Wait for model to load with timeout
+                    for _ in 0..<50 { // 5 seconds timeout (100ms * 50)
+                        if modelIsReady {
+                            break
+                        }
+                        try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+                    }
+                    
+                    if !modelIsReady {
+                        print("Failed to load WhisperKit model in time")
+                        return
+                    }
+                } else {
+                    // If model doesn't exist, notify that download is needed
+                    print("WhisperKit: Model doesn't exist, download required")
+                    modelDownloadState = .idle
+                    modelError = "Model not found. Please download it first."
                     return
                 }
             } else {
