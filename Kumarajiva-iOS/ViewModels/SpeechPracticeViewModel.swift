@@ -222,6 +222,38 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
         }
     }
     
+    // Delete all recordings for a specific word
+    func deleteAllRecordsForWord(_ word: String) {
+        // Get all records for this word
+        let recordsToDelete = records.filter { $0.word == word }
+        
+        // Stop any playback
+        if audioPlayer != nil {
+            audioPlayer?.stop()
+            audioPlayer = nil
+            playbackCompletionHandler = nil
+        }
+        
+        // Delete each record
+        for record in recordsToDelete {
+            // Delete file from disk
+            do {
+                try FileManager.default.removeItem(at: record.audioURL)
+            } catch {
+                print("Failed to delete recording file: \(error)")
+            }
+            
+            // Remove from records array
+            if let index = records.firstIndex(where: { $0.id == record.id }) {
+                records.remove(at: index)
+            }
+        }
+        
+        // Save changes
+        saveRecordsToDisk()
+        print("已删除 \(recordsToDelete.count) 条关于 '\(word)' 的练习记录")
+    }
+    
     // Load records from disk
     private func loadRecordsFromDisk() {
         let userDefaults = UserDefaults.standard

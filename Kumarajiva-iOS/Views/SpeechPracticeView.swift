@@ -100,6 +100,7 @@ struct TabButton: View {
 struct RecordsTabView: View {
     @ObservedObject var viewModel: SpeechPracticeViewModel
     @State private var playingRecordID: UUID? = nil
+    @State private var showingDeleteConfirmation = false
     let history: History
     
     // 过滤当前单词的练习记录
@@ -120,37 +121,62 @@ struct RecordsTabView: View {
                 }
                 .frame(maxHeight: .infinity)
             } else {
-                List {
-                    ForEach(filteredRecords) { record in
-                        RecordItemView(
-                            record: record,
-                            isPlaying: playingRecordID == record.id,
-                            onPlay: {
-                                if playingRecordID == record.id {
-                                    playingRecordID = nil
-                                    viewModel.stopPlayback()
-                                } else {
-                                    playingRecordID = record.id
-                                    viewModel.playRecording(at: record.audioURL) {
-                                        // Callback when playback finishes
+                VStack(spacing: 0) {
+                    // 清空按钮
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            showingDeleteConfirmation = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 14))
+                                Text("清空记录")
+                                    .font(.system(size: 14))
+                            }
+                            .foregroundColor(.red)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(16)
+                        }
+                        .padding(.trailing, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
+                    }
+                    
+                    List {
+                        ForEach(filteredRecords) { record in
+                            RecordItemView(
+                                record: record,
+                                isPlaying: playingRecordID == record.id,
+                                onPlay: {
+                                    if playingRecordID == record.id {
                                         playingRecordID = nil
+                                        viewModel.stopPlayback()
+                                    } else {
+                                        playingRecordID = record.id
+                                        viewModel.playRecording(at: record.audioURL) {
+                                            // Callback when playback finishes
+                                            playingRecordID = nil
+                                        }
                                     }
                                 }
-                            }
-                        )
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                viewModel.deleteRecord(id: record.id)
-                                if playingRecordID == record.id {
-                                    playingRecordID = nil
+                            )
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    viewModel.deleteRecord(id: record.id)
+                                    if playingRecordID == record.id {
+                                        playingRecordID = nil
+                                    }
+                                } label: {
+                                    Label("删除", systemImage: "trash")
                                 }
-                            } label: {
-                                Label("删除", systemImage: "trash")
                             }
                         }
                     }
+                    .listStyle(InsetGroupedListStyle())
                 }
-                .listStyle(InsetGroupedListStyle())
             }
         }
         .onDisappear {
@@ -159,6 +185,20 @@ struct RecordsTabView: View {
                 viewModel.stopPlayback()
                 playingRecordID = nil
             }
+        }
+        .alert("确认删除", isPresented: $showingDeleteConfirmation) {
+            Button("取消", role: .cancel) { }
+            Button("删除", role: .destructive) {
+                // 停止任何正在播放的录音
+                if playingRecordID != nil {
+                    viewModel.stopPlayback()
+                    playingRecordID = nil
+                }
+                // 执行删除操作
+                viewModel.deleteAllRecordsForWord(history.word)
+            }
+        } message: {
+            Text("确定要删除所有关于 '\(history.word)' 的练习记录吗？此操作无法撤销。")
         }
     }
 }
@@ -488,4 +528,4 @@ struct WordWrappedExampleText: View {
             result.word.lowercased().trimmingCharacters(in: .punctuationCharacters) == normalizedWord
         }
     }
-} 
+}
