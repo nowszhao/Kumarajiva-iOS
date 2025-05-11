@@ -119,19 +119,34 @@ struct PracticeTabView: View {
                         let buttonAction = {
                             isExamplePlaying.toggle()
                             if isExamplePlaying {
-                                // Setup audio session properly before playing
-                                let dispatchTime = DispatchTime.now() + 0.1
-                                DispatchQueue.main.asyncAfter(deadline: dispatchTime) {
+                                // 创建一个循环播放函数
+                                func playExampleInLoop() {
+                                    // 如果不再处于播放状态，则停止循环
+                                    if !isExamplePlaying {
+                                        return
+                                    }
+                                    
+                                    // 播放例句
                                     AudioService.shared.playPronunciation(
                                         word: exampleToShow,
                                         le: "en",
                                         rate: playbackRate,
                                         onCompletion: {
-                                            DispatchQueue.main.async {
-                                                self.isExamplePlaying = false
+                                            // 播放完成后，等待200ms再次播放
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                                // 再次检查是否仍处于播放状态
+                                                if self.isExamplePlaying {
+                                                    playExampleInLoop()
+                                                }
                                             }
                                         }
                                     )
+                                }
+                                
+                                // 开始循环播放
+                                let dispatchTime = DispatchTime.now() + 0.1
+                                DispatchQueue.main.asyncAfter(deadline: dispatchTime) {
+                                    playExampleInLoop()
                                 }
                             } else {
                                 AudioService.shared.stopPlayback()
@@ -405,6 +420,11 @@ struct PracticeTabView: View {
                 AudioService.shared.stopPlayback()
                 isExamplePlaying = false
             }
+        }
+        .onAppear {
+            // 确保在视图出现时重置播放状态
+            isExamplePlaying = false
+            AudioService.shared.stopPlayback()
         }
     }
     
