@@ -22,7 +22,7 @@ enum SpeechRecognitionServiceType: Int, CaseIterable {
 enum WhisperModelSize: String, CaseIterable {
     case tiny = "openai_whisper-tiny.en"
     case base = "openai_whisper-base.en"
-    case small = "openai_whisper-small.en"
+    case small = "openai_whisper-small.en_217MB"
     case large = "openai_whisper-large-v3-v20240930_turbo_632MB"
     
     var title: String {
