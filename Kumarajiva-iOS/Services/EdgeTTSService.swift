@@ -42,8 +42,12 @@ class EdgeTTSService {
             
             for fileURL in fileURLs {
                 if fileURL.pathExtension == "mp3" {
-                    let cacheKey = fileURL.deletingPathExtension().lastPathComponent
-                    audioCache[cacheKey] = fileURL
+                    // 提取文件名中的哈希部分（最后8个字符）作为缓存键
+                    let fileName = fileURL.deletingPathExtension().lastPathComponent
+                    if let lastUnderscoreIndex = fileName.lastIndex(of: "_") {
+                        let hashPart = fileName.suffix(from: lastUnderscoreIndex).dropFirst()
+                        audioCache[String(hashPart)] = fileURL
+                    }
                 }
             }
             
@@ -115,17 +119,16 @@ class EdgeTTSService {
                 return
             }
             
-            // Create a more readable filename with timestamp
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
-            let timestamp = dateFormatter.string(from: Date())
+            // Create a more readable filename without timestamp to ensure cache consistency
             let displayableText = String(limitedText.prefix(20))
                 .replacingOccurrences(of: " ", with: "_")
                 .replacingOccurrences(of: "/", with: "_")
                 .replacingOccurrences(of: ":", with: "_")
             
-            // Save to cache with a more user-friendly name (but still use hash as part of filename for uniqueness)
-            let fileURL = self.cacheDirectory.appendingPathComponent("\(displayableText)_\(timestamp)_\(cacheKey.prefix(8)).mp3")
+            // Save to cache with a more user-friendly name (use hash as part of filename for uniqueness)
+            // 使用cacheKey的前8个字符作为文件名的一部分，确保缓存查找时能够匹配
+            let hashPart = cacheKey.prefix(8)
+            let fileURL = self.cacheDirectory.appendingPathComponent("\(displayableText)_\(hashPart).mp3")
             
             do {
                 try data.write(to: fileURL)
@@ -155,4 +158,4 @@ class EdgeTTSService {
             print("Failed to clear cache: \(error)")
         }
     }
-} 
+}
