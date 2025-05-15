@@ -113,6 +113,7 @@ struct SettingsView: View {
     @State private var whisperModelSize: WhisperModelSize = UserSettings.shared.whisperModelSize
     @State private var isModelInfoShowing = false
     @State private var isModelLoading = false
+    @State private var playbackSpeed: Float = UserSettings.shared.playbackSpeed
     
     var body: some View {
         NavigationView {
@@ -133,6 +134,21 @@ struct SettingsView: View {
                         .pickerStyle(.menu)
                         .onChange(of: playbackMode) { newValue in
                             UserSettings.shared.playbackMode = newValue
+                        }
+                        
+                        Picker("播放速度", selection: $playbackSpeed) {
+                            Text("0.5x").tag(Float(0.5))
+                            Text("0.6x").tag(Float(0.6))
+                            Text("0.75x").tag(Float(0.75))
+                            Text("1.0x").tag(Float(1.0))
+                            Text("1.5x").tag(Float(1.5))
+                            Text("1.7x").tag(Float(1.7))
+                            Text("2.0x").tag(Float(2.0))
+                        }
+                        .pickerStyle(.menu)
+                        .onChange(of: playbackSpeed) { newValue in
+                            UserSettings.shared.playbackSpeed = newValue
+                            AudioService.shared.setPlaybackRate(newValue)
                         }
                         
                         Picker("语音服务", selection: $ttsServiceType) {

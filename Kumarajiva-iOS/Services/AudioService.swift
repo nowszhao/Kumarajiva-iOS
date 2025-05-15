@@ -13,6 +13,27 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     private var completionHandler: (() -> Void)?
     private var currentPlaybackRate: Float = 1.0
     
+    // 提取英文句子的方法
+    private func extractEnglishSentence(from input: String) -> String? {
+        // 定义兼容中英文括号的正则表达式模式
+        let pattern = #"[(（]([A-Za-z ,.'-]+.*?)[)）]"#
+        
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+        
+        // 在输入字符串中查找所有匹配项
+        let matches = regex.matches(in: input, range: NSRange(input.startIndex..., in: input))
+        
+        // 取最后一个匹配项（通常英文句子在末尾括号）
+        guard let lastMatch = matches.last else { return nil }
+        
+        // 提取捕获组内容并去除前后空格
+        let range = lastMatch.range(at: 1)
+        guard let swiftRange = Range(range, in: input) else { return nil }
+        return String(input[swiftRange]).trimmingCharacters(in: .whitespaces)
+    }
+    
     private override init() {
         super.init()
         setupAudioSession()
@@ -27,9 +48,11 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         }
     }
     
-    func playPronunciation(word: String, le: String = "zh", rate: Float = 1.0, onCompletion: (() -> Void)? = nil) {
+    func playPronunciation(word: String, le: String = "zh", rate: Float? = nil, onCompletion: (() -> Void)? = nil) {
+        // 使用传入的速率或默认使用用户设置的速率
+        let actualRate = rate ?? UserSettings.shared.playbackSpeed
         // Save the current playback rate
-        currentPlaybackRate = rate
+        currentPlaybackRate = actualRate
         
         // Determine which TTS service to use
         let ttsService = UserSettings.shared.ttsServiceType
@@ -37,10 +60,10 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         
         // If playback mode is highestScoreSpeech, always use Youdao TTS
         if playbackMode == .highestScoreSpeech || ttsService == .youdaoTTS {
-            playYoudaoPronunciation(word: word, le: le, rate: rate, onCompletion: onCompletion)
+            playYoudaoPronunciation(word: word, le: le, rate: actualRate, onCompletion: onCompletion)
         } else {
             // Use Edge TTS for other modes if selected
-            playEdgePronunciation(word: word, rate: rate, onCompletion: onCompletion)
+            playEdgePronunciation(word: word, rate: actualRate, onCompletion: onCompletion)
         }
     }
     
@@ -111,7 +134,9 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     }
     
     // 播放本地音频文件
-    func playLocalAudio(url: URL, rate: Float = 1.0, onCompletion: (() -> Void)? = nil) {
+    func playLocalAudio(url: URL, rate: Float? = nil, onCompletion: (() -> Void)? = nil) {
+        // 使用传入的速率或默认使用用户设置的速率
+        let actualRate = rate ?? UserSettings.shared.playbackSpeed
         do {
             // 停止当前播放
             player?.pause()
@@ -130,7 +155,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             
             // Apply playback rate
             audioPlayer?.enableRate = true
-            audioPlayer?.rate = rate
+            audioPlayer?.rate = actualRate
             
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
@@ -199,6 +224,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         
         let history = words[currentIndex]
         let playbackMode = UserSettings.shared.playbackMode
+        let playbackSpeed = UserSettings.shared.playbackSpeed
         
         // 通知当前播放的单词和索引变化
         DispatchQueue.main.async { [weak self] in
@@ -211,7 +237,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         
         switch playbackMode {
         case .wordOnly:
-            playPronunciation(word: history.word, le: "en") { [weak self] in
+            playPronunciation(word: history.word, le: "en", rate: playbackSpeed) { [weak self] in
                 DispatchQueue.main.async {
                     guard let self = self else { return }
                     self.currentIndex += 1
@@ -221,7 +247,21 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             
         case .memoryOnly:
             if let method = history.memoryMethod {
-                playPronunciation(word: method) { [weak self] in
+                playPronunciation(word: method, rate: playbackSpeed) { [weak self] in
+                    DispatchQueue.main.async {
+                        guard let self = self else { return }
+                        self.currentIndex += 1
+                        self.playNextContent()
+                    }
+                }
+            } else {
+                currentIndex += 1
+                playNextContent()
+            }
+            
+        case .englishMemoryOnly:
+            if let method = history.memoryMethod, let englishSentence = extractEnglishSentence(from: method) {
+                playPronunciation(word: englishSentence, le: "en", rate: playbackSpeed) { [weak self] in
                     DispatchQueue.main.async {
                         guard let self = self else { return }
                         self.currentIndex += 1
@@ -235,7 +275,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             
         case .wordAndMemory:
             if !shouldPlayMemory {
-                playPronunciation(word: history.word) { [weak self] in
+                playPronunciation(word: history.word, rate: playbackSpeed) { [weak self] in
                     DispatchQueue.main.async {
                         guard let self = self else { return }
                         self.shouldPlayMemory = true
@@ -244,7 +284,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
                 }
             } else {
                 if let method = history.memoryMethod {
-                    playPronunciation(word: method) { [weak self] in
+                    playPronunciation(word: method, rate: playbackSpeed) { [weak self] in
                         DispatchQueue.main.async {
                             guard let self = self else { return }
                             self.currentIndex += 1
@@ -263,7 +303,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             // 查找该单词的最高分录音
             if let highestScoreRecording = SpeechRecordService.shared.findHighestScoreRecording(for: history.word) {
                 // 如果找到最高分录音，播放录音
-                playLocalAudio(url: highestScoreRecording.audioURL) {
+                playLocalAudio(url: highestScoreRecording.audioURL, rate: playbackSpeed) {
                     DispatchQueue.main.async {
                         self.currentIndex += 1
                         self.playNextContent()
@@ -271,7 +311,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
                 }
             } else {
                 // 如果没有录音，播放单词发音
-                playPronunciation(word: history.word, le: "en") {
+                playPronunciation(word: history.word, le: "en", rate: playbackSpeed) {
                     DispatchQueue.main.async {
                         self.currentIndex += 1
                         self.playNextContent()
@@ -371,4 +411,4 @@ extension AudioService: AVAudioPlayerDelegate {
             self.audioPlayer = nil
         }
     }
-} 
+}

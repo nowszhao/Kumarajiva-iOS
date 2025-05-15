@@ -8,6 +8,7 @@ class UserSettings {
     private let ttsServiceTypeKey = "tts_service_type"
     private let speechRecognitionServiceTypeKey = "speech_recognition_service_type"
     private let whisperModelSizeKey = "whisper_model_size"
+    private let playbackSpeedKey = "playback_speed"
     
     private init() {}
     
@@ -50,4 +51,14 @@ class UserSettings {
             defaults.set(newValue.rawValue, forKey: whisperModelSizeKey)
         }
     }
-} 
+    
+    var playbackSpeed: Float {
+        get {
+            let speed = defaults.float(forKey: playbackSpeedKey)
+            return speed > 0 ? speed : 1.0
+        }
+        set {
+            defaults.set(newValue, forKey: playbackSpeedKey)
+        }
+    }
+}
