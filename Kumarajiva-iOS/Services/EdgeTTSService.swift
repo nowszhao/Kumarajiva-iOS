@@ -72,7 +72,7 @@ class EdgeTTSService {
         return "fallback_\(Date().timeIntervalSince1970)"
     }
     
-    func synthesize(text: String, voice: String = "en-US-AndrewMultilingualNeural", rate: String = "-15%", completion: @escaping (URL?) -> Void) {
+    func synthesize(text: String, voice: String = "en-US-AndrewMultilingualNeural", rate: String = "1", completion: @escaping (URL?) -> Void) {
         // Limit text length to 500 characters to prevent issues with very long texts
         let limitedText = text.count > 500 ? String(text.prefix(500)) + "..." : text
         let cacheKey = cacheKeyForText(limitedText, voice: voice, rate: rate)
