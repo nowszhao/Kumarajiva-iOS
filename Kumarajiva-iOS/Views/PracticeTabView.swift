@@ -271,10 +271,10 @@ struct PracticeTabView: View {
                                 // Show example sentence with matched words highlighted
                                 ExampleSentenceView(example: exampleToShow, recognizedResults: viewModel.wordResults)
                                 
-                                Divider()
+//                                Divider()
                                 
                                 // Show recognized text with highlighting
-                                HighlightedTextView(results: viewModel.formattedRecognizedText(), viewModel: viewModel)
+//                                HighlightedTextView(results: viewModel.formattedRecognizedText(), viewModel: viewModel)
                             }
                             .padding()
                             .frame(maxWidth: .infinity, minHeight: 70, alignment: .leading)
