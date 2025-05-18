@@ -248,35 +248,12 @@ struct HistoryItemView: View {
     
     // 获取该单词的口语练习记录数量
     private var speechPracticeCount: Int {
-        let allRecords = UserDefaults.standard.data(forKey: "speechPracticeRecords")
-        if let data = allRecords {
-            do {
-                let decoder = JSONDecoder()
-                let records = try decoder.decode([SpeechPracticeRecord].self, from: data)
-                return records.filter { $0.word == history.word }.count
-            } catch {
-                print("Failed to load speech practice records: \(error)")
-            }
-        }
-        return 0
+        return SpeechPracticeRecordService.shared.getRecordCount(forWord: history.word)
     }
     
     // 获取该单词的口语练习最高分
     private var highestScore: Int {
-        let allRecords = UserDefaults.standard.data(forKey: "speechPracticeRecords")
-        if let data = allRecords {
-            do {
-                let decoder = JSONDecoder()
-                let records = try decoder.decode([SpeechPracticeRecord].self, from: data)
-                let wordRecords = records.filter { $0.word == history.word }
-                if !wordRecords.isEmpty {
-                    return wordRecords.map { $0.score }.max() ?? 0
-                }
-            } catch {
-                print("Failed to load speech practice records: \(error)")
-            }
-        }
-        return 0
+        return SpeechPracticeRecordService.shared.getHighestScore(forWord: history.word)
     }
     
     // 根据分数返回颜色

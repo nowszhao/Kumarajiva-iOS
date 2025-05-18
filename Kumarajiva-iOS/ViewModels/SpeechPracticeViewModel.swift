@@ -22,7 +22,8 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
     
     override init() {
         super.init()
-        loadRecordsFromDisk()
+        // 从服务获取记录
+        records = SpeechPracticeRecordService.shared.records
         
         // Bind to speech service properties
         speechService.$isRecording.assign(to: &$isRecording)
@@ -141,8 +142,10 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
                     score: score
                 )
                 
-                self.records.insert(record, at: 0)
-                self.saveRecordsToDisk()
+                // 使用服务添加记录
+                SpeechPracticeRecordService.shared.addRecord(record)
+                // 更新本地记录数组
+                self.records = SpeechPracticeRecordService.shared.records
                 print("SpeechPracticeViewModel: 录音记录已保存")
             }
         }
@@ -199,34 +202,21 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
     
     // Delete a recording
     func deleteRecord(id: UUID) {
-        if let index = records.firstIndex(where: { $0.id == id }) {
-            let record = records[index]
-            
-            // Stop if currently playing this recording
-            if audioPlayer != nil {
-                audioPlayer?.stop()
-                audioPlayer = nil
-                playbackCompletionHandler = nil
-            }
-            
-            // Delete file from disk
-            do {
-                try FileManager.default.removeItem(at: record.audioURL)
-            } catch {
-                print("Failed to delete recording file: \(error)")
-            }
-            
-            // Remove from records array
-            records.remove(at: index)
-            saveRecordsToDisk()
+        // Stop if currently playing this recording
+        if audioPlayer != nil {
+            audioPlayer?.stop()
+            audioPlayer = nil
+            playbackCompletionHandler = nil
         }
+        
+        // 使用服务删除记录
+        SpeechPracticeRecordService.shared.deleteRecord(id: id)
+        // 更新本地记录数组
+        records = SpeechPracticeRecordService.shared.records
     }
     
     // Delete all recordings for a specific word
     func deleteAllRecordsForWord(_ word: String) {
-        // Get all records for this word
-        let recordsToDelete = records.filter { $0.word == word }
-        
         // Stop any playback
         if audioPlayer != nil {
             audioPlayer?.stop()
@@ -234,104 +224,15 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
             playbackCompletionHandler = nil
         }
         
-        // Delete each record
-        for record in recordsToDelete {
-            // Delete file from disk
-            do {
-                try FileManager.default.removeItem(at: record.audioURL)
-            } catch {
-                print("Failed to delete recording file: \(error)")
-            }
-            
-            // Remove from records array
-            if let index = records.firstIndex(where: { $0.id == record.id }) {
-                records.remove(at: index)
-            }
-        }
-        
-        // Save changes
-        saveRecordsToDisk()
-        print("已删除 \(recordsToDelete.count) 条关于 '\(word)' 的练习记录")
+        // 使用服务删除记录
+        SpeechPracticeRecordService.shared.deleteAllRecordsForWord(word)
+        // 更新本地记录数组
+        records = SpeechPracticeRecordService.shared.records
+        print("已删除关于 '\(word)' 的练习记录")
     }
     
-    // Load records from disk
-    private func loadRecordsFromDisk() {
-        let userDefaults = UserDefaults.standard
-        if let data = userDefaults.data(forKey: "speechPracticeRecords") {
-            do {
-                let decoder = JSONDecoder()
-                let savedRecords = try decoder.decode([SpeechPracticeRecord].self, from: data)
-                
-                print("加载了 \(savedRecords.count) 条语音练习记录")
-                
-                // 创建一个数组来存储被过滤掉的记录的详细信息
-                var missingFiles: [(UUID, String, String)] = []
-                
-                // Filter out records with invalid URLs
-                records = savedRecords.filter { record in
-                    // Verify if the file exists
-                    let fileExists = FileManager.default.fileExists(atPath: record.audioURL.path)
-                    
-                    // 如果文件不存在，记录详细信息
-                    if !fileExists {
-                        missingFiles.append((record.id, record.word, record.audioURL.path))
-                    }
-                    
-                    return fileExists
-                }
-                
-                // If we filtered some records, update the saved records and log details
-                if records.count != savedRecords.count {
-                    print("警告: 移除了 \(savedRecords.count - records.count) 条缺失音频文件的记录")
-                    
-                    // 打印详细的缺失文件信息
-                    for (id, word, path) in missingFiles {
-                        print("缺失的音频文件: ID=\(id), 单词=\(word), 路径=\(path)")
-                    }
-                    
-                    // 检查KumarajivaWhisperRecordings目录是否存在
-                    let containerURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                    let recordingsDirectory = containerURL.appendingPathComponent("KumarajivaWhisperRecordings", isDirectory: true)
-                    
-                    if FileManager.default.fileExists(atPath: recordingsDirectory.path) {
-                        print("KumarajivaWhisperRecordings目录存在")
-                        
-                        // 尝试列出目录中的文件
-                        do {
-                            let files = try FileManager.default.contentsOfDirectory(at: recordingsDirectory, includingPropertiesForKeys: nil)
-                            print("目录中有 \(files.count) 个文件")
-                            
-                            // 如果有文件但记录丢失，可能是路径问题
-                            if !files.isEmpty && !missingFiles.isEmpty {
-                                print("检测到可能的路径问题: 目录中有文件但记录引用的文件不存在")
-                            }
-                        } catch {
-                            print("无法读取录音目录内容: \(error)")
-                        }
-                    } else {
-                        print("警告: KumarajivaWhisperRecordings目录不存在")
-                    }
-                    
-                    saveRecordsToDisk()
-                }
-            } catch {
-                print("加载语音练习记录失败: \(error)")
-            }
-        } else {
-            print("未找到保存的语音练习记录数据")
-        }
-    }
-    
-    // Save records to disk
-    private func saveRecordsToDisk() {
-        do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(records)
-            UserDefaults.standard.set(data, forKey: "speechPracticeRecords")
-        } catch {
-            print("Failed to save speech practice records: \(error)")
-        }
-    }
+    // 这些方法已由 SpeechPracticeRecordService 处理
+    // 保留此注释以表明这些功能已移至服务中
     
     // Format recording time as MM:SS
     func formatRecordingTime(_ time: TimeInterval) -> String {
