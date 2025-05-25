@@ -9,6 +9,7 @@ class ReviewViewModel: ObservableObject {
     @Published var error: String?
     
     private var currentWordIndex = 0
+    private let authService = AuthService.shared
     
     func loadTodayWords() async {
         isLoading = true
@@ -34,7 +35,7 @@ class ReviewViewModel: ObservableObject {
                 currentQuiz = nil
             }
         } catch {
-            self.error = error.localizedDescription
+            handleError(error)
         }
         isLoading = false
     }
@@ -72,7 +73,7 @@ class ReviewViewModel: ObservableObject {
                 currentQuiz = nil
             }
         } catch {
-            self.error = error.localizedDescription
+            handleError(error)
         }
     }
     
@@ -88,8 +89,18 @@ class ReviewViewModel: ObservableObject {
                 try await loadQuiz(for: firstWord.word)
             }
         } catch {
-            self.error = error.localizedDescription
+            handleError(error)
         }
         isLoading = false
+    }
+    
+    private func handleError(_ error: Error) {
+        if let apiError = error as? APIError, case .unauthorized = apiError {
+            // 认证失败，自动登出
+            authService.logout()
+            self.error = "登录已过期，请重新登录"
+        } else {
+            self.error = error.localizedDescription
+        }
     }
 } 

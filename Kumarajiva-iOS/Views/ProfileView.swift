@@ -2,15 +2,20 @@ import SwiftUI
 
 struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
+    @StateObject private var authService = AuthService.shared
     @State private var playbackMode: PlaybackMode = UserSettings.shared.playbackMode
     @State private var ttsServiceType: TTSServiceType = UserSettings.shared.ttsServiceType
     @State private var speechRecognitionServiceType: SpeechRecognitionServiceType = UserSettings.shared.speechRecognitionServiceType
     @State private var whisperModelSize: WhisperModelSize = UserSettings.shared.whisperModelSize
+    @State private var showingLogoutAlert = false
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
+                    // 用户信息卡片
+                    UserInfoCardView()
+                    
                     // 学习统计卡片
                     if let stats = viewModel.stats {
                         StatsCardView(stats: stats)
@@ -27,6 +32,99 @@ struct ProfileView: View {
             .task {
                 await viewModel.loadStats()
             }
+        }
+    }
+}
+
+// MARK: - 用户信息卡片
+struct UserInfoCardView: View {
+    @StateObject private var authService = AuthService.shared
+    @State private var showingLogoutAlert = false
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            if let user = authService.currentUser {
+                HStack(spacing: 16) {
+                    // 用户头像
+                    AsyncImage(url: user.avatarUrl.flatMap { URL(string: $0) }) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(.gray)
+                    }
+                    .frame(width: 60, height: 60)
+                    .clipShape(Circle())
+                    
+                    // 用户信息
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(user.username)
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        if let email = user.email {
+                            Text(email)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                            
+                            Text("已通过 GitHub 认证")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // 登出按钮
+                    Button(action: {
+                        showingLogoutAlert = true
+                    }) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.title3)
+                            .foregroundColor(.red)
+                    }
+                }
+                .padding()
+            } else {
+                // 加载状态
+                HStack(spacing: 16) {
+                    ProgressView()
+                        .frame(width: 60, height: 60)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("加载用户信息...")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        Text("请稍候")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                .padding()
+            }
+        }
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 5, y: 2)
+        .padding(.horizontal)
+        .alert("确认登出", isPresented: $showingLogoutAlert) {
+            Button("取消", role: .cancel) { }
+            Button("登出", role: .destructive) {
+                authService.logout()
+            }
+        } message: {
+            Text("您确定要登出吗？登出后需要重新登录才能访问您的数据。")
         }
     }
 }

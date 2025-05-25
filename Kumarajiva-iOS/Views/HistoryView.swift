@@ -16,7 +16,7 @@ struct HistoryView: View {
         return "已选择\(selectedWordTypes.count)项"
     }
     
-    private var filteredHistories: [History] {
+    private var filteredHistories: [ReviewHistoryItem] {
         viewModel.histories.filter { history in
             if selectedWordTypes.contains(.all) {
                 return true
@@ -108,53 +108,100 @@ struct HistoryView: View {
     private var contentView: some View {
         Group {
             if viewModel.isLoading && viewModel.histories.isEmpty {
-                ProgressView()
-                    .frame(maxHeight: .infinity)
+                loadingView
             } else if viewModel.histories.isEmpty {
                 EmptyStateView()
             } else {
-                ScrollViewReader { proxy in
-                    List {
-                        ForEach(groupedHistories.keys.sorted(by: >), id: \.self) { date in
-                            Section(header: Text(formatSectionDate(date)).foregroundColor(.secondary)) {
-                                ForEach(groupedHistories[date] ?? [], id: \.word) { history in
-                                    NavigationLink(destination: SpeechPracticeView(history: history)) {
-                                        HistoryItemView(
-                                            history: history,
-                                            isPlaying: history.word == currentPlayingWord
-                                        )
-                                        .id(history.word)
-                                        .listRowBackground(
-                                            history.word == currentPlayingWord ?
-                                                Color.blue.opacity(0.1) : Color(.systemBackground)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // 添加加载更多功能
-                        if !viewModel.histories.isEmpty && viewModel.histories.count < viewModel.total {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .onAppear {
-                                    Task {
-                                        await viewModel.loadMore()
-                                    }
-                                }
-                        }
-                    }
-                    .listStyle(InsetGroupedListStyle())
-                    .onChange(of: currentPlayingWord) { newWord in
-                        if let word = newWord {
-                            withAnimation {
-                                proxy.scrollTo(word, anchor: .center)
-                            }
-                        }
+                historyListView
+            }
+        }
+    }
+    
+    private var loadingView: some View {
+        ProgressView()
+            .frame(maxHeight: .infinity)
+    }
+    
+    private var historyListView: some View {
+        ScrollViewReader { proxy in
+            List {
+                historySections
+                loadMoreSection
+            }
+            .listStyle(InsetGroupedListStyle())
+            .onChange(of: currentPlayingWord) { newWord in
+                if let word = newWord {
+                    withAnimation {
+                        proxy.scrollTo(word, anchor: UnitPoint.center)
                     }
                 }
             }
         }
+    }
+    
+    private var historySections: some View {
+        ForEach(sortedDates, id: \.self) { date in
+            Section(header: sectionHeader(for: date)) {
+                historyItems(for: date)
+            }
+        }
+    }
+    
+    private var sortedDates: [Date] {
+        groupedHistories.keys.sorted(by: >)
+    }
+    
+    private func sectionHeader(for date: Date) -> some View {
+        Text(formatSectionDate(date))
+            .foregroundColor(.secondary)
+    }
+    
+    private func historyItems(for date: Date) -> some View {
+        ForEach(groupedHistories[date] ?? [], id: \.word) { history in
+            historyNavigationLink(for: history)
+        }
+    }
+    
+    private func historyNavigationLink(for history: ReviewHistoryItem) -> some View {
+        NavigationLink(destination: SpeechPracticeView(reviewHistory: history)) {
+            historyItemContent(for: history)
+        }
+    }
+    
+    private func historyItemContent(for history: ReviewHistoryItem) -> some View {
+        HistoryItemView(
+            history: history,
+            isPlaying: history.word == currentPlayingWord
+        )
+        .id(history.word)
+        .listRowBackground(rowBackground(for: history))
+    }
+    
+    private func rowBackground(for history: ReviewHistoryItem) -> Color {
+        history.word == currentPlayingWord ? 
+            Color.blue.opacity(0.1) : Color(.systemBackground)
+    }
+    
+    @ViewBuilder
+    private var loadMoreSection: some View {
+        if shouldShowLoadMore {
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .onAppear {
+                    Task {
+                        let filterType = selectedWordTypes.first { $0 != .all } ?? .all
+                        await viewModel.loadHistory(
+                            filter: selectedFilter, 
+                            wordType: filterType, 
+                            reset: false
+                        )
+                    }
+                }
+        }
+    }
+    
+    private var shouldShowLoadMore: Bool {
+        !viewModel.histories.isEmpty && viewModel.hasMoreData
     }
     
     private var playbackControlPanel: some View {
@@ -171,9 +218,9 @@ struct HistoryView: View {
         }
     }
     
-    private var groupedHistories: [Date: [History]] {
+    private var groupedHistories: [Date: [ReviewHistoryItem]] {
         Dictionary(grouping: filteredHistories) { history in
-            Calendar.current.startOfDay(for: Date(timeIntervalSince1970: TimeInterval(history.lastReviewDate! / 1000)))
+            Calendar.current.startOfDay(for: history.reviewDateFormatted)
         }
     }
     
@@ -237,13 +284,13 @@ struct HistoryView: View {
 
 // 历史记录项组件
 struct HistoryItemView: View {
-    let history: History
+    let history: ReviewHistoryItem
     let isPlaying: Bool
     @State private var isPlayingMemory = false
     
-    private func getPronunciation(_ pronunciation: History.Pronunciation?) -> String? {
-        guard let pronunciation = pronunciation else { return nil }
-        return pronunciation.American.isEmpty ? pronunciation.British : pronunciation.American
+    private func getPronunciation() -> String? {
+        guard let pronunciation = history.pronunciation else { return nil }
+        return pronunciation.American.isEmpty == false ? pronunciation.American : pronunciation.British
     }
     
     // 获取该单词的口语练习记录数量
@@ -277,7 +324,7 @@ struct HistoryItemView: View {
                 .lineLimit(1)
             
             // 音标独立行
-            if let pronunciation = getPronunciation(history.pronunciation) {
+            if let pronunciation = getPronunciation() {
                 Text(pronunciation)
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
@@ -303,7 +350,7 @@ struct HistoryItemView: View {
             }
             
             // 记忆方法
-            if let method = history.memoryMethod {
+            if let memoryMethod = history.memoryMethod, !memoryMethod.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text("记忆方法")
@@ -317,7 +364,7 @@ struct HistoryItemView: View {
                         Button(action: {
                             isPlayingMemory.toggle()
                             if isPlayingMemory {
-                                AudioService.shared.playPronunciation(word: method, le: "zh", onCompletion: {
+                                AudioService.shared.playPronunciation(word: memoryMethod, le: "zh", onCompletion: {
                                     DispatchQueue.main.async {
                                         self.isPlayingMemory = false
                                     }
@@ -358,7 +405,7 @@ struct HistoryItemView: View {
                         }
                     }
                     
-                    Text(method)
+                    Text(memoryMethod)
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                         .padding(10)
@@ -389,12 +436,10 @@ struct HistoryItemView: View {
             }
             
             // 最后复习时间
-            if let lastReviewDate = history.lastReviewDate {
-                StatisticLabel(
-                    icon: "clock",
-                    text: "上次复习: \(formatTimestamp(lastReviewDate))"
-                )
-            }
+            StatisticLabel(
+                icon: "clock",
+                text: "上次复习: \(formatTimestamp(history.lastReviewDate))"
+            )
         }
         .padding(.vertical, 8)
     }
@@ -470,7 +515,7 @@ struct EnhancedPlaybackControlPanel: View {
     @Binding var isPlaying: Bool
     @Binding var currentWord: String?
     @Binding var currentIndex: Int
-    let histories: [History]
+    let histories: [ReviewHistoryItem]
     
     var body: some View {
         VStack(spacing: 0) {

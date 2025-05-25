@@ -17,7 +17,9 @@ class LLMService: ObservableObject {
     // Private properties
     private var currentConversationId: String? = nil
     private var isConversationValid: Bool = false
-    private let baseURL = "http://47.121.117.100:3000/api/llm"
+     private let baseURL = "http://47.121.117.100:3000/api/llm"
+//    private let baseURL = "http://127.0.0.1:3000/api/llm"
+
     private var cancellables = Set<AnyCancellable>()
     
     // API Response Structures

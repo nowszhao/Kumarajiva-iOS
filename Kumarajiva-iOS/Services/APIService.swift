@@ -5,11 +5,15 @@ enum APIError: Error {
     case invalidResponse
     case networkError(Error)
     case decodingError(Error)
+    case unauthorized
 }
 
 class APIService {
     static let shared = APIService()
-    private let baseURL = "http://47.121.117.100:3000/api"
+     private let baseURL = "http://47.121.117.100:3000/api"
+//    private let baseURL = "http://127.0.0.1:3000/api"
+
+    private let authService = AuthService.shared
     
     private init() {}
     
@@ -42,7 +46,7 @@ class APIService {
         return try await post(url, body: [:])
     }
     
-    func getHistory(params: [String: Any]) async throws -> HistoryResponse {
+    func getHistory(params: [String: Any]) async throws -> ReviewHistoryResponse {
         var urlComponents = URLComponents(string: "\(baseURL)/review/history")!
         urlComponents.queryItems = params.map { key, value in
             URLQueryItem(name: key, value: String(describing: value))
@@ -87,6 +91,13 @@ class APIService {
         var request = URLRequest(url: url)
         request.httpMethod = HTTPMethod.post.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // 添加认证头
+        let authHeaders = authService.getAuthHeaders()
+        for (key, value) in authHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         print("📦 (Raw) Request body: \(body)")
         
@@ -94,6 +105,11 @@ class APIService {
         print("📥 (Raw) Response received")
         if let httpResponse = response as? HTTPURLResponse {
             print("📊 (Raw) Status code: \(httpResponse.statusCode)")
+            
+            // 检查认证状态
+            if httpResponse.statusCode == 401 {
+                throw APIError.unauthorized
+            }
         }
         
         print("#################end###################\n\n")
@@ -112,6 +128,12 @@ class APIService {
         var request = URLRequest(url: url)
         request.httpMethod = method.rawValue
         
+        // 添加认证头
+        let authHeaders = authService.getAuthHeaders()
+        for (key, value) in authHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
         if let body = body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -124,6 +146,11 @@ class APIService {
             print("📥 Response received")
             if let httpResponse = response as? HTTPURLResponse {
                 print("📊 Status code: \(httpResponse.statusCode)")
+                
+                // 检查认证状态
+                if httpResponse.statusCode == 401 {
+                    throw APIError.unauthorized
+                }
             }
             
             if let responseString = String(data: data, encoding: .utf8) {
@@ -166,11 +193,22 @@ class APIService {
         var request = URLRequest(url: url)
         request.httpMethod = HTTPMethod.get.rawValue
         
+        // 添加认证头
+        let authHeaders = authService.getAuthHeaders()
+        for (key, value) in authHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
         let (data, response) = try await URLSession.shared.data(for: request)
         
         print("📥 Response received")
         if let httpResponse = response as? HTTPURLResponse {
             print("📊 Status code: \(httpResponse.statusCode)")
+            
+            // 检查认证状态
+            if httpResponse.statusCode == 401 {
+                throw APIError.unauthorized
+            }
         }
         
         if let responseString = String(data: data, encoding: .utf8) {
@@ -184,7 +222,6 @@ class APIService {
         
         do {
             let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
             let response = try decoder.decode(T.self, from: data)
             print("✅ Successfully decoded response")
             
@@ -213,8 +250,23 @@ struct SimpleResponse: Decodable {
 
 struct HistoryResponse: Codable {
     let success: Bool
-    let total: Int
+    let total: Int?
     let data: [History]
-    let limit: Int
-    let offset: Int
+    let limit: Int?
+    let offset: Int?
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        success = try container.decode(Bool.self, forKey: .success)
+        data = try container.decode([History].self, forKey: .data)
+        
+        total = try container.decodeIfPresent(Int.self, forKey: .total)
+        limit = try container.decodeIfPresent(Int.self, forKey: .limit)
+        offset = try container.decodeIfPresent(Int.self, forKey: .offset)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case success, total, data, limit, offset
+    }
 } 

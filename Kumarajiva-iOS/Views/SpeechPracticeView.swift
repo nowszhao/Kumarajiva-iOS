@@ -7,6 +7,33 @@ struct SpeechPracticeView: View {
     @State private var selectedTab = 0
     @Environment(\.presentationMode) var presentationMode
     
+    // New initializer for ReviewHistoryItem
+    init(reviewHistory: ReviewHistoryItem) {
+        // Convert ReviewHistoryItem to History format for compatibility
+        self.history = History(
+            word: reviewHistory.word,
+            definitions: reviewHistory.definitions,
+            examples: reviewHistory.examples,
+            lastReviewDate: reviewHistory.lastReviewDate,
+            reviewCount: reviewHistory.reviewCount,
+            correctCount: reviewHistory.correctCount,
+            pronunciation: reviewHistory.pronunciation.map { pronunciation in
+                History.Pronunciation(
+                    American: pronunciation.American,
+                    British: pronunciation.British
+                )
+            },
+            memoryMethod: reviewHistory.memoryMethod,
+            mastered: reviewHistory.mastered,
+            timestamp: reviewHistory.timestamp
+        )
+    }
+    
+    // Original initializer for History
+    init(history: History) {
+        self.history = history
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Navigation bar with back button
@@ -93,8 +120,6 @@ struct TabButton: View {
         .frame(maxWidth: .infinity)
     }
 }
-
-
 
 // Records tab content
 struct RecordsTabView: View {

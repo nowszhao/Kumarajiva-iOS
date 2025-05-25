@@ -1,12 +1,13 @@
 import Foundation
 import AVFoundation
+import MediaPlayer
 
-class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
+class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate, ObservableObject {
     static let shared = AudioService()
     private var player: AVPlayer?
     private var audioPlayer: AVAudioPlayer?
     private var isLooping = false
-    private var currentWords: [History]?
+    private var currentWords: [Any]? // Use Any to store either History or ReviewHistoryItem
     private var currentIndex = 0
     private var shouldPlayMemory = false
     private var onWordChangeWithIndex: ((String, Int) -> Void)?
@@ -184,7 +185,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
     }
     
     func startBatchPlayback(
-        words: [History],
+        words: [Any],
         startIndex: Int = 0,
         onWordChange: ((String, Int) -> Void)? = nil
     ) {
@@ -222,22 +223,39 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             return
         }
         
-        let history = words[currentIndex]
+        let item = words[currentIndex]
         let playbackMode = UserSettings.shared.playbackMode
         let playbackSpeed = UserSettings.shared.playbackSpeed
+        
+        // Extract word and other properties based on type
+        let word: String
+        let memoryMethod: String?
+        
+        if let history = item as? History {
+            word = history.word
+            memoryMethod = history.memoryMethod
+        } else if let reviewHistory = item as? ReviewHistoryItem {
+            word = reviewHistory.word
+            memoryMethod = reviewHistory.memoryMethod
+        } else {
+            // Skip unknown types
+            currentIndex += 1
+            playNextContent()
+            return
+        }
         
         // 通知当前播放的单词和索引变化
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.onWordChangeWithIndex?(history.word, self.currentIndex)
+            self.onWordChangeWithIndex?(word, self.currentIndex)
         }
         
         // 更新锁屏显示
-        updateNowPlayingInfo(for: history)
+        updateNowPlayingInfo(for: item)
         
         switch playbackMode {
         case .wordOnly:
-            playPronunciation(word: history.word, le: "en", rate: playbackSpeed) { [weak self] in
+            playPronunciation(word: word, le: "en", rate: playbackSpeed) { [weak self] in
                 DispatchQueue.main.async {
                     guard let self = self else { return }
                     self.currentIndex += 1
@@ -246,7 +264,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             }
             
         case .memoryOnly:
-            if let method = history.memoryMethod {
+            if let method = memoryMethod {
                 playPronunciation(word: method, rate: playbackSpeed) { [weak self] in
                     DispatchQueue.main.async {
                         guard let self = self else { return }
@@ -260,7 +278,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             }
             
         case .englishMemoryOnly:
-            if let method = history.memoryMethod, let englishSentence = extractEnglishSentence(from: method) {
+            if let method = memoryMethod, let englishSentence = extractEnglishSentence(from: method) {
                 playPronunciation(word: englishSentence, le: "en", rate: playbackSpeed) { [weak self] in
                     DispatchQueue.main.async {
                         guard let self = self else { return }
@@ -275,7 +293,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             
         case .wordAndMemory:
             if !shouldPlayMemory {
-                playPronunciation(word: history.word, rate: playbackSpeed) { [weak self] in
+                playPronunciation(word: word, rate: playbackSpeed) { [weak self] in
                     DispatchQueue.main.async {
                         guard let self = self else { return }
                         self.shouldPlayMemory = true
@@ -283,7 +301,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
                     }
                 }
             } else {
-                if let method = history.memoryMethod {
+                if let method = memoryMethod {
                     playPronunciation(word: method, rate: playbackSpeed) { [weak self] in
                         DispatchQueue.main.async {
                             guard let self = self else { return }
@@ -301,7 +319,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
             
         case .highestScoreSpeech:
             // 查找该单词的最高分录音
-            if let highestScoreRecording = SpeechRecordService.shared.findHighestScoreRecording(for: history.word) {
+            if let highestScoreRecording = SpeechRecordService.shared.findHighestScoreRecording(for: word) {
                 // 如果找到最高分录音，播放录音
                 playLocalAudio(url: highestScoreRecording.audioURL, rate: playbackSpeed) {
                     DispatchQueue.main.async {
@@ -311,7 +329,7 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
                 }
             } else {
                 // 如果没有录音，播放单词发音
-                playPronunciation(word: history.word, le: "en", rate: playbackSpeed) {
+                playPronunciation(word: word, le: "en", rate: playbackSpeed) {
                     DispatchQueue.main.async {
                         self.currentIndex += 1
                         self.playNextContent()
@@ -368,25 +386,51 @@ class AudioService: NSObject, AVPlayerItemMetadataOutputPushDelegate {
         audioPlayer?.play()
     }
     
-    private func updateNowPlayingInfo(for history: History) {
-        print("Debug - History object: \(history)")
+    private func updateNowPlayingInfo(for item: Any) {
+        print("Debug - Item object: \(item)")
+        
+        // Extract properties based on type
+        let word: String
+        let definitions: [Word.Definition]
+        let pronunciation: History.Pronunciation?
+        let memoryMethod: String?
+        
+        if let history = item as? History {
+            word = history.word
+            definitions = history.definitions
+            pronunciation = history.pronunciation
+            memoryMethod = history.memoryMethod
+        } else if let reviewHistory = item as? ReviewHistoryItem {
+            word = reviewHistory.word
+            definitions = reviewHistory.definitions
+            pronunciation = reviewHistory.pronunciation.map { parsed in
+                History.Pronunciation(
+                    American: parsed.American,
+                    British: parsed.British
+                )
+            }
+            memoryMethod = reviewHistory.memoryMethod
+        } else {
+            // Unknown type, skip
+            return
+        }
         
         // 获取所有释义并组合
-        let definition = history.definitions
+        let definition = definitions
             .map { "\($0.pos) \($0.meaning)" }
             .joined(separator: "\n")
         
         print("Debug - Combined definition: \(definition)")
         
-        let phonetic = history.pronunciation?.American
+        let phonetic = pronunciation?.American
         print("Debug - Phonetic: \(String(describing: phonetic))")
-        print("Debug - Memory method: \(String(describing: history.memoryMethod))")
+        print("Debug - Memory method: \(String(describing: memoryMethod))")
         
         NowPlayingService.shared.updateNowPlayingInfo(
-            word: history.word,
+            word: word,
             definition: definition,
             phonetic: phonetic,
-            memoryMethod: history.memoryMethod
+            memoryMethod: memoryMethod
         )
     }
     

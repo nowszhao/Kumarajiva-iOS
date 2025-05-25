@@ -43,4 +43,21 @@ enum WordTypeFilter: String, CaseIterable, Identifiable {
             return history.correctCount < history.reviewCount
         }
     }
+    
+    func matches(_ history: ReviewHistoryItem) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case .new:
+            // For ReviewHistoryItem, use reviewCount to determine if it's new
+            return history.reviewCount == 1
+        case .mastered:
+            return history.mastered > 0
+        case .reviewing:
+            // For ReviewHistoryItem, consider words with multiple reviews but not mastered as reviewing
+            return history.reviewCount > 1 && history.mastered == 0
+        case .incorrect:
+            return history.correctCount < history.reviewCount
+        }
+    }
 } 
