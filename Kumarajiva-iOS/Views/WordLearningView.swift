@@ -133,19 +133,7 @@ struct ContentWrapperView<Content: View>: View {
 // MARK: - 生词库视图（预留）
 struct VocabularyLibraryView: View {
     var body: some View {
-        VStack(spacing: 0) {
-            // 页面标题
-            HStack {
-                Text("生词库")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 16)
-            .background(Color(.systemBackground))
-            
+        VStack(spacing: 0) {            
             // 内容区域
             ScrollView {
                 VStack(spacing: 0) {
@@ -154,7 +142,7 @@ struct VocabularyLibraryView: View {
                         .padding(.top, 60)
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            // .background(Color(.systemGroupedBackground))
         }
     }
     
