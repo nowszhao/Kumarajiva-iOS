@@ -11,38 +11,38 @@ struct PodcastDetailView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            List {
-                // 播客信息头部
-                podcastHeaderView
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
-                
-                // 节目列表
-                Section {
+        List {
+            // 播客信息头部
+            podcastHeaderView
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
+            
+            // 节目列表
+            Section {
                     if stableEpisodes.isEmpty {
-                        emptyEpisodesView
-                    } else {
+                    emptyEpisodesView
+                } else {
                         ForEach(stableEpisodes) { episode in
-                            NavigationLink(destination: PodcastPlayerView(episode: episode)) {
-                                EpisodeRowView(episode: episode)
-                            }
-                            .id("\(episode.id)_\(episode.subtitles.count)")  // 使用复合ID，但保持稳定性
+                        NavigationLink(destination: PodcastPlayerView(episode: episode)) {
+                            EpisodeRowView(episode: episode)
                         }
-                    }
-                } header: {
-                    HStack {
-                        Text("节目列表")
-                            .font(.headline)
-                        
-                        Spacer()
-                        
-                        Text("\(stableEpisodes.count) 集")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .id("\(episode.id)_\(episode.subtitles.count)")  // 使用复合ID，但保持稳定性
                     }
                 }
+            } header: {
+                HStack {
+                    Text("节目列表")
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                        Text("\(stableEpisodes.count) 集")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
-            .listStyle(PlainListStyle())
+        }
+        .listStyle(PlainListStyle())
             
             // 底部迷你播放器
             MiniPlayerView()

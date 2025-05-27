@@ -194,7 +194,7 @@ class LLMService: ObservableObject {
             )
             
             do {
-                request.httpBody = try JSONEncoder().encode(requestBody)
+            request.httpBody = try JSONEncoder().encode(requestBody)
                 print("🤖 [LLM] 请求体大小: \(request.httpBody?.count ?? 0) 字节")
             } catch {
                 print("🤖 [LLM] 编码请求体失败: \(error)")
@@ -229,20 +229,20 @@ class LLMService: ObservableObject {
             }
             
             do {
-                let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
+            let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
                 print("🤖 [LLM] JSON解析成功，success: \(chatResponse.success)")
-                
-                guard chatResponse.success else {
+            
+            guard chatResponse.success else {
                     print("🤖 [LLM] API返回success=false")
-                    // Mark conversation as potentially invalid if API returns success=false
-                    isConversationValid = false
-                    throw NSError(domain: "LLMService", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to send message: API returned success=false"])
-                }
+                // Mark conversation as potentially invalid if API returns success=false
+                isConversationValid = false
+                throw NSError(domain: "LLMService", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to send message: API returned success=false"])
+            }
                 
                 print("🤖 [LLM] 响应内容长度: \(chatResponse.data.content.count) 字符")
                 print("🤖 [LLM] 响应内容预览: \(String(chatResponse.data.content.prefix(200)))...")
-                
-                return chatResponse.data.content
+            
+            return chatResponse.data.content
             } catch {
                 print("🤖 [LLM] JSON解析失败: \(error)")
                 throw error

@@ -194,9 +194,9 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
                     // 检查是否仍有当前节目（防止在加载过程中被停止）
                     guard self.playbackState.currentEpisode != nil else {
                         print("🎧 [Player] 音频加载完成但播放已停止，跳过播放")
-                        return
-                    }
-                    
+            return
+        }
+        
                     do {
                         self.audioPlayer = try AVAudioPlayer(data: data)
                         self.audioPlayer?.prepareToPlay()
@@ -229,8 +229,8 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         Task {
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
-                
-                await MainActor.run {
+            
+            await MainActor.run {
                     // 检查是否仍有当前节目（防止在加载过程中被停止）
                     guard self.playbackState.currentEpisode != nil else {
                         print("🎧 [Player] 音频加载完成但播放已停止，跳过准备")
@@ -253,8 +253,8 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
                         self.errorMessage = "音频准备失败: \(error.localizedDescription)"
                     }
                 }
-            } catch {
-                await MainActor.run {
+        } catch {
+            await MainActor.run {
                     self.errorMessage = "音频加载失败: \(error.localizedDescription)"
                 }
             }

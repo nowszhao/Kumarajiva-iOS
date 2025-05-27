@@ -74,11 +74,11 @@ struct PodcastPlayerView: View {
             Divider()
             
             // 字幕内容
-            if playerService.currentSubtitles.isEmpty {
-                emptySubtitleView
-            } else {
+                    if playerService.currentSubtitles.isEmpty {
+                        emptySubtitleView
+                    } else {
                 ScrollView {
-                    subtitleListView
+                        subtitleListView
                 }
                 .background(Color(.systemBackground))
             }
@@ -118,9 +118,9 @@ struct PodcastPlayerView: View {
                                 .foregroundColor(.green)
                                 .fontWeight(.bold)
                         } else {
-                            Text("\(Int(playerService.subtitleGenerationProgress * 100))%")
-                                .font(.headline)
-                                .fontWeight(.semibold)
+                        Text("\(Int(playerService.subtitleGenerationProgress * 100))%")
+                            .font(.headline)
+                            .fontWeight(.semibold)
                         }
                     }
                     
@@ -181,10 +181,10 @@ struct PodcastPlayerView: View {
                                     .cornerRadius(8)
                                 }
                             } else {
-                                Text("请先在\"我的\"页面设置中配置WhisperKit")
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
-                                    .multilineTextAlignment(.center)
+                            Text("请先在\"我的\"页面设置中配置WhisperKit")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                                .multilineTextAlignment(.center)
                             }
                             
                             Text("当前状态: \(whisperStatusText)")
@@ -500,9 +500,9 @@ struct SubtitleRowView: View {
                     
                     Spacer()
                     
-                    Text("\(subtitle.words.count)词")
+                        Text("\(subtitle.words.count)词")
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                            .foregroundColor(.secondary)
                 }
                 .padding(.horizontal, isActive ? 16 : 12)
                 .padding(.top, 8)
@@ -618,4 +618,4 @@ struct SubtitleRowView: View {
             ]
         ))
     }
-}
+} 

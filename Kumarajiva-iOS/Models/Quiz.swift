@@ -17,16 +17,12 @@ struct Quiz: Codable {
         
         var toDefinition: Word.Definition {
             // Try to parse definition as JSON first
-            if let definitionData = definition.data(using: .utf8) {
-                let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
-                if let definitionsArray = try? decoder.decode([Word.Definition].self, from: definitionData),
-                   let firstDefinition = definitionsArray.first {
-                    return firstDefinition
-                }
-                // If JSON parsing fails, use the string as meaning
-                return Word.Definition(meaning: definition, pos: pos)
+            if let definitionData = definition.data(using: .utf8),
+               let definitionsArray = try? JSONDecoder().decode([Word.Definition].self, from: definitionData),
+               let firstDefinition = definitionsArray.first {
+                return firstDefinition
             } else {
+                // If JSON parsing fails, use the string as meaning
                 return Word.Definition(meaning: definition, pos: pos)
             }
         }
@@ -51,16 +47,11 @@ struct Quiz: Codable {
             definitions = definitionsArray
         } else if let definitionsString = try? container.decode(String.self, forKey: .definitions) {
             // If it's a string, try to parse it as JSON first
-            if let definitionsData = definitionsString.data(using: .utf8) {
-                let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
-                if let definitionsArray = try? decoder.decode([Word.Definition].self, from: definitionsData) {
-                    definitions = definitionsArray
-                } else {
-                    // If JSON parsing fails, treat as a single definition
-                    definitions = [Word.Definition(meaning: definitionsString, pos: "")]
-                }
+            if let definitionsData = definitionsString.data(using: .utf8),
+               let definitionsArray = try? JSONDecoder().decode([Word.Definition].self, from: definitionsData) {
+                definitions = definitionsArray
             } else {
+                // If JSON parsing fails, treat as a single definition
                 definitions = [Word.Definition(meaning: definitionsString, pos: "")]
             }
         } else {
@@ -75,8 +66,8 @@ struct Quiz: Codable {
         case audio
         case definitions
         case examples
-        case memoryMethod = "memory_method"
-        case correctAnswer = "correct_answer"
+        case memoryMethod
+        case correctAnswer
         case options
         case isNew
     }

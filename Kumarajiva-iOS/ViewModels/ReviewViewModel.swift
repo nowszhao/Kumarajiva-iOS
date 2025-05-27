@@ -42,7 +42,9 @@ class ReviewViewModel: ObservableObject {
     
     func loadQuiz(for word: String) async throws {
         currentQuiz = try await APIService.shared.getQuiz(word: word)
-        print("currentQuiz:\(currentQuiz)")
+        print("🔍 Quiz loaded for word: \(word)")
+        print("🔍 memoryMethod: '\(currentQuiz?.memoryMethod ?? "nil")'")
+        print("🔍 memoryMethod isEmpty: \(currentQuiz?.memoryMethod?.isEmpty ?? true)")
     }
     
     func submitAnswer(word: String, isCorrect: Bool) async {

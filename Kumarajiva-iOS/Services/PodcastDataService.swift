@@ -196,7 +196,7 @@ class PodcastDataService: ObservableObject {
     func getEpisodes(for podcast: Podcast) -> [PodcastEpisode] {
         // 首先从主数据中获取最新的播客信息
         guard let currentPodcast = podcasts.first(where: { $0.id == podcast.id }) else {
-            return podcast.episodes.sorted { $0.publishDate > $1.publishDate }
+        return podcast.episodes.sorted { $0.publishDate > $1.publishDate }
         }
         
         // 合并缓存中的字幕数据到节目中
@@ -274,32 +274,32 @@ class PodcastDataService: ObservableObject {
             
             print("🎧 [Data] 开始延迟更新主数据...")
             
-            // 查找并更新对应的节目
-            for (podcastIndex, podcast) in self.podcasts.enumerated() {
-                for (episodeIndex, episode) in podcast.episodes.enumerated() {
-                    if episode.id == episodeId {
-                        // 创建更新后的节目
-                        var updatedEpisode = episode
-                        updatedEpisode.subtitles = subtitles
-                        if let date = generationDate {
-                            updatedEpisode.subtitleGenerationDate = date
-                        }
-                        if let ver = version {
-                            updatedEpisode.subtitleVersion = ver
-                        }
-                        
-                        // 更新播客中的节目
-                        var updatedPodcast = podcast
-                        updatedPodcast.episodes[episodeIndex] = updatedEpisode
-                        
-                        // 更新播客列表
-                        self.podcasts[podcastIndex] = updatedPodcast
-                        
+                // 查找并更新对应的节目
+                for (podcastIndex, podcast) in self.podcasts.enumerated() {
+                    for (episodeIndex, episode) in podcast.episodes.enumerated() {
+                        if episode.id == episodeId {
+                            // 创建更新后的节目
+                            var updatedEpisode = episode
+                            updatedEpisode.subtitles = subtitles
+                            if let date = generationDate {
+                                updatedEpisode.subtitleGenerationDate = date
+                            }
+                            if let ver = version {
+                                updatedEpisode.subtitleVersion = ver
+                            }
+                            
+                            // 更新播客中的节目
+                            var updatedPodcast = podcast
+                            updatedPodcast.episodes[episodeIndex] = updatedEpisode
+                            
+                            // 更新播客列表
+                            self.podcasts[podcastIndex] = updatedPodcast
+                            
                         // 保存到持久化存储
                         self.savePodcastsToPersistentStorage()
-                        
+                            
                         print("🎧 [Data] 延迟更新完成，节目字幕更新成功，共 \(subtitles.count) 条字幕")
-                        return
+                            return
                     }
                 }
             }

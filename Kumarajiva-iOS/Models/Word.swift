@@ -51,7 +51,7 @@ struct Word: Codable, Identifiable {
                 definitions = definitionsArray
             } else {
                 // If JSON parsing fails, treat as a single definition
-                definitions = [Definition(meaning: definitionsString, pos: "")]
+            definitions = [Definition(meaning: definitionsString, pos: "")]
             }
         } else {
             // Fallback to empty array

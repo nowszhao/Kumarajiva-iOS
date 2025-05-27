@@ -1230,4 +1230,4 @@ extension WhisperKit {
         
         return modelDirectoryURL
     }
-}
+} 
