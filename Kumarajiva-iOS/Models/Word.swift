@@ -45,9 +45,14 @@ struct Word: Codable, Identifiable {
             // If it's already an array of Definition objects, use it directly
             definitions = definitionsArray
         } else if let definitionsString = try? container.decode(String.self, forKey: .definitions) {
-            // If it's a string, parse it into a single Definition
-            // For now, we'll treat the entire string as the meaning with unknown pos
-            definitions = [Definition(meaning: definitionsString, pos: "")]
+            // If it's a string, try to parse it as JSON first
+            if let definitionsData = definitionsString.data(using: .utf8),
+               let definitionsArray = try? JSONDecoder().decode([Definition].self, from: definitionsData) {
+                definitions = definitionsArray
+            } else {
+                // If JSON parsing fails, treat as a single definition
+                definitions = [Definition(meaning: definitionsString, pos: "")]
+            }
         } else {
             // Fallback to empty array
             definitions = []
