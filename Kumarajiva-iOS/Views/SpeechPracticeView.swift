@@ -50,7 +50,7 @@ struct SpeechPracticeView: View {
                 
                 Spacer()
                 
-                Text("口语练习室")
+                Text("句子跟读")
                     .font(.headline)
                 
                 Spacer()
@@ -65,7 +65,7 @@ struct SpeechPracticeView: View {
             
             // Custom segmented control
             HStack(spacing: 0) {
-                TabButton(title: "口语练习", isSelected: selectedTab == 0) {
+                TabButton(title: "跟读练习", isSelected: selectedTab == 0) {
                     // Stop any audio when switching tabs
                     AudioService.shared.stopPlayback()
                     viewModel.stopPlayback()

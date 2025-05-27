@@ -34,7 +34,7 @@ struct HistoryView: View {
                 contentView
             }
             .overlay(playbackControlPanel, alignment: .bottom)
-            .navigationTitle("历史记录")
+            // .navigationTitle("历史记录")
         }
         .task {
             await viewModel.loadHistory(filter: selectedFilter)

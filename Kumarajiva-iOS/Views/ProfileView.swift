@@ -25,7 +25,7 @@ struct ProfileView: View {
                 }
                                 
             }
-            .navigationTitle("我的")
+            // .navigationTitle("我的")
             .task {
                 await viewModel.loadStats()
             }

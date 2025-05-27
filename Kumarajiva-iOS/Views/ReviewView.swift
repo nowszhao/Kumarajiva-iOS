@@ -24,7 +24,7 @@ struct ReviewView: View {
                     EmptyStateView()
                 }
             }
-            .navigationTitle("今日回顾")
+            // .navigationTitle("今日回顾")
             .navigationBarTitleDisplayMode(.inline)
             .alert("Error", isPresented: .constant(viewModel.error != nil)) {
                 Button("OK") {

@@ -24,7 +24,7 @@ struct ListeningPracticeView: View {
                 // 底部迷你播放器
                 MiniPlayerView()
             }
-            .navigationTitle("听力练习")
+            .navigationTitle("练听力")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

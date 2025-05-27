@@ -3,19 +3,14 @@ import SwiftUI
 struct MainView: View {
     var body: some View {
         TabView {
-            ReviewView()
+            WordLearningView()
                 .tabItem {
-                    Label("今日回顾", systemImage: "book.fill")
-                }
-            
-            HistoryView()
-                .tabItem {
-                    Label("历史记录", systemImage: "clock.fill")
+                    Label("记单词", systemImage: "book.fill")
                 }
             
             ListeningPracticeView()
                 .tabItem {
-                    Label("听力练习", systemImage: "headphones")
+                    Label("练听力", systemImage: "headphones")
                 }
             
             ProfileView()
@@ -23,5 +18,6 @@ struct MainView: View {
                     Label("我的", systemImage: "person.fill")
                 }
         }
+        .accentColor(.accentColor)
     }
 } 
