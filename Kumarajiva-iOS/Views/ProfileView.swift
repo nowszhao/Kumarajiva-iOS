@@ -3,10 +3,6 @@ import SwiftUI
 struct ProfileView: View {
     @StateObject private var viewModel = ProfileViewModel()
     @StateObject private var authService = AuthService.shared
-    @State private var playbackMode: PlaybackMode = UserSettings.shared.playbackMode
-    @State private var ttsServiceType: TTSServiceType = UserSettings.shared.ttsServiceType
-    @State private var speechRecognitionServiceType: SpeechRecognitionServiceType = UserSettings.shared.speechRecognitionServiceType
-    @State private var whisperModelSize: WhisperModelSize = UserSettings.shared.whisperModelSize
     @State private var showingLogoutAlert = false
     
     var body: some View {
@@ -24,7 +20,8 @@ struct ProfileView: View {
                             .frame(height: 200)
                     }
                     
-                    SettingsView()
+                    // 设置入口
+                    SettingsEntryView()
                 }
                                 
             }
@@ -33,6 +30,36 @@ struct ProfileView: View {
                 await viewModel.loadStats()
             }
         }
+    }
+}
+
+// MARK: - 设置入口卡片
+struct SettingsEntryView: View {
+    var body: some View {
+        NavigationLink(destination: SettingsDetailView()) {
+            HStack {
+                Image(systemName: "gearshape.fill")
+                    .font(.title2)
+                    .foregroundColor(.blue)
+                    .frame(width: 30)
+                
+                Text("设置")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.05), radius: 5, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .padding(.horizontal)
     }
 }
 
@@ -203,8 +230,8 @@ struct StatItemView: View {
     }
 } 
 
-
-struct SettingsView: View {
+// MARK: - 设置详情页面
+struct SettingsDetailView: View {
     @State private var playbackMode: PlaybackMode = UserSettings.shared.playbackMode
     @State private var ttsServiceType: TTSServiceType = UserSettings.shared.ttsServiceType
     @State private var speechRecognitionServiceType: SpeechRecognitionServiceType = UserSettings.shared.speechRecognitionServiceType
@@ -212,153 +239,200 @@ struct SettingsView: View {
     @State private var isModelInfoShowing = false
     @State private var isModelLoading = false
     @State private var playbackSpeed: Float = UserSettings.shared.playbackSpeed
+    @State private var autoLoadWhisperModel: Bool = UserSettings.shared.autoLoadWhisperModel
+    @State private var allowCellularDownload: Bool = UserSettings.shared.allowCellularDownload
+    @StateObject private var networkMonitor = NetworkMonitor.shared
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                Text("设置")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(Color(.systemGroupedBackground))
-
-                Form {
-                    Section {
-                        Picker("播放模式", selection: $playbackMode) {
-                            ForEach(PlaybackMode.allCases, id: \.self) { mode in
-                                Text(mode.title).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .onChange(of: playbackMode) { newValue in
-                            UserSettings.shared.playbackMode = newValue
-                        }
-                        
-                        Picker("播放速度", selection: $playbackSpeed) {
-                            Text("0.5x").tag(Float(0.5))
-                            Text("0.6x").tag(Float(0.6))
-                            Text("0.75x").tag(Float(0.75))
-                            Text("1.0x").tag(Float(1.0))
-                            Text("1.5x").tag(Float(1.5))
-                            Text("1.7x").tag(Float(1.7))
-                            Text("2.0x").tag(Float(2.0))
-                        }
-                        .pickerStyle(.menu)
-                        .onChange(of: playbackSpeed) { newValue in
-                            UserSettings.shared.playbackSpeed = newValue
-                            AudioService.shared.setPlaybackRate(newValue)
-                        }
-                        
-                        Picker("语音服务", selection: $ttsServiceType) {
-                            ForEach(TTSServiceType.allCases, id: \.self) { service in
-                                Text(service.title).tag(service)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .onChange(of: ttsServiceType) { newValue in
-                            UserSettings.shared.ttsServiceType = newValue
-                        }
-                    } header: {
-                        Text("播放设置")
-                    } footer: {
-                        Text("Edge TTS提供更自然的语音效果。高分录音模式将继续使用原有语音服务。")
-                    }
-                    
-                    Section {
-                        Picker("语音识别服务", selection: $speechRecognitionServiceType) {
-                            ForEach(SpeechRecognitionServiceType.allCases, id: \.self) { service in
-                                Text(service.title).tag(service)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .onChange(of: speechRecognitionServiceType) { newValue in
-                            UserSettings.shared.speechRecognitionServiceType = newValue
-                            
-                            // If WhisperKit is selected, trigger model check/loading
-                            if newValue == .whisperKit {
-                                Task {
-                                    // Always reload the model when WhisperKit is selected
-                                    WhisperKitService.shared.reloadModel()
-                                }
-                            }
-                        }
-                        
-                        if speechRecognitionServiceType == .whisperKit {
-                            Picker("WhisperKit模型", selection: $whisperModelSize) {
-                                ForEach(WhisperModelSize.allCases, id: \.self) { model in
-                                    HStack {
-                                        Text(model.title)
-                                        Spacer()
-                                        Text("(\(model.modelSize)MB)")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }.tag(model)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .onChange(of: whisperModelSize) { newValue in
-                                UserSettings.shared.whisperModelSize = newValue
-                                // Reload the model when changed - no need to manage local loading state
-                                WhisperKitService.shared.reloadModel()
-                            }
-                            
-                            // Add model download status view
-                            if speechRecognitionServiceType == .whisperKit {
-                                ModelStatusView()
-                            }
-                            
-                            Button(action: {
-                                isModelInfoShowing = true
-                            }) {
-                                HStack {
-                                    Text("模型说明")
-                                    Spacer()
-                                    Image(systemName: "info.circle")
-                                }
-                            }
-                            .foregroundColor(.blue)
-                            .sheet(isPresented: $isModelInfoShowing) {
-                                WhisperModelInfoView()
-                            }
-                        }
-                    } header: {
-                        Text("语音识别设置")
-                    } footer: {
-                        Text("WhisperKit提供更高准确度的语音识别，但需要下载模型。模型越大，识别越精准但速度越慢。")
-                    }
-                    
-                    Section {
-                        Button(action: {
-                            EdgeTTSService.shared.clearCache()
-                        }) {
-                            HStack {
-                                Text("清除语音缓存")
-                                Spacer()
-                                Image(systemName: "trash")
-                            }
-                        }
-                        .foregroundColor(.red)
-                    } header: {
-                        Text("缓存管理")
-                    } footer: {
-                        Text("清除已缓存的语音文件以释放存储空间")
+        Form {
+            Section {
+                Picker("播放模式", selection: $playbackMode) {
+                    ForEach(PlaybackMode.allCases, id: \.self) { mode in
+                        Text(mode.title).tag(mode)
                     }
                 }
+                .pickerStyle(.menu)
+                .onChange(of: playbackMode) { newValue in
+                    UserSettings.shared.playbackMode = newValue
+                }
+                
+                Picker("播放速度", selection: $playbackSpeed) {
+                    Text("0.5x").tag(Float(0.5))
+                    Text("0.6x").tag(Float(0.6))
+                    Text("0.75x").tag(Float(0.75))
+                    Text("1.0x").tag(Float(1.0))
+                    Text("1.5x").tag(Float(1.5))
+                    Text("1.7x").tag(Float(1.7))
+                    Text("2.0x").tag(Float(2.0))
+                }
+                .pickerStyle(.menu)
+                .onChange(of: playbackSpeed) { newValue in
+                    UserSettings.shared.playbackSpeed = newValue
+                    AudioService.shared.setPlaybackRate(newValue)
+                }
+                
+                Picker("语音服务", selection: $ttsServiceType) {
+                    ForEach(TTSServiceType.allCases, id: \.self) { service in
+                        Text(service.title).tag(service)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: ttsServiceType) { newValue in
+                    UserSettings.shared.ttsServiceType = newValue
+                }
+            } header: {
+                Text("播放设置")
+            } footer: {
+                Text("Edge TTS提供更自然的语音效果。高分录音模式将继续使用原有语音服务。")
             }
-            .background(Color(.systemBackground))
-            .cornerRadius(10)
-            .padding(.horizontal)
-            .onAppear {
-                // When view appears, check if we're using WhisperKit and model status
+            
+            Section {
+                Picker("语音识别服务", selection: $speechRecognitionServiceType) {
+                    ForEach(SpeechRecognitionServiceType.allCases, id: \.self) { service in
+                        Text(service.title).tag(service)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: speechRecognitionServiceType) { newValue in
+                    UserSettings.shared.speechRecognitionServiceType = newValue
+                    
+                    // If WhisperKit is selected, trigger model check/loading
+                    if newValue == .whisperKit {
+                        Task {
+                            // Always reload the model when WhisperKit is selected
+                            WhisperKitService.shared.reloadModel()
+                        }
+                    }
+                }
+                
                 if speechRecognitionServiceType == .whisperKit {
-                    // Check if model is in idle state but should be ready
-                    if WhisperKitService.shared.modelDownloadState == .idle {
-                        // Try to reload the model
+                    Picker("WhisperKit模型", selection: $whisperModelSize) {
+                        ForEach(WhisperModelSize.allCases, id: \.self) { model in
+                            HStack {
+                                Text(model.title)
+                                Spacer()
+                                Text("(\(model.modelSize)MB)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }.tag(model)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .onChange(of: whisperModelSize) { newValue in
+                        UserSettings.shared.whisperModelSize = newValue
+                        // Reload the model when changed - no need to manage local loading state
                         WhisperKitService.shared.reloadModel()
                     }
+                    
+                    // Add model download status view
+                    if speechRecognitionServiceType == .whisperKit {
+                        ModelStatusView()
+                    }
+                    
+                    // 自动加载设置
+                    Toggle("自动加载模型", isOn: $autoLoadWhisperModel)
+                        .onChange(of: autoLoadWhisperModel) { newValue in
+                            UserSettings.shared.autoLoadWhisperModel = newValue
+                            
+                            // 如果启用自动加载且模型已下载但未加载，立即加载
+                            if newValue && WhisperKitService.shared.modelDownloadState == .ready {
+                                WhisperKitService.shared.preloadModelInBackground()
+                            }
+                        }
+                    
+                    Toggle("允许蜂窝网络下载", isOn: $allowCellularDownload)
+                        .onChange(of: allowCellularDownload) { newValue in
+                            UserSettings.shared.allowCellularDownload = newValue
+                        }
+                    
+                    // 网络状态显示
+                    HStack {
+                        Text("当前网络")
+                        Spacer()
+                        HStack {
+                            Circle()
+                                .fill(networkMonitor.isConnected ? .green : .red)
+                                .frame(width: 8, height: 8)
+                            Text(networkMonitor.isConnected ? networkMonitor.connectionType.description : "未连接")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Button(action: {
+                        isModelInfoShowing = true
+                    }) {
+                        HStack {
+                            Text("模型说明")
+                            Spacer()
+                            Image(systemName: "info.circle")
+                        }
+                    }
+                    .foregroundColor(.blue)
+                    .sheet(isPresented: $isModelInfoShowing) {
+                        WhisperModelInfoView()
+                    }
+                }
+            } header: {
+                Text("语音识别设置")
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("WhisperKit提供更高准确度的语音识别，但需要下载模型。模型越大，识别越精准但速度越慢。")
+                    Text("• 自动加载：应用启动时自动加载已下载的模型")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("• 蜂窝网络下载：允许在移动网络下下载模型（可能产生流量费用）")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
-        }.frame(height: 430)
+            
+            Section {
+                NavigationLink(destination: SubtitleTaskManagerView()) {
+                    HStack {
+                        Image(systemName: "list.bullet.clipboard")
+                            .foregroundColor(.green)
+                        Text("字幕生成任务")
+                    }
+                }
+                
+                NavigationLink(destination: StorageSettingsView()) {
+                    HStack {
+                        Image(systemName: "internaldrive")
+                            .foregroundColor(.blue)
+                        Text("存储设置")
+                    }
+                }
+                
+                Button(action: {
+                    EdgeTTSService.shared.clearCache()
+                }) {
+                    HStack {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                        Text("清除语音缓存")
+                        Spacer()
+                    }
+                }
+                .foregroundColor(.red)
+            } header: {
+                Text("数据管理")
+            } footer: {
+                Text("管理应用数据存储、缓存文件和字幕生成任务")
+            }
+        }
+        .navigationTitle("设置")
+        .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+            // When view appears, check if we're using WhisperKit and model status
+            if speechRecognitionServiceType == .whisperKit {
+                // Check if model is in idle state but should be ready
+                if WhisperKitService.shared.modelDownloadState == .idle {
+                    // Try to reload the model
+                    WhisperKitService.shared.reloadModel()
+                }
+            }
+        }
     }
 }
 

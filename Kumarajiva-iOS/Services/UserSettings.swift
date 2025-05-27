@@ -9,6 +9,8 @@ class UserSettings {
     private let speechRecognitionServiceTypeKey = "speech_recognition_service_type"
     private let whisperModelSizeKey = "whisper_model_size"
     private let playbackSpeedKey = "playback_speed"
+    private let autoLoadWhisperModelKey = "auto_load_whisper_model"
+    private let allowCellularDownloadKey = "allow_cellular_download"
     
     private init() {}
     
@@ -59,6 +61,31 @@ class UserSettings {
         }
         set {
             defaults.set(newValue, forKey: playbackSpeedKey)
+        }
+    }
+    
+    /// 是否自动加载WhisperKit模型
+    var autoLoadWhisperModel: Bool {
+        get {
+            // 默认为true，提供更好的用户体验
+            if defaults.object(forKey: autoLoadWhisperModelKey) == nil {
+                return true
+            }
+            return defaults.bool(forKey: autoLoadWhisperModelKey)
+        }
+        set {
+            defaults.set(newValue, forKey: autoLoadWhisperModelKey)
+        }
+    }
+    
+    /// 是否允许使用蜂窝网络下载模型
+    var allowCellularDownload: Bool {
+        get {
+            // 默认为false，避免消耗用户流量
+            return defaults.bool(forKey: allowCellularDownloadKey)
+        }
+        set {
+            defaults.set(newValue, forKey: allowCellularDownloadKey)
         }
     }
 }

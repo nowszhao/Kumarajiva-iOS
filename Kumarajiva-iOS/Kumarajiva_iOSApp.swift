@@ -10,6 +10,9 @@ import SwiftUI
 @main
 struct Kumarajiva_iOSApp: App {
     @StateObject private var authService = AuthService.shared
+    @StateObject private var dataService = PodcastDataService.shared
+    @StateObject private var networkMonitor = NetworkMonitor.shared
+    @Environment(\.scenePhase) private var scenePhase
     
     var body: some Scene {
         WindowGroup {
@@ -29,6 +32,21 @@ struct Kumarajiva_iOSApp: App {
             .onAppear {
                 print("📱 [App] 应用启动")
                 print("🔐 [App] 当前认证状态: \(authService.isAuthenticated)")
+            }
+            .onChange(of: scenePhase) { newPhase in
+                switch newPhase {
+                case .background:
+                    print("📱 [App] 应用进入后台，同步字幕缓存")
+                    Task {
+                        await dataService.syncSubtitleCacheToMainData()
+                    }
+                case .active:
+                    print("📱 [App] 应用变为活跃状态")
+                case .inactive:
+                    print("📱 [App] 应用变为非活跃状态")
+                @unknown default:
+                    break
+                }
             }
         }
     }

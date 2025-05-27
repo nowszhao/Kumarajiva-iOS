@@ -3,7 +3,7 @@ import AVFoundation
 import WhisperKit
 
 @MainActor
-class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
+class WhisperKitService: NSObject, ObservableObject, @preconcurrency AVAudioRecorderDelegate {
     static let shared = WhisperKitService()
     
     // Published properties
@@ -80,8 +80,13 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
     
     override private init() {
         super.init()
-        // Check if model exists but delay loading until needed
+        // Check if model exists and auto-load if configured
         checkModelStatus()
+        
+        // 监听网络状态变化，在合适的时机自动下载模型
+        Task {
+            await setupAutoDownloadMonitoring()
+        }
     }
     
     // New method to just check if model exists without loading it
@@ -120,14 +125,8 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                             downloadedModelSize = UserSettings.shared.whisperModelSize
                             modelDownloadState = .ready
                             
-                            // 自动预加载模型，如果用户选择了WhisperKit作为语音识别服务
-                            if UserSettings.shared.speechRecognitionServiceType == .whisperKit {
-                                print("WhisperKitService: WhisperKit is the selected service, preloading model...")
-                                // Load the model if it's not already loaded
-                                if whisperKit == nil && !modelIsReady && !isModelLoading {
-                                    loadWhisperKit()
-                                }
-                            }
+                                                // 智能预加载模型
+                    await handleIntelligentPreloading()
                             return
                         } else {
                             print("WhisperKitService: Saved model is invalid, will check standard location")
@@ -158,14 +157,8 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                     // Save the valid model path
                     UserDefaults.standard.set(modelDirectoryURL.path, forKey: "whisperkit_model_path_\(modelName)")
                     
-                    // 自动预加载模型，如果用户选择了WhisperKit作为语音识别服务
-                    if UserSettings.shared.speechRecognitionServiceType == .whisperKit {
-                        print("WhisperKitService: WhisperKit is the selected service, preloading model...")
-                        // Load the model if it's not already loaded
-                        if whisperKit == nil && !modelIsReady && !isModelLoading {
-                            loadWhisperKit()
-                        }
-                    }
+                    // 智能预加载模型
+                    await handleIntelligentPreloading()
                 } else {
                     print("WhisperKitService: Model files incomplete or corrupted, need to download")
                     modelDownloadState = .idle
@@ -493,11 +486,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         
         // 如果模型目录不存在，创建它
         if !fileManager.fileExists(atPath: modelDirectoryURL.path) {
-            do {
-                try fileManager.createDirectory(at: modelDirectoryURL, withIntermediateDirectories: true)
-            } catch {
-                throw NSError(domain: "WhisperKitService", code: 1002, userInfo: [NSLocalizedDescriptionKey: "创建模型目录失败: \(error.localizedDescription)"])
-            }
+            try fileManager.createDirectory(at: modelDirectoryURL, withIntermediateDirectories: true)
         }
         
         // 首先尝试使用WhisperKit的官方下载方法
@@ -513,6 +502,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
             return
         } catch {
             print("官方下载方法失败: \(error.localizedDescription)")
+            throw error
         }
     }
     
@@ -812,6 +802,78 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         }
     }
     
+    // MARK: - 公共方法：获取WhisperKit实例用于文件转录
+    
+    /// 获取WhisperKit实例用于直接转录音频文件
+    func getWhisperKitInstance() async -> WhisperKit? {
+        // 如果模型未准备就绪，尝试加载
+        if whisperKit == nil && modelDownloadState == .ready && !isModelLoading {
+            loadWhisperKit()
+            
+            // 等待模型加载完成
+            var attempts = 0
+            while attempts < 100 && !modelIsReady { // 10秒超时
+                try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+                attempts += 1
+            }
+        }
+        
+        return modelIsReady ? whisperKit : nil
+    }
+    
+    /// 直接转录音频文件（启用单词时间戳）
+    func transcribeAudioFile(at url: URL) async throws -> [TranscriptionResult] {
+        guard let whisperKit = await getWhisperKitInstance() else {
+            throw NSError(domain: "WhisperKitService", code: 2001, userInfo: [NSLocalizedDescriptionKey: "WhisperKit模型未准备就绪"])
+        }
+        
+        print("🎤 [WhisperKit] 开始转录音频文件: \(url.lastPathComponent)")
+        
+        // 配置解码选项，启用单词时间戳
+        let decodingOptions = DecodingOptions(
+            verbose: true,
+            task: .transcribe,
+            language: "en", // 可以根据需要调整语言
+            temperature: 0.0,
+            temperatureFallbackCount: 3,
+            sampleLength: 224,
+            usePrefillPrompt: true,
+            usePrefillCache: true,
+            skipSpecialTokens: false,
+            withoutTimestamps: false,
+            wordTimestamps: true, // 关键：启用单词时间戳
+            clipTimestamps: [0.0],
+            concurrentWorkerCount: 0,
+            chunkingStrategy: .none
+        )
+        
+        do {
+            // 使用配置的选项进行转录
+            let results = try await whisperKit.transcribe(audioPath: url.path, decodeOptions: decodingOptions)
+            print("🎤 [WhisperKit] 文件转录完成，结果数量: \(results.count)")
+            
+            // 打印单词时间戳信息用于调试
+            for (index, result) in results.enumerated() {
+                print("🎤 [WhisperKit] 结果 \(index): 文本长度 \(result.text.count), 单词数量: \(result.allWords.count)")
+                if !result.allWords.isEmpty {
+                    let firstWord = result.allWords.first!
+                    let lastWord = result.allWords.last!
+                    print("🎤 [WhisperKit] 单词时间戳范围: \(firstWord.start)s - \(lastWord.end)s")
+                    
+                    // 打印前几个单词的时间戳
+                    for (wordIndex, word) in result.allWords.prefix(5).enumerated() {
+                        print("🎤 [WhisperKit] 单词 \(wordIndex): '\(word.word)' (\(word.start)s - \(word.end)s)")
+                    }
+                }
+            }
+            
+            return results
+        } catch {
+            print("🎤 [WhisperKit] 文件转录失败: \(error)")
+            throw error
+        }
+    }
+    
     // Calculate score by comparing recognized text with the expected text
     func calculateScore(expectedText: String) async -> Int {
         guard !recognizedText.isEmpty else { 
@@ -991,7 +1053,7 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
     }
     
     // AVAudioRecorderDelegate method
-    func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
+    nonisolated func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
         if !flag {
             print("WhisperKit recording failed")
         }
@@ -1061,6 +1123,89 @@ class WhisperKitService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         
         return englishWords.joined(separator: " ")
     }
+    
+    // MARK: - 智能预加载功能
+    
+    /// 设置自动下载监控
+    private func setupAutoDownloadMonitoring() async {
+        // 如果当前没有模型且用户启用了自动加载，尝试下载
+        if modelDownloadState == .idle && 
+           UserSettings.shared.speechRecognitionServiceType == .whisperKit &&
+           UserSettings.shared.autoLoadWhisperModel {
+            
+            print("WhisperKitService: 自动下载条件满足，开始下载模型")
+            let modelName = UserSettings.shared.whisperModelSize.rawValue
+            try? await downloadModel(modelName: modelName, progressCallback: { progress in
+                // 静默下载，不显示进度
+            })
+        }
+    }
+    
+    /// 智能预加载处理
+    private func handleIntelligentPreloading() async {
+        let userSettings = UserSettings.shared
+        
+        // 检查是否应该自动加载模型
+        guard userSettings.speechRecognitionServiceType == .whisperKit else {
+            print("WhisperKitService: 用户未选择WhisperKit服务，跳过预加载")
+            return
+        }
+        
+        guard userSettings.autoLoadWhisperModel else {
+            print("WhisperKitService: 用户禁用了自动加载，跳过预加载")
+            return
+        }
+        
+        // 如果模型已经加载，无需重复加载
+        guard whisperKit == nil && !modelIsReady && !isModelLoading else {
+            print("WhisperKitService: 模型已加载或正在加载中")
+            return
+        }
+        
+        print("WhisperKitService: 开始智能预加载模型...")
+        
+        // 延迟一小段时间，避免阻塞应用启动
+        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1秒
+        
+        loadWhisperKit()
+    }
+    
+    /// 检查是否应该提示用户下载模型
+    func shouldPromptForModelDownload() -> Bool {
+        let userSettings = UserSettings.shared
+        
+        return modelDownloadState == .idle &&
+               userSettings.speechRecognitionServiceType == .whisperKit
+    }
+    
+    /// 智能下载模型（考虑网络状态和用户设置）
+    func smartDownloadModel() async {
+        let modelName = UserSettings.shared.whisperModelSize.rawValue
+        try? await downloadModel(modelName: modelName, progressCallback: { progress in
+            // 更新下载进度
+            Task { @MainActor in
+                self.downloadProgress = progress
+            }
+        })
+    }
+    
+    /// 预加载模型（在后台静默加载）
+    func preloadModelInBackground() {
+        guard UserSettings.shared.autoLoadWhisperModel else { return }
+        guard UserSettings.shared.speechRecognitionServiceType == .whisperKit else { return }
+        guard modelDownloadState == .ready else { return }
+        guard whisperKit == nil && !modelIsReady && !isModelLoading else { return }
+        
+        print("WhisperKitService: 后台预加载模型...")
+        
+        Task {
+            // 延迟加载，避免影响用户操作
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2秒
+            await MainActor.run {
+                loadWhisperKit()
+            }
+        }
+    }
 }
 
 extension WhisperKit {
@@ -1085,4 +1230,4 @@ extension WhisperKit {
         
         return modelDirectoryURL
     }
-} 
+}

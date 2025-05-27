@@ -86,10 +86,13 @@ class LLMService: ObservableObject {
     ///   - cookie: Authentication cookie (optional, uses default if nil)
     /// - Returns: The new conversation ID
     private func createConversation(agentId: String? = nil, cookie: String? = nil) async throws -> String {
+        print("🤖 [LLM] 创建新对话...")
+        
         let finalAgentId = agentId ?? defaultAgentId
         let finalCookie = cookie ?? defaultCookie
         
         let url = URL(string: "\(baseURL)/conversation/create")!
+        print("🤖 [LLM] 创建对话URL: \(url)")
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -98,22 +101,37 @@ class LLMService: ObservableObject {
         let requestBody = CreateConversationRequest(agentId: finalAgentId, cookie: finalCookie)
         request.httpBody = try JSONEncoder().encode(requestBody)
         
+        print("🤖 [LLM] 发送创建对话请求...")
         let (data, response) = try await URLSession.shared.data(for: request)
+        print("🤖 [LLM] 创建对话响应大小: \(data.count) 字节")
         
         guard let httpResponse = response as? HTTPURLResponse else {
+            print("🤖 [LLM] 创建对话：无效的HTTP响应")
             throw NSError(domain: "LLMService", code: 1000, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
         }
         
+        print("🤖 [LLM] 创建对话HTTP状态码: \(httpResponse.statusCode)")
+        
         if httpResponse.statusCode != 200 {
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("🤖 [LLM] 创建对话错误响应: \(responseString)")
+            }
             throw NSError(domain: "LLMService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to create conversation: HTTP \(httpResponse.statusCode)"])
         }
         
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("🤖 [LLM] 创建对话响应内容: \(responseString)")
+        }
+        
         let createResponse = try JSONDecoder().decode(CreateConversationResponse.self, from: data)
+        print("🤖 [LLM] 创建对话解析成功，success: \(createResponse.success)")
         
         guard createResponse.success else {
+            print("🤖 [LLM] 创建对话API返回success=false")
             throw NSError(domain: "LLMService", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to create conversation: API returned success=false"])
         }
         
+        print("🤖 [LLM] 新对话创建成功，ID: \(createResponse.data.id)")
         return createResponse.data.id
     }
     
@@ -130,9 +148,15 @@ class LLMService: ObservableObject {
         model: String? = nil,
         cookie: String? = nil
     ) async throws -> String {
+        print("🤖 [LLM] 开始发送聊天消息")
+        print("🤖 [LLM] 提示词长度: \(prompt.count) 字符")
+        
         let finalAgentId = agentId ?? defaultAgentId
         let finalModel = model ?? defaultModel
         let finalCookie = cookie ?? defaultCookie
+        
+        print("🤖 [LLM] 使用参数 - AgentID: \(finalAgentId), Model: \(finalModel)")
+        print("🤖 [LLM] Cookie长度: \(finalCookie.count) 字符")
         
         isLoading = true
         defer { isLoading = false }
@@ -142,16 +166,21 @@ class LLMService: ObservableObject {
             
             // Try to get a valid conversation ID or create a new one if needed
             do {
+                print("🤖 [LLM] 确保有效对话...")
                 conversationId = try await ensureValidConversation(agentId: finalAgentId, cookie: finalCookie)
+                print("🤖 [LLM] 对话ID: \(conversationId)")
             } catch {
+                print("🤖 [LLM] 确保对话失败，创建新对话: \(error)")
                 // If ensuring a valid conversation fails, invalidate our current conversation and try once more
                 isConversationValid = false
                 currentConversationId = nil
                 conversationId = try await createConversation(agentId: finalAgentId, cookie: finalCookie)
+                print("🤖 [LLM] 新对话ID: \(conversationId)")
             }
             
             // Now send the chat message
             let url = URL(string: "\(baseURL)/chat/\(conversationId)")!
+            print("🤖 [LLM] 请求URL: \(url)")
             
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
@@ -164,30 +193,62 @@ class LLMService: ObservableObject {
                 cookie: finalCookie
             )
             
-            request.httpBody = try JSONEncoder().encode(requestBody)
+            do {
+                request.httpBody = try JSONEncoder().encode(requestBody)
+                print("🤖 [LLM] 请求体大小: \(request.httpBody?.count ?? 0) 字节")
+            } catch {
+                print("🤖 [LLM] 编码请求体失败: \(error)")
+                throw error
+            }
             
+            print("🤖 [LLM] 发送HTTP请求...")
             let (data, response) = try await URLSession.shared.data(for: request)
+            print("🤖 [LLM] 收到响应，数据大小: \(data.count) 字节")
             
             guard let httpResponse = response as? HTTPURLResponse else {
+                print("🤖 [LLM] 无效的HTTP响应")
                 throw NSError(domain: "LLMService", code: 1000, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
             }
             
+            print("🤖 [LLM] HTTP状态码: \(httpResponse.statusCode)")
+            
             if httpResponse.statusCode != 200 {
+                // 打印响应内容以便调试
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("🤖 [LLM] 错误响应内容: \(responseString)")
+                }
+                
                 // Mark conversation as potentially invalid if we get an error
                 isConversationValid = false
                 throw NSError(domain: "LLMService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to send message: HTTP \(httpResponse.statusCode)"])
             }
             
-            let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
-            
-            guard chatResponse.success else {
-                // Mark conversation as potentially invalid if API returns success=false
-                isConversationValid = false
-                throw NSError(domain: "LLMService", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to send message: API returned success=false"])
+            // 打印原始响应内容
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("🤖 [LLM] 原始响应内容: \(responseString)")
             }
             
-            return chatResponse.data.content
+            do {
+                let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
+                print("🤖 [LLM] JSON解析成功，success: \(chatResponse.success)")
+                
+                guard chatResponse.success else {
+                    print("🤖 [LLM] API返回success=false")
+                    // Mark conversation as potentially invalid if API returns success=false
+                    isConversationValid = false
+                    throw NSError(domain: "LLMService", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to send message: API returned success=false"])
+                }
+                
+                print("🤖 [LLM] 响应内容长度: \(chatResponse.data.content.count) 字符")
+                print("🤖 [LLM] 响应内容预览: \(String(chatResponse.data.content.prefix(200)))...")
+                
+                return chatResponse.data.content
+            } catch {
+                print("🤖 [LLM] JSON解析失败: \(error)")
+                throw error
+            }
         } catch {
+            print("🤖 [LLM] 发送消息失败: \(error)")
             lastError = error.localizedDescription
             throw error
         }

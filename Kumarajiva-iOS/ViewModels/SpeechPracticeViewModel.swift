@@ -275,8 +275,8 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
 }
 
 // MARK: - AVAudioPlayerDelegate
-extension SpeechPracticeViewModel: AVAudioPlayerDelegate {
-    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+extension SpeechPracticeViewModel: @preconcurrency AVAudioPlayerDelegate {
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
