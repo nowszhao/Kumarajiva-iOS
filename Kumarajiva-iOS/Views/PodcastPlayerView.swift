@@ -271,6 +271,32 @@ struct PodcastPlayerView: View {
             }
             .disabled(playerService.currentSubtitles.isEmpty)
             
+            // 重新转录字幕按钮
+            Button {
+                Task {
+                    await playerService.generateSubtitlesForCurrentEpisode()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 14, weight: .medium))
+                    Text("重新转录字幕")
+                        .font(.system(size: 14, weight: .medium))
+                }
+                .foregroundColor(playerService.isGeneratingSubtitles ? .secondary : .orange)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(.systemGray6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(playerService.isGeneratingSubtitles ? Color.clear : Color.orange.opacity(0.3), lineWidth: 1)
+                        )
+                )
+            }
+            .disabled(playerService.isGeneratingSubtitles)
+            
             Spacer()
             
             // 可以在这里添加更多功能按钮

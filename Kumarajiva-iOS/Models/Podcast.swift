@@ -292,7 +292,7 @@ enum SubtitleError: Error, LocalizedError {
 } 
 
 // MARK: - 生词解析模型
-struct DifficultVocabulary: Codable, Identifiable {
+struct DifficultVocabulary: Codable, Identifiable, Equatable {
     let id = UUID()
     let vocabulary: String
     let type: String
@@ -309,6 +309,16 @@ struct DifficultVocabulary: Codable, Identifiable {
         case chineseMeaning = "chinese_meaning"
         case chineseEnglishSentence = "chinese_english_sentence"
     }
+    
+    // Equatable conformance - compare by vocabulary content, not UUID
+    static func == (lhs: DifficultVocabulary, rhs: DifficultVocabulary) -> Bool {
+        return lhs.vocabulary == rhs.vocabulary &&
+               lhs.type == rhs.type &&
+               lhs.partOfSpeech == rhs.partOfSpeech &&
+               lhs.phonetic == rhs.phonetic &&
+               lhs.chineseMeaning == rhs.chineseMeaning &&
+               lhs.chineseEnglishSentence == rhs.chineseEnglishSentence
+    }
 }
 
 struct VocabularyAnalysisResponse: Codable {
@@ -316,11 +326,24 @@ struct VocabularyAnalysisResponse: Codable {
 }
 
 // MARK: - 生词解析状态
-enum VocabularyAnalysisState {
+enum VocabularyAnalysisState: Equatable {
     case idle
     case analyzing
     case completed([DifficultVocabulary])
     case failed(String)
+    
+    static func == (lhs: VocabularyAnalysisState, rhs: VocabularyAnalysisState) -> Bool {
+        switch (lhs, rhs) {
+        case (.idle, .idle), (.analyzing, .analyzing):
+            return true
+        case (.completed(let lhsVocab), .completed(let rhsVocab)):
+            return lhsVocab == rhsVocab
+        case (.failed(let lhsError), .failed(let rhsError)):
+            return lhsError == rhsError
+        default:
+            return false
+        }
+    }
 }
 
 // MARK: - 播放状态枚举
