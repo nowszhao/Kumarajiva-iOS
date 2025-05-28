@@ -3,6 +3,7 @@ import SwiftUI
 struct VocabularyAnalysisView: View {
     @ObservedObject var playerService: PodcastPlayerService
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var viewModel = VocabularyViewModel.shared
     
     var body: some View {
         NavigationView {
@@ -179,7 +180,7 @@ struct VocabularyAnalysisView: View {
                 
                 // 生词卡片列表
                 ForEach(vocabulary) { word in
-                    VocabularyCardView(vocabulary: word)
+                    VocabularyCardView(vocabulary: word, viewModel: viewModel)
                         .padding(.horizontal, 16)
                 }
                 
@@ -237,7 +238,13 @@ struct VocabularyAnalysisView: View {
 // MARK: - 生词卡片视图
 struct VocabularyCardView: View {
     let vocabulary: DifficultVocabulary
+    let viewModel: VocabularyViewModel
     @State private var isExpanded = false
+    @State private var isCollected = false
+    @State private var isLocallyAdded = false  // 是否为本地新词
+    @State private var isFromCloud = false     // 是否为云端词汇
+    @State private var isLoading = false
+    @State private var showRemoveAlert = false  // 显示移除确认对话框
     
     var body: some View {
         VStack(spacing: 0) {
@@ -271,6 +278,26 @@ struct VocabularyCardView: View {
                     }
                     
                     Spacer()
+                    
+                    // 收藏按钮
+                    Button {
+                        handleStarTap()
+                    } label: {
+                        if isLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .frame(width: 24, height: 24)
+                        } else {
+                            Image(systemName: isCollected ? "star.fill" : "star")
+                                .font(.system(size: 20))
+                                .foregroundColor(starColor)
+                                .scaleEffect(isCollected ? 1.1 : 1.0)
+                                .animation(.easeInOut(duration: 0.2), value: isCollected)
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.trailing, 8)
+                    .disabled(isCollected && isFromCloud)  // 云端词汇禁用点击
                     
                     // 展开/收起图标
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
@@ -316,6 +343,26 @@ struct VocabularyCardView: View {
                                 .lineSpacing(2)
                                 .multilineTextAlignment(.leading)
                         }
+                        
+                        // 状态提示（仅在已收藏时显示）
+                        if isCollected {
+                            HStack(spacing: 6) {
+                                Image(systemName: isLocallyAdded ? "iphone" : "cloud")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(isLocallyAdded ? .blue : .gray)
+                                
+                                Text(statusText)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(isLocallyAdded ? .blue : .gray)
+                                
+                                if isLocallyAdded {
+                                    Text("• 点击星号可取消收藏")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 12)
@@ -323,9 +370,115 @@ struct VocabularyCardView: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        )
+        .task {
+            updateCollectionStatus()
+        }
+        .onChange(of: viewModel.vocabularies) { _ in
+            updateCollectionStatus()
+        }
+        .alert("取消收藏", isPresented: $showRemoveAlert) {
+            Button("取消", role: .cancel) { }
+            Button("确认取消", role: .destructive) {
+                performRemoveVocabulary()
+            }
+        } message: {
+            Text("确定要取消收藏生词 \"\(vocabulary.vocabulary)\" 吗？\n\n此操作将从本地生词库中移除该词汇。")
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private var starColor: Color {
+        if !isCollected {
+            return .gray.opacity(0.6)
+        } else if isLocallyAdded {
+            return .yellow  // 本地新词：黄色五星
+        } else {
+            return .gray.opacity(0.8)    // 云端词汇：灰色五星
+        }
+    }
+    
+    private var statusText: String {
+        if isLocallyAdded {
+            return "本地新词"
+        } else {
+            return "云端词汇"
+        }
+    }
+    
+    private func updateCollectionStatus() {
+        isCollected = viewModel.isVocabularyCollected(vocabulary.vocabulary)
+        isLocallyAdded = viewModel.isVocabularyLocallyAdded(vocabulary.vocabulary)
+        isFromCloud = viewModel.isVocabularyFromCloud(vocabulary.vocabulary)
+    }
+    
+    private func handleStarTap() {
+        guard !isLoading else { return }
+        
+        // 添加触觉反馈
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        if isCollected {
+            // 已收藏的情况
+            if isLocallyAdded {
+                // 本地新词：显示确认对话框
+                showRemoveAlert = true
+            } else {
+                // 云端词汇：显示提示信息
+                let notificationFeedback = UINotificationFeedbackGenerator()
+                notificationFeedback.notificationOccurred(.warning)
+                print("⚠️ 云端词汇 '\(vocabulary.vocabulary)' 不允许取消收藏")
+                
+                // 可以考虑添加一个临时的视觉提示
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    // 这里可以添加一个临时的提示动画
+                }
+            }
+        } else {
+            // 未收藏的情况：添加到本地
+            addVocabularyToLocal()
+        }
+    }
+    
+    private func addVocabularyToLocal() {
+        isLoading = true
+        
+        // 添加成功的触觉反馈
+        let notificationFeedback = UINotificationFeedbackGenerator()
+        
+        let item = VocabularyItem(from: vocabulary)
+        viewModel.addVocabularyLocally(item)
+        
+        // 延迟更新状态，让用户看到加载动画
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            updateCollectionStatus()
+            isLoading = false
+            notificationFeedback.notificationOccurred(.success)
+            print("✅ 已收藏生词 '\(vocabulary.vocabulary)'")
+        }
+    }
+    
+    private func performRemoveVocabulary() {
+        isLoading = true
+        
+        // 移除成功的触觉反馈
+        let notificationFeedback = UINotificationFeedbackGenerator()
+        
+        viewModel.removeLocalVocabulary(vocabulary.vocabulary)
+        
+        // 延迟更新状态
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            updateCollectionStatus()
+            isLoading = false
+            notificationFeedback.notificationOccurred(.success)
+            print("✅ 已取消收藏本地生词 '\(vocabulary.vocabulary)'")
+        }
     }
     
     private func typeColor(for type: String) -> Color {
@@ -333,11 +486,9 @@ struct VocabularyCardView: View {
         case "words":
             return .blue
         case "phrases":
-            return .green
-        case "slang":
-            return .orange
-        case "abbreviations":
             return .purple
+        case "idioms":
+            return .orange
         default:
             return .gray
         }

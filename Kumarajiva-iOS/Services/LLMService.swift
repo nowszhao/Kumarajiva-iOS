@@ -22,6 +22,15 @@ class LLMService: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
     
+    // Custom URLSession with extended timeout for LLM requests
+    private lazy var urlSession: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 300 // 2 minutes for individual request
+        configuration.timeoutIntervalForResource = 600 // 5 minutes for entire resource
+        configuration.waitsForConnectivity = true
+        return URLSession(configuration: configuration)
+    }()
+    
     // API Response Structures
     struct CreateConversationResponse: Codable {
         let success: Bool
@@ -102,7 +111,7 @@ class LLMService: ObservableObject {
         request.httpBody = try JSONEncoder().encode(requestBody)
         
         print("🤖 [LLM] 发送创建对话请求...")
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
         print("🤖 [LLM] 创建对话响应大小: \(data.count) 字节")
         
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -202,7 +211,7 @@ class LLMService: ObservableObject {
             }
             
             print("🤖 [LLM] 发送HTTP请求...")
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await urlSession.data(for: request)
             print("🤖 [LLM] 收到响应，数据大小: \(data.count) 字节")
             
             guard let httpResponse = response as? HTTPURLResponse else {

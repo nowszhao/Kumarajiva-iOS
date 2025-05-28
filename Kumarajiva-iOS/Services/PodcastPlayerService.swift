@@ -15,6 +15,9 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var isGeneratingSubtitles: Bool = false
     @Published var subtitleGenerationProgress: Double = 0.0
     
+    // 播放历史记录
+    @Published var playbackRecords: [String: EpisodePlaybackRecord] = [:]
+    
     // MARK: - Private Properties
     private var audioPlayer: AVAudioPlayer?
     private var playbackTimer: Timer?
@@ -22,6 +25,7 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     private var shouldContinueGeneration = true
     private var whisperService: WhisperKitService!
     private var isSubtitleLooping = false // 标记是否正在进行字幕循环播放
+    private let playbackRecordsKey = "podcast_playback_records"
     
     // MARK: - 生词解析相关
     @Published var vocabularyAnalysisState: VocabularyAnalysisState = .idle
@@ -32,6 +36,7 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         whisperService = WhisperKitService.shared
         setupAudioSession()
         observeTaskManagerUpdates()
+        loadPlaybackRecords()
     }
     
     // MARK: - 任务管理器状态监听
@@ -405,17 +410,32 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
             guard let self = self, let player = self.audioPlayer else { return }
             
             DispatchQueue.main.async {
-                self.playbackState.currentTime = player.currentTime
-                
-                // 更新当前字幕索引
-                self.updateCurrentSubtitleIndex()
-                
-                if !player.isPlaying && self.playbackState.isPlaying {
-                    self.playbackState.isPlaying = false
-                    self.stopPlaybackTimer()
-                }
+                self.updatePlaybackTime()
             }
         }
+    }
+    
+    private func updatePlaybackTime() {
+        guard let player = audioPlayer else { return }
+        
+        self.playbackState.currentTime = player.currentTime
+        
+        // 检查播放器状态，如果停止了但我们的状态还是播放中，则更新状态
+        if !player.isPlaying && self.playbackState.isPlaying {
+            self.playbackState.isPlaying = false
+        }
+        
+        // 更新播放历史记录
+        if let episode = playbackState.currentEpisode {
+            updatePlaybackRecord(
+                for: episode.id,
+                currentTime: player.currentTime,
+                duration: playbackState.duration
+            )
+        }
+        
+        // 更新字幕索引
+        updateCurrentSubtitleIndex()
     }
     
     private func updateCurrentSubtitleIndex() {
@@ -778,6 +798,51 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         vocabularyAnalysisState = .idle
     }
     
+    // MARK: - 播放历史记录
+    
+    private func loadPlaybackRecords() {
+        if let data = UserDefaults.standard.data(forKey: playbackRecordsKey),
+           let records = try? JSONDecoder().decode([String: EpisodePlaybackRecord].self, from: data) {
+            playbackRecords = records
+            print("🎧 [Player] 加载播放历史记录: \(records.count) 条")
+        }
+    }
+    
+    private func savePlaybackRecords() {
+        if let data = try? JSONEncoder().encode(playbackRecords) {
+            UserDefaults.standard.set(data, forKey: playbackRecordsKey)
+        }
+    }
+    
+    func updatePlaybackRecord(for episodeId: String, currentTime: TimeInterval, duration: TimeInterval, isCompleted: Bool = false) {
+        if var record = playbackRecords[episodeId] {
+            record.currentTime = currentTime
+            record.duration = duration
+            record.lastPlayedDate = Date()
+            record.isCompleted = isCompleted
+            playbackRecords[episodeId] = record
+        } else {
+            var newRecord = EpisodePlaybackRecord(episodeId: episodeId, currentTime: currentTime, duration: duration)
+            newRecord.isCompleted = isCompleted
+            playbackRecords[episodeId] = newRecord
+        }
+        savePlaybackRecords()
+    }
+    
+    func getPlaybackStatus(for episodeId: String) -> EpisodePlaybackStatus {
+        guard let record = playbackRecords[episodeId] else {
+            return .notPlayed
+        }
+        return record.status
+    }
+    
+    func getPlaybackProgress(for episodeId: String) -> Double {
+        guard let record = playbackRecords[episodeId] else {
+            return 0
+        }
+        return record.progress
+    }
+    
     // MARK: - 清理
     
     deinit {
@@ -793,20 +858,26 @@ extension PodcastPlayerService {
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         print("🎧 [Player] 音频播放完成，成功: \(flag)")
         
+        // 标记播放完成
+        if let episode = playbackState.currentEpisode {
+            updatePlaybackRecord(
+                for: episode.id,
+                currentTime: playbackState.duration,
+                duration: playbackState.duration,
+                isCompleted: true
+            )
+        }
+        
         if flag && playbackState.isLooping {
-            // 循环播放：重新开始播放
-            print("🎧 [Player] 循环播放：重新开始")
-            player.currentTime = 0
-            playbackState.currentTime = 0
-            playbackState.currentSubtitleIndex = nil
-            player.play()
+            // 如果是循环播放，重新开始
+            seek(to: 0)
+            resumePlayback()
         } else {
-            // 正常结束播放
+            // 播放完成，重置状态
             playbackState.isPlaying = false
             playbackState.currentTime = 0
             playbackState.currentSubtitleIndex = nil
             stopPlaybackTimer()
-            print("🎧 [Player] 播放结束")
         }
     }
     

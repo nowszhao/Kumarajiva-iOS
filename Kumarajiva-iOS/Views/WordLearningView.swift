@@ -86,7 +86,7 @@ struct WordLearningView: View {
                 ))
             case 2:
                 // 生词库 - 预留功能
-                VocabularyLibraryView()
+                VocabularyView()
                     .transition(.asymmetric(
                         insertion: .move(edge: .leading).combined(with: .opacity),
                         removal: .move(edge: .trailing).combined(with: .opacity)
@@ -127,70 +127,6 @@ struct ContentWrapperView<Content: View>: View {
             // 内容区域
             content
         }
-    }
-}
-
-// MARK: - 生词库视图（预留）
-struct VocabularyLibraryView: View {
-    var body: some View {
-        VStack(spacing: 0) {            
-            // 内容区域
-            ScrollView {
-                VStack(spacing: 0) {
-                    // 空状态视图
-                    emptyStateView
-                        .padding(.top, 60)
-                }
-            }
-            // .background(Color(.systemGroupedBackground))
-        }
-    }
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            // 图标
-            ZStack {
-                Circle()
-                    .fill(Color(.systemGray6))
-                    .frame(width: 80, height: 80)
-                
-                Image(systemName: "book.closed.fill")
-                    .font(.system(size: 32, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
-            
-            // 描述
-            VStack(spacing: 8) {
-                Text("这里将展示您收集的所有生词")
-                    .font(.system(size: 16))
-                    .foregroundColor(.secondary)
-                
-                Text("敬请期待")
-                    .font(.system(size: 16))
-                    .foregroundColor(.secondary)
-            }
-            .multilineTextAlignment(.center)
-            
-            // 占位按钮
-            Button(action: {
-                // 预留功能
-            }) {
-                HStack(spacing: 6) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 14, weight: .medium))
-                    Text("添加生词")
-                        .font(.system(size: 14, weight: .medium))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(Color.accentColor)
-                .clipShape(Capsule())
-            }
-            .disabled(true)
-            .opacity(0.6)
-        }
-        .padding(.horizontal, 24)
     }
 }
 

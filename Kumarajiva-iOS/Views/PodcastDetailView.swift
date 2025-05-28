@@ -9,6 +9,22 @@ struct PodcastDetailView: View {
     // 使用稳定的episodes数组，避免频繁重新计算
     @State private var stableEpisodes: [PodcastEpisode] = []
     
+    // 播放状态筛选
+    @State private var selectedPlaybackStatus: EpisodePlaybackStatus? = nil
+    @State private var showingStatusFilter = false
+    
+    // 计算筛选后的节目列表
+    private var filteredEpisodes: [PodcastEpisode] {
+        guard let status = selectedPlaybackStatus else {
+            return stableEpisodes
+        }
+        
+        return stableEpisodes.filter { episode in
+            let episodeStatus = playerService.getPlaybackStatus(for: episode.id)
+            return episodeStatus == status
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
         List {
@@ -22,7 +38,7 @@ struct PodcastDetailView: View {
                     if stableEpisodes.isEmpty {
                     emptyEpisodesView
                 } else {
-                        ForEach(stableEpisodes) { episode in
+                        ForEach(filteredEpisodes) { episode in
                         NavigationLink(destination: PodcastPlayerView(episode: episode)) {
                             EpisodeRowView(episode: episode)
                         }
@@ -30,16 +46,80 @@ struct PodcastDetailView: View {
                     }
                 }
             } header: {
-                HStack {
-                    Text("节目列表")
-                        .font(.headline)
+                VStack(spacing: 8) {
+                    // 第一行：标题和总数
+                    HStack {
+                        Text("节目列表")
+                            .font(.headline)
+                        
+                        Spacer()
+                        
+                        Text("\(filteredEpisodes.count) / \(stableEpisodes.count) 集")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                     
-                    Spacer()
-                    
-                        Text("\(stableEpisodes.count) 集")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    // 第二行：播放状态筛选
+                    HStack {
+                        Text("播放状态:")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        // 播放状态筛选按钮
+                        Menu {
+                            Button {
+                                selectedPlaybackStatus = nil
+                            } label: {
+                                HStack {
+                                    Text("全部")
+                                    if selectedPlaybackStatus == nil {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                            
+                            ForEach(EpisodePlaybackStatus.allCases, id: \.self) { status in
+                                Button {
+                                    selectedPlaybackStatus = status
+                                } label: {
+                                    HStack {
+                                        Image(systemName: status.icon)
+                                        Text(status.displayName)
+                                        if selectedPlaybackStatus == status {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                if let status = selectedPlaybackStatus {
+                                    Image(systemName: status.icon)
+                                        .foregroundColor(statusColor(for: status))
+                                    Text(status.displayName)
+                                        .foregroundColor(statusColor(for: status))
+                                } else {
+                                    Image(systemName: "line.3.horizontal.decrease.circle")
+                                        .foregroundColor(.accentColor)
+                                    Text("全部")
+                                        .foregroundColor(.accentColor)
+                                }
+                                Image(systemName: "chevron.down")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .font(.subheadline)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
+                        }
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
         }
         .listStyle(PlainListStyle())
@@ -180,6 +260,17 @@ struct PodcastDetailView: View {
     
     // MARK: - 方法
     
+    private func statusColor(for status: EpisodePlaybackStatus) -> Color {
+        switch status {
+        case .notPlayed:
+            return .gray
+        case .playing:
+            return .blue
+        case .completed:
+            return .green
+        }
+    }
+    
     private func refreshPodcast() {
         isRefreshing = true
         
@@ -243,11 +334,15 @@ struct PodcastDetailView: View {
 struct EpisodeRowView: View {
     let episode: PodcastEpisode
     @StateObject private var taskManager = SubtitleGenerationTaskManager.shared
+    @StateObject private var playerService = PodcastPlayerService.shared
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // 标题和时长
             HStack {
+                // 播放状态指示器
+                playbackStatusIndicator
+                
                 Text(episode.title)
                     .font(.headline)
                     .lineLimit(2)
@@ -271,11 +366,22 @@ struct EpisodeRowView: View {
                     .lineLimit(3)
             }
             
-            // 发布日期
+            // 发布日期和状态信息
             HStack {
                 Text(formatDate(episode.publishDate))
                     .font(.caption)
                     .foregroundColor(.secondary)
+                
+                // 播放进度（如果有）
+                if playerService.getPlaybackProgress(for: episode.id) > 0 {
+                    Text("进度: \(Int(playerService.getPlaybackProgress(for: episode.id) * 100))%")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(4)
+                }
                 
                 Spacer()
                 
@@ -284,6 +390,27 @@ struct EpisodeRowView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+    
+    // 播放状态指示器
+    private var playbackStatusIndicator: some View {
+        let status = playerService.getPlaybackStatus(for: episode.id)
+        
+        return Image(systemName: status.icon)
+            .font(.caption)
+            .foregroundColor(statusColor(for: status))
+            .frame(width: 16, height: 16)
+    }
+    
+    private func statusColor(for status: EpisodePlaybackStatus) -> Color {
+        switch status {
+        case .notPlayed:
+            return .gray
+        case .playing:
+            return .blue
+        case .completed:
+            return .green
+        }
     }
     
     // 字幕状态视图

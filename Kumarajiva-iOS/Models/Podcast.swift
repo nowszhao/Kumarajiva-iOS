@@ -321,4 +321,63 @@ enum VocabularyAnalysisState {
     case analyzing
     case completed([DifficultVocabulary])
     case failed(String)
+}
+
+// MARK: - 播放状态枚举
+enum EpisodePlaybackStatus: String, CaseIterable, Codable {
+    case notPlayed = "not_played"      // 未播放
+    case playing = "playing"           // 播放中
+    case completed = "completed"       // 播放完成
+    
+    var displayName: String {
+        switch self {
+        case .notPlayed: return "未播放"
+        case .playing: return "播放中"
+        case .completed: return "播放完成"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .notPlayed: return "circle"
+        case .playing: return "play.circle.fill"
+        case .completed: return "checkmark.circle.fill"
+        }
+    }
+}
+
+// MARK: - 播放历史记录
+struct EpisodePlaybackRecord: Codable, Identifiable {
+    let id: String
+    let episodeId: String
+    var currentTime: TimeInterval
+    var duration: TimeInterval
+    var lastPlayedDate: Date
+    var isCompleted: Bool
+    
+    init(episodeId: String, currentTime: TimeInterval = 0, duration: TimeInterval = 0) {
+        self.id = UUID().uuidString
+        self.episodeId = episodeId
+        self.currentTime = currentTime
+        self.duration = duration
+        self.lastPlayedDate = Date()
+        self.isCompleted = false
+    }
+    
+    // 计算播放进度
+    var progress: Double {
+        guard duration > 0 else { return 0 }
+        return min(currentTime / duration, 1.0)
+    }
+    
+    // 获取播放状态
+    var status: EpisodePlaybackStatus {
+        if isCompleted {
+            return .completed
+        } else if currentTime > 0 {
+            return .playing
+        } else {
+            return .notPlayed
+        }
+    }
 } 
