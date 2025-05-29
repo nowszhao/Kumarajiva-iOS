@@ -22,7 +22,7 @@ struct PodcastPlayerView: View {
             // 播放控制面板
             playbackControlView
         }
-        .navigationTitle("播放器")
+//        .navigationTitle("播放器")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             // 只准备节目，不自动播放
@@ -339,7 +339,7 @@ struct PodcastPlayerView: View {
                 in: 0...1
             )
             .accentColor(.accentColor)
-            .frame(height: 16) // 减少触摸区域高度
+            .frame(height: 10) // 减少触摸区域高度
             
             // 时间显示
             HStack {
@@ -360,7 +360,7 @@ struct PodcastPlayerView: View {
         HStack(spacing: 8) {
             // 播放速度
             Menu {
-                ForEach([0.5, 0.75, 1.0, 1.25, 1.5, 2.0], id: \.self) { rate in
+                ForEach([0.5, 0.6, 0.65,0.7, 0.75, 1.0, 1.25, 1.5, 2.0], id: \.self) { rate in
                     Button {
                         playerService.setPlaybackRate(Float(rate))
                     } label: {
