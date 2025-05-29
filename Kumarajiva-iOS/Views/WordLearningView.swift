@@ -8,8 +8,21 @@ struct WordLearningView: View {
             // 顶部导航
             segmentedControl
             
-            // 内容区域
-            contentView
+            // 内容区域 - 使用TabView支持滑动
+            TabView(selection: $selectedTab) {
+                // 今日学习
+                ReviewView()
+                    .tag(0)
+                
+                // 历史复习
+                HistoryView()
+                    .tag(1)
+                
+                // 生词库
+                VocabularyView()
+                    .tag(2)
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
         }
         .background(Color(.systemBackground))
     }
@@ -59,44 +72,11 @@ struct WordLearningView: View {
     
     private func tabTitle(for index: Int) -> String {
         switch index {
-        case 0: return "每日测验"
-        case 1: return "回顾"
+        case 0: return "今日学习"
+        case 1: return "历史复习"
         case 2: return "生词库"
         default: return ""
         }
-    }
-    
-    // MARK: - 内容视图
-    private var contentView: some View {
-        Group {
-            switch selectedTab {
-            case 0:
-                // 每日测验 - 对应原来的今日回顾
-                ReviewView()
-                .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal: .move(edge: .leading).combined(with: .opacity)
-                ))
-            case 1:
-                // 回顾 - 对应原来的历史记录
-                HistoryView()
-                .transition(.asymmetric(
-                    insertion: .move(edge: selectedTab > 1 ? .leading : .trailing).combined(with: .opacity),
-                    removal: .move(edge: selectedTab > 1 ? .trailing : .leading).combined(with: .opacity)
-                ))
-            case 2:
-                // 生词库 - 预留功能
-                VocabularyView()
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .leading).combined(with: .opacity),
-                        removal: .move(edge: .trailing).combined(with: .opacity)
-                    ))
-            default:
-                    ReviewView()
-                
-            }
-        }
-        .animation(.easeInOut(duration: 0.25), value: selectedTab)
     }
 }
 

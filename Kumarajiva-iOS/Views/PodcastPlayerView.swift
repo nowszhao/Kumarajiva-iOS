@@ -143,7 +143,7 @@ struct PodcastPlayerView: View {
                         .font(.headline)
                         .foregroundColor(.secondary)
                     
-                    Text("字幕将在播放过程中自动生成")
+                    Text("点击下方按钮生成字幕")
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -357,7 +357,7 @@ struct PodcastPlayerView: View {
     }
     
     private var mainControlsView: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
             // 播放速度
             Menu {
                 ForEach([0.5, 0.6, 0.65,0.7, 0.75, 1.0, 1.25, 1.5, 2.0], id: \.self) { rate in
@@ -373,81 +373,77 @@ struct PodcastPlayerView: View {
                     }
                 }
             } label: {
-                VStack(spacing: 1) {
+                VStack(spacing: 2) {
                     Image(systemName: "speedometer")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 22, weight: .medium))
                     Text("\(playerService.playbackState.playbackRate, specifier: "%.2g")x")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.system(size: 10, weight: .medium))
                 }
                 .foregroundColor(.primary)
-                .frame(width: 32, height: 32)
-                .background(Color(.systemGray6))
-                .clipShape(Circle())
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
             }
             
             // 上一句
             Button {
                 playerService.previousSubtitle()
             } label: {
-                VStack(spacing: 1) {
+                VStack(spacing: 2) {
                     Image(systemName: "backward.end.fill")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 22, weight: .medium))
                     Text("上一句")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.system(size: 10, weight: .medium))
                 }
                 .foregroundColor(playerService.hasPreviousSubtitle ? .primary : .secondary)
-                .frame(width: 32, height: 32)
-                .background(Color(.systemGray6))
-                .clipShape(Circle())
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
             }
             .disabled(!playerService.hasPreviousSubtitle)
             
-            // 播放/暂停 (缩小尺寸)
+            // 播放/暂停
             Button {
                 playerService.togglePlayPause()
             } label: {
                 Image(systemName: playerService.playbackState.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 50))
+                    .font(.system(size: 55))
                     .foregroundColor(.accentColor)
             }
+            .frame(maxWidth: .infinity)
             
             // 下一句
             Button {
                 playerService.nextSubtitle()
             } label: {
-                VStack(spacing: 1) {
+                VStack(spacing: 2) {
                     Image(systemName: "forward.end.fill")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 22, weight: .medium))
                     Text("下一句")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.system(size: 10, weight: .medium))
                 }
                 .foregroundColor(playerService.hasNextSubtitle ? .primary : .secondary)
-                .frame(width: 32, height: 32)
-                .background(Color(.systemGray6))
-                .clipShape(Circle())
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
             }
             .disabled(!playerService.hasNextSubtitle)
             
-            // 循环播放 (放在最右侧)
+            // 循环播放
             Button {
                 playerService.toggleLoop()
             } label: {
-                VStack(spacing: 1) {
+                VStack(spacing: 2) {
                     Image(systemName: playerService.playbackState.isLooping ? "repeat.1" : "repeat")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(playerService.playbackState.isLooping ? .white : .primary)
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
                     Text("循环")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(playerService.playbackState.isLooping ? .white : .primary)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
                 }
-                .frame(width: 32, height: 32)
-                .background(playerService.playbackState.isLooping ? Color.accentColor : Color(.systemGray6))
-                .clipShape(Circle())
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
             }
         }
+        .padding(.horizontal, 20)
     }
-    
-
     
     // MARK: - 计算属性
     

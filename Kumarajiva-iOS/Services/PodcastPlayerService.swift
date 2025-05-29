@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import AVFoundation
 import WhisperKit
+import MediaPlayer
 
 class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     static let shared = PodcastPlayerService()
@@ -35,6 +36,7 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         super.init()
         whisperService = WhisperKitService.shared
         setupAudioSession()
+        setupRemoteCommandCenter()
         observeTaskManagerUpdates()
         loadPlaybackRecords()
     }
@@ -120,11 +122,66 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     // MARK: - 音频会话设置
     private func setupAudioSession() {
         do {
-            // 设置音频会话类别，确保只有一个音频播放
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            try AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
+            // 设置音频会话类别为播放类型，确保可以在锁屏时控制
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
+            try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("🎧 [Player] 音频会话设置失败: \(error)")
+        }
+    }
+    
+    // MARK: - 远程控制设置
+    private func setupRemoteCommandCenter() {
+        let commandCenter = MPRemoteCommandCenter.shared()
+        
+        // 启用播放/暂停命令
+        commandCenter.playCommand.isEnabled = true
+        commandCenter.pauseCommand.isEnabled = true
+        commandCenter.togglePlayPauseCommand.isEnabled = true
+        
+        // 启用上一个/下一个命令
+        commandCenter.previousTrackCommand.isEnabled = true
+        commandCenter.nextTrackCommand.isEnabled = true
+        
+        // 禁用其他不需要的命令
+        commandCenter.seekBackwardCommand.isEnabled = false
+        commandCenter.seekForwardCommand.isEnabled = false
+        commandCenter.skipBackwardCommand.isEnabled = false
+        commandCenter.skipForwardCommand.isEnabled = false
+        commandCenter.ratingCommand.isEnabled = false
+        commandCenter.changePlaybackRateCommand.isEnabled = false
+        commandCenter.likeCommand.isEnabled = false
+        commandCenter.dislikeCommand.isEnabled = false
+        commandCenter.bookmarkCommand.isEnabled = false
+        
+        // 播放命令
+        commandCenter.playCommand.addTarget { [weak self] _ in
+            self?.resumePlayback()
+            return .success
+        }
+        
+        // 暂停命令
+        commandCenter.pauseCommand.addTarget { [weak self] _ in
+            self?.pausePlayback()
+            return .success
+        }
+        
+        // 切换播放/暂停命令
+        commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
+            self?.togglePlayPause()
+            return .success
+        }
+        
+        // 上一个命令（上一句字幕）
+        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
+            self?.previousSubtitle()
+            return .success
+        }
+        
+        // 下一个命令（下一句字幕）
+        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
+            self?.nextSubtitle()
+            return .success
         }
     }
     
@@ -143,10 +200,8 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         // 开始播放音频
         loadAndPlayAudio(from: episode.audioURL)
         
-        // 自动开始字幕生成（如果没有字幕）
-        if episode.subtitles.isEmpty {
-            startSubtitleGeneration(for: episode)
-        }
+        // 移除自动字幕生成逻辑，改为手动触发
+        // 用户需要通过"重新转录字幕"按钮手动生成字幕
         
         print("🎧 [Player] 开始播放节目: \(episode.title)")
     }
@@ -172,10 +227,8 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         // 准备音频但不播放
         prepareAudio(from: episode.audioURL)
         
-        // 自动开始字幕生成（如果没有字幕）
-        if episode.subtitles.isEmpty {
-            startSubtitleGeneration(for: episode)
-        }
+        // 移除自动字幕生成逻辑，改为手动触发
+        // 用户需要通过"重新转录字幕"按钮手动生成字幕
         
         print("🎧 [Player] 准备节目（不自动播放）: \(episode.title)")
     }
@@ -284,6 +337,9 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         playbackState.isPlaying = true
         startPlaybackTimer()
         
+        // 更新锁屏显示信息
+        updateNowPlayingInfo()
+        
         print("🎧 [Player] 开始播放: \(playbackState.currentEpisode?.title ?? "未知")")
     }
     
@@ -291,12 +347,18 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         audioPlayer?.pause()
         playbackState.isPlaying = false
         stopPlaybackTimer()
+        
+        // 更新锁屏显示信息
+        updateNowPlayingInfo()
     }
     
     func resumePlayback() {
         audioPlayer?.play()
         playbackState.isPlaying = true
         startPlaybackTimer()
+        
+        // 更新锁屏显示信息
+        updateNowPlayingInfo()
     }
     
     func stopPlayback() {
@@ -310,6 +372,9 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         playbackState.currentSubtitleIndex = nil
         playbackState.currentEpisode = nil
         stopPlaybackTimer()
+        
+        // 清除锁屏显示信息
+        clearNowPlayingInfo()
         
         // 释放音频会话
         do {
@@ -349,6 +414,9 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         player.rate = rate
         playbackState.playbackRate = rate
         
+        // 更新锁屏显示信息
+        updateNowPlayingInfo()
+        
         print("🎧 [Player] 播放速度已设置为: \(rate)x")
     }
     
@@ -367,6 +435,9 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
             seek(to: currentSubtitles[0].startTime)
         }
         
+        // 更新锁屏显示信息
+        updateNowPlayingInfo()
+        
         print("🎧 [Player] 手动切换到上一条字幕")
     }
     
@@ -381,6 +452,9 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
             playbackState.currentSubtitleIndex = currentIndex + 1
             seek(to: nextSubtitle.startTime)
         }
+        
+        // 更新锁屏显示信息
+        updateNowPlayingInfo()
         
         print("🎧 [Player] 手动切换到下一条字幕")
     }
@@ -474,6 +548,9 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
                     
                     playbackState.currentSubtitleIndex = index
                     print("🎧 [Player] 字幕切换到索引: \(index)")
+                    
+                    // 字幕切换时更新锁屏显示信息
+                    updateNowPlayingInfo()
                 }
                 return
             }
@@ -535,8 +612,8 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
                 print("🎧 [Player] 任务完成，更新当前字幕: \(task.episodeName)")
                 currentSubtitles = task.generatedSubtitles
                 
-                // 触发UI更新
-                objectWillChange.send()
+                // 移除手动触发UI更新的调用，@Published属性会自动处理
+                // 避免过度的UI刷新导致导航问题
                 break
             }
             
@@ -849,6 +926,57 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         stopPlaybackTimer()
         audioPlayer?.stop()
         cancellables.removeAll()
+    }
+    
+    // MARK: - 锁屏显示信息更新
+    private func updateNowPlayingInfo() {
+        guard let episode = playbackState.currentEpisode else {
+            clearNowPlayingInfo()
+            return
+        }
+        
+        var nowPlayingInfo = [String: Any]()
+        
+        // 标题：播客节目标题
+        nowPlayingInfo[MPMediaItemPropertyTitle] = episode.title
+        
+        // 副标题：播客描述（可选）
+        if !episode.description.isEmpty {
+            nowPlayingInfo[MPMediaItemPropertyArtist] = episode.description
+        } else {
+            nowPlayingInfo[MPMediaItemPropertyArtist] = "播客节目"
+        }
+        
+        // 专辑标题：当前字幕内容（如果有的话）
+        if let currentIndex = playbackState.currentSubtitleIndex,
+           currentIndex < currentSubtitles.count {
+            let currentSubtitle = currentSubtitles[currentIndex]
+            nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = currentSubtitle.text
+        }
+        
+        // 播放时间信息
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = playbackState.duration
+        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = playbackState.currentTime
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackState.isPlaying ? NSNumber(value: playbackState.playbackRate) : NSNumber(value: 0.0)
+        
+        // 设置应用图标
+        if let image = UIImage(named: "AppIcon") ?? UIImage(named: "AppIcon60x60") {
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in
+                return image
+            }
+        }
+        
+        // 其他信息
+        nowPlayingInfo[MPMediaItemPropertyMediaType] = MPMediaType.podcast.rawValue
+        
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+        
+        print("🎧 [Player] 更新锁屏显示信息: \(episode.title)")
+    }
+    
+    private func clearNowPlayingInfo() {
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        print("🎧 [Player] 清除锁屏显示信息")
     }
 }
 

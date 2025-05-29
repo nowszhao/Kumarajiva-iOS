@@ -7,6 +7,8 @@ struct HistoryView: View {
     @State private var selectedWordTypes: Set<WordTypeFilter> = [.all]
     @State private var currentPlayingWord: String? = nil
     @State private var showingFilterSheet = false
+    @State private var selectedHistory: ReviewHistoryItem? = nil
+    @State private var showingSpeechPractice = false
     @AppStorage("lastPlaybackIndex") private var lastPlaybackIndex: Int = 0
     
     private var filterTypeText: String {
@@ -28,16 +30,21 @@ struct HistoryView: View {
     }
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                filterToolbar
-                contentView
-            }
-            .overlay(playbackControlPanel, alignment: .bottom)
-            // .navigationTitle("历史记录")
+        VStack(spacing: 0) {
+            filterToolbar
+            contentView
         }
+        .overlay(playbackControlPanel, alignment: .bottom)
         .task {
             await viewModel.loadHistory(filter: selectedFilter)
+        }
+        .sheet(isPresented: $showingSpeechPractice) {
+            if let history = selectedHistory {
+                SpeechPracticeView(reviewHistory: history)
+                    .onAppear {
+                        print("🔥 [HistoryView] Sheet 已显示，selectedHistory: \(history.word)")
+                    }
+            }
         }
     }
     
@@ -158,14 +165,29 @@ struct HistoryView: View {
     
     private func historyItems(for date: Date) -> some View {
         ForEach(groupedHistories[date] ?? [], id: \.word) { history in
-            historyNavigationLink(for: history)
+            historyItemButton(for: history)
+                .listRowBackground(rowBackground(for: history))
         }
     }
     
-    private func historyNavigationLink(for history: ReviewHistoryItem) -> some View {
-        NavigationLink(destination: SpeechPracticeView(reviewHistory: history)) {
-            historyItemContent(for: history)
+    private func historyItemButton(for history: ReviewHistoryItem) -> some View {
+        Button(action: {
+            print("🔥 [HistoryView] 点击了单词: \(history.word)")
+            selectedHistory = history
+            showingSpeechPractice = true
+            print("🔥 [HistoryView] showingSpeechPractice 设置为: \(showingSpeechPractice)")
+        }) {
+            HStack(spacing: 12) {
+                historyItemContent(for: history)
+                
+                // 添加右侧箭头图标
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .padding(.trailing, 8)
+            }
         }
+        .buttonStyle(.plain)
     }
     
     private func historyItemContent(for history: ReviewHistoryItem) -> some View {
@@ -174,7 +196,6 @@ struct HistoryView: View {
             isPlaying: history.word == currentPlayingWord
         )
         .id(history.word)
-        .listRowBackground(rowBackground(for: history))
     }
     
     private func rowBackground(for history: ReviewHistoryItem) -> Color {
@@ -377,6 +398,8 @@ struct HistoryItemView: View {
                                 .font(.system(size: 18))
                                 .foregroundColor(isPlayingMemory ? .red : .blue)
                         }
+                        .buttonStyle(.borderless)
+                        .contentShape(Circle())
                         
                         Spacer()
                         
