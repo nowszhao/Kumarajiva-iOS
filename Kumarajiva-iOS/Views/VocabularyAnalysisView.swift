@@ -1,9 +1,31 @@
 import SwiftUI
 
+// MARK: - 解析模式枚举
+enum VocabularyAnalysisMode {
+    case fullText    // 全文解析
+    case selective   // 选择解析
+}
+
+// MARK: - 解析状态枚举  
+enum VocabularyAnalysisStep {
+    case modeSelection    // 模式选择
+    case wordSelection    // 单词选择（仅限选择解析模式）
+    case analyzing        // 分析中
+    case completed        // 完成
+    case failed           // 失败
+}
+
 struct VocabularyAnalysisView: View {
     @ObservedObject var playerService: PodcastPlayerService
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var viewModel = VocabularyViewModel.shared
+    
+    // 状态管理
+    @State private var currentStep: VocabularyAnalysisStep = .modeSelection
+    @State private var selectedMode: VocabularyAnalysisMode = .fullText
+    @State private var selectedWords: Set<String> = []
+    @State private var errorMessage: String = ""
+    @State private var analysisResult: [DifficultVocabulary] = []
     
     var body: some View {
         NavigationView {
@@ -32,7 +54,7 @@ struct VocabularyAnalysisView: View {
                 
                 Spacer()
                 
-                Text("生词列表")
+                Text(navigationTitle)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
                 
@@ -51,73 +73,259 @@ struct VocabularyAnalysisView: View {
         }
     }
     
+    // 动态标题
+    private var navigationTitle: String {
+        switch currentStep {
+        case .modeSelection:
+            return "生词解析"
+        case .wordSelection:
+            return "选择生词"
+        case .analyzing:
+            return "分析中"
+        case .completed, .failed:
+            return "生词列表"
+        }
+    }
+    
     // MARK: - 内容区域
     private var contentView: some View {
         Group {
-            switch playerService.vocabularyAnalysisState {
-            case .idle:
-                idleView
+            switch currentStep {
+            case .modeSelection:
+                modeSelectionView
+            case .wordSelection:
+                wordSelectionView
             case .analyzing:
                 analyzingView
-            case .completed(let vocabulary):
-                vocabularyListView(vocabulary)
-            case .failed(let error):
-                errorView(error)
+            case .completed:
+                vocabularyListView(analysisResult)
+            case .failed:
+                errorView(errorMessage)
             }
         }
     }
     
-    // MARK: - 空闲状态
-    private var idleView: some View {
-        VStack(spacing: 24) {
+    // MARK: - 模式选择视图
+    private var modeSelectionView: some View {
+        VStack(spacing: 32) {
             Spacer()
             
-            Image(systemName: "text.magnifyingglass")
-                .font(.system(size: 60))
-                .foregroundColor(.secondary)
-            
-            VStack(spacing: 12) {
-                Text("生词解析")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+            // 图标和标题
+            VStack(spacing: 16) {
+                Image(systemName: "text.magnifyingglass")
+                    .font(.system(size: 50))
+                    .foregroundColor(.accentColor)
                 
-                Text("AI将分析当前播客字幕中的难词\n帮助您更好地学习英语")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(2)
+                VStack(spacing: 8) {
+                    Text("生词解析")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    Text("选择您希望的解析方式")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             
-            Button {
-                Task {
-                    await playerService.analyzeVocabulary()
+            // 解析模式选项
+            VStack(spacing: 16) {
+                // 全文解析
+                Button {
+                    selectedMode = .fullText
+                    startFullTextAnalysis()
+                } label: {
+                    HStack(spacing: 16) {
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .font(.system(size: 24))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Color.blue)
+                            .cornerRadius(12)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("全文解析")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.primary)
+                            
+                            Text("AI自动分析所有字幕中的难词")
+                                .font(.system(size: 15))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(16)
+                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
                 }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                    Text("开始解析")
+                .buttonStyle(PlainButtonStyle())
+                .disabled(playerService.currentSubtitles.isEmpty)
+                
+                // 选择解析
+                Button {
+                    selectedMode = .selective
+                    currentStep = .wordSelection
+                } label: {
+                    HStack(spacing: 16) {
+                        Image(systemName: "hand.tap")
+                            .font(.system(size: 24))
+                            .foregroundColor(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Color.purple)
+                            .cornerRadius(12)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("选择解析")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.primary)
+                            
+                            Text("手动选择不熟悉的单词进行解析")
+                                .font(.system(size: 15))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color(.systemBackground))
+                    .cornerRadius(16)
+                    .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
                 }
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.accentColor)
-                .cornerRadius(12)
+                .buttonStyle(PlainButtonStyle())
+                .disabled(playerService.currentSubtitles.isEmpty)
             }
-            .padding(.horizontal, 32)
-            .disabled(playerService.currentSubtitles.isEmpty)
+            .padding(.horizontal, 24)
             
             if playerService.currentSubtitles.isEmpty {
                 Text("请先生成字幕后再进行生词解析")
                     .font(.caption)
                     .foregroundColor(.orange)
                     .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
             }
             
             Spacer()
         }
         .padding(.horizontal, 20)
+    }
+    
+    // MARK: - 单词选择视图
+    private var wordSelectionView: some View {
+        VStack(spacing: 0) {
+            // 选择状态栏
+            selectionStatusBar
+            
+            // 字幕内容
+            subtitleSelectionView
+            
+            // 底部操作栏
+            selectionActionBar
+        }
+    }
+    
+    // 选择状态栏
+    private var selectionStatusBar: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("点击选择不熟悉的单词")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Text("已选择 \(selectedWords.count) 个单词")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // 全选/全不选按钮
+            Button {
+                if selectedWords.isEmpty {
+                    selectAllWords()
+                } else {
+                    selectedWords.removeAll()
+                }
+            } label: {
+                Text(selectedWords.isEmpty ? "全选" : "清空")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.accentColor)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(.systemBackground))
+        .overlay(
+            Rectangle()
+                .frame(height: 1)
+                .foregroundColor(Color(.separator))
+                .frame(maxHeight: .infinity, alignment: .bottom)
+        )
+    }
+    
+    // 字幕选择视图
+    private var subtitleSelectionView: some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(playerService.currentSubtitles) { subtitle in
+                    SubtitleWordSelectionView(
+                        subtitle: subtitle,
+                        selectedWords: $selectedWords
+                    )
+                    .padding(.horizontal, 16)
+                }
+                
+                // 底部间距
+                Color.clear.frame(height: 80)
+            }
+            .padding(.top, 16)
+        }
+    }
+    
+    // 选择操作栏
+    private var selectionActionBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+            
+            HStack(spacing: 12) {
+                Button("返回") {
+                    currentStep = .modeSelection
+                    selectedWords.removeAll()
+                }
+                .font(.system(size: 17))
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                
+                Button("开始解析") {
+                    startSelectiveAnalysis()
+                }
+                .font(.system(size: 17, weight: .medium))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(selectedWords.isEmpty ? Color.gray : Color.accentColor)
+                .cornerRadius(12)
+                .disabled(selectedWords.isEmpty)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .background(Color(.systemBackground))
     }
     
     // MARK: - 分析中状态
@@ -164,7 +372,7 @@ struct VocabularyAnalysisView: View {
                 // 统计信息
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("共找到 \(vocabulary.count) 个生词")
+                        Text("共解析 \(vocabulary.count) 个生词")
                             .font(.headline)
                             .foregroundColor(.primary)
                         
@@ -177,9 +385,9 @@ struct VocabularyAnalysisView: View {
                     
                     // 重新解析按钮
                     Button {
-                        Task {
-                            await playerService.analyzeVocabulary()
-                        }
+                        currentStep = .modeSelection
+                        selectedWords.removeAll()
+                        analysisResult.removeAll()
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.clockwise")
@@ -193,7 +401,6 @@ struct VocabularyAnalysisView: View {
                         .background(Color.accentColor)
                         .cornerRadius(8)
                     }
-                    .disabled(playerService.vocabularyAnalysisState == .analyzing)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
@@ -232,9 +439,9 @@ struct VocabularyAnalysisView: View {
             }
             
             Button {
-                Task {
-                    await playerService.analyzeVocabulary()
-                }
+                currentStep = .modeSelection
+                selectedWords.removeAll()
+                errorMessage = ""
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.clockwise")
@@ -252,6 +459,97 @@ struct VocabularyAnalysisView: View {
             Spacer()
         }
         .padding(.horizontal, 20)
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func selectAllWords() {
+        var allWords: Set<String> = []
+        for subtitle in playerService.currentSubtitles {
+            let words = subtitle.text.components(separatedBy: .whitespacesAndNewlines)
+                .map { $0.trimmingCharacters(in: .punctuationCharacters) }
+                .filter { !$0.isEmpty && $0.rangeOfCharacter(from: .letters) != nil }
+            allWords.formUnion(words)
+        }
+        selectedWords = allWords
+    }
+    
+    private func startFullTextAnalysis() {
+        currentStep = .analyzing
+        Task {
+            await performFullTextAnalysis()
+        }
+    }
+    
+    private func startSelectiveAnalysis() {
+        currentStep = .analyzing
+        Task {
+            await performSelectiveAnalysis()
+        }
+    }
+    
+    @MainActor
+    private func performFullTextAnalysis() async {
+        // 使用现有的全文解析逻辑
+        await playerService.analyzeVocabulary()
+        
+        // 定期检查分析状态直到完成
+        while true {
+            switch playerService.vocabularyAnalysisState {
+            case .completed(let vocabulary):
+                analysisResult = vocabulary
+                currentStep = .completed
+                return
+            case .failed(let error):
+                errorMessage = error
+                currentStep = .failed
+                return
+            case .analyzing:
+                // 继续等待
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5秒
+                continue
+            case .idle:
+                // 如果还是idle状态，说明出现了问题
+                errorMessage = "分析状态异常，请重试"
+                currentStep = .failed
+                return
+            }
+        }
+    }
+    
+    @MainActor
+    private func performSelectiveAnalysis() async {
+        guard !selectedWords.isEmpty else {
+            errorMessage = "请选择要解析的单词"
+            currentStep = .failed
+            return
+        }
+        
+        // 调用PodcastPlayerService中的选择解析方法
+        await playerService.analyzeSelectedWords(selectedWords)
+        
+        // 定期检查分析状态直到完成
+        while true {
+            switch playerService.vocabularyAnalysisState {
+            case .completed(let vocabulary):
+                analysisResult = vocabulary
+                currentStep = .completed
+                return
+            case .failed(let error):
+                errorMessage = error
+                currentStep = .failed
+                return
+            case .analyzing:
+                // 继续等待
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5秒
+                continue
+            case .idle:
+                // 如果还是idle状态，说明出现了问题
+                errorMessage = "分析状态异常，请重试"
+                currentStep = .failed
+                return
+            }
+        }
     }
 }
 
@@ -512,6 +810,167 @@ struct VocabularyCardView: View {
         default:
             return .gray
         }
+    }
+}
+
+// MARK: - 字幕单词选择组件
+struct SubtitleWordSelectionView: View {
+    let subtitle: Subtitle
+    @Binding var selectedWords: Set<String>
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // 时间标签
+            HStack {
+                Text(formatTime(subtitle.startTime))
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(6)
+                
+                Spacer()
+            }
+            
+            // 单词流式布局
+            wordFlowView
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+    
+    private var wordFlowView: some View {
+        FlowLayout(spacing: 8) {
+            ForEach(Array(words.enumerated()), id: \.offset) { index, word in
+                wordButton(word)
+            }
+        }
+    }
+    
+    private func wordButton(_ word: String) -> some View {
+        Button {
+            toggleWordSelection(word)
+        } label: {
+            Text(word)
+                .font(.system(size: 16))
+                .foregroundColor(isWordSelected(word) ? .white : .primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(isWordSelected(word) ? Color.accentColor : Color(.systemGray6))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isWordSelected(word) ? Color.accentColor : Color.clear, lineWidth: 1)
+                )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .scaleEffect(isWordSelected(word) ? 1.05 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isWordSelected(word))
+    }
+    
+    // 处理的单词列表（过滤标点符号等）
+    private var words: [String] {
+        subtitle.text.components(separatedBy: .whitespacesAndNewlines)
+            .map { $0.trimmingCharacters(in: .punctuationCharacters) }
+            .filter { !$0.isEmpty && $0.rangeOfCharacter(from: .letters) != nil }
+    }
+    
+    private func isWordSelected(_ word: String) -> Bool {
+        selectedWords.contains(word.lowercased())
+    }
+    
+    private func toggleWordSelection(_ word: String) {
+        let lowercaseWord = word.lowercased()
+        if selectedWords.contains(lowercaseWord) {
+            selectedWords.remove(lowercaseWord)
+        } else {
+            selectedWords.insert(lowercaseWord)
+        }
+        
+        // 添加触觉反馈
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+    }
+    
+    private func formatTime(_ time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+}
+
+// MARK: - 流式布局组件
+struct FlowLayout: Layout {
+    let spacing: CGFloat
+    
+    init(spacing: CGFloat = 8) {
+        self.spacing = spacing
+    }
+    
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = FlowResult(
+            in: proposal.replacingUnspecifiedDimensions().width,
+            subviews: subviews,
+            spacing: spacing
+        )
+        return CGSize(width: proposal.width ?? 0, height: result.height)
+    }
+    
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = FlowResult(
+            in: bounds.width,
+            subviews: subviews,
+            spacing: spacing
+        )
+        
+        for index in subviews.indices {
+            let position = result.positions[index]
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
+                proposal: ProposedViewSize(result.sizes[index])
+            )
+        }
+    }
+}
+
+// MARK: - 流式布局计算
+struct FlowResult {
+    let positions: [CGPoint]
+    let sizes: [CGSize]
+    let height: CGFloat
+    
+    init(in maxWidth: CGFloat, subviews: LayoutSubviews, spacing: CGFloat) {
+        var positions: [CGPoint] = []
+        var sizes: [CGSize] = []
+        var currentRow: (offset: CGFloat, height: CGFloat) = (0, 0)
+        var totalHeight: CGFloat = 0
+        
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            sizes.append(size)
+            
+            if currentRow.offset + size.width > maxWidth && currentRow.offset > 0 {
+                // 需要换行
+                totalHeight += currentRow.height + spacing
+                currentRow = (0, 0)
+            }
+            
+            positions.append(CGPoint(x: currentRow.offset, y: totalHeight))
+            currentRow.offset += size.width + spacing
+            currentRow.height = max(currentRow.height, size.height)
+        }
+        
+        totalHeight += currentRow.height
+        
+        self.positions = positions
+        self.sizes = sizes
+        self.height = totalHeight
     }
 }
 

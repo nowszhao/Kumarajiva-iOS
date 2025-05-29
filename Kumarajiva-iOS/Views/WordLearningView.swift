@@ -73,7 +73,7 @@ struct WordLearningView: View {
     private func tabTitle(for index: Int) -> String {
         switch index {
         case 0: return "今日学习"
-        case 1: return "历史复习"
+        case 1: return "复习"
         case 2: return "生词库"
         default: return ""
         }

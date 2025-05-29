@@ -743,97 +743,8 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         print("🔍 [Vocabulary] 合并文本长度: \(fullText.count) 字符")
         print("🔍 [Vocabulary] 文本预览: \(String(fullText.prefix(200)))...")
         
-        // 构建提示词
-        let prompt = """
-        你现在是一位专业的英语教学专家，我是一个英语四级的中国人，你现在正帮我从英语对话或文章中提炼难词，要求如下：
-        1、您的任务是分析给定文本中的所有语言难点，这些难点可能包括对非母语学习者具有挑战性的词汇、短语、俚语、缩写、简写以及网络用语等。
-        2、输出请遵循以下要求：
-        - 词汇：识别出句子中所有词汇，包括短语/词块、俚语、缩写
-        - 类型：包括短语/词块、俚语、缩写（Phrases, Slang, Abbreviations）
-        - 词性：使用n., v., adj., adv., phrase等标准缩写
-        - 音标：提供美式音标
-        - 中英混合句子：使用词汇造一个句子，除了该词汇外，其他均为中文，需要保证语法正确，通过在完整中文语境中嵌入单一核心英语术语，帮助学习者直观理解专业概念的实际用法，括号里面是英文句子。
-        3、输出示例如下,严格按照json格式输出，需要注意双引号问题：
-        {
-        "difficultVocabulary": [
-            {
-                "vocabulary": "benchmark",
-                "type": "Words",
-                "part_of_speech": "n.",
-                "phonetic": "/ˈbentʃmɑːrk/",
-                "chinese_meaning": "基准；参照标准",
-                "chinese_english_sentence": "深度求索最近发布的推理模型在常见benchmark中击败了许多顶级人工智能公司。（DeepSeek's newly launched reasoning model has surpassed leading AI companies on standard benchmarks.）"
-            }
-            ]
-        }    
-        处理内容如下：
-        \(fullText)
-        """
-        
-        print("🔍 [Vocabulary] 提示词长度: \(prompt.count) 字符")
-        
-        do {
-            print("🔍 [Vocabulary] 开始调用LLM服务...")
-            let response = try await llmService.sendChatMessage(prompt: prompt)
-            print("🔍 [Vocabulary] LLM响应长度: \(response.count) 字符")
-            print("🔍 [Vocabulary] LLM响应内容: \(response)")
-            
-            // 清理响应文本，移除可能的markdown格式
-            let cleanedResponse = cleanJSONResponse(response)
-            print("🔍 [Vocabulary] 清理后响应: \(cleanedResponse)")
-            
-            // 解析JSON响应
-            if let jsonData = cleanedResponse.data(using: .utf8) {
-                print("🔍 [Vocabulary] 开始解析JSON...")
-                
-                do {
-                    let analysisResponse = try JSONDecoder().decode(VocabularyAnalysisResponse.self, from: jsonData)
-                    print("🔍 [Vocabulary] JSON解析成功，生词数量: \(analysisResponse.difficultVocabulary.count)")
-                    
-                    // 打印每个生词的详细信息
-                    for (index, vocab) in analysisResponse.difficultVocabulary.enumerated() {
-                        print("🔍 [Vocabulary] 生词\(index + 1): \(vocab.vocabulary) - \(vocab.chineseMeaning)")
-                    }
-                    
-                    await MainActor.run {
-                        vocabularyAnalysisState = .completed(analysisResponse.difficultVocabulary)
-                    }
-                } catch let decodingError {
-                    print("🔍 [Vocabulary] JSON解析失败: \(decodingError)")
-                    if let decodingError = decodingError as? DecodingError {
-                        print("🔍 [Vocabulary] 解析错误详情: \(decodingError.localizedDescription)")
-                        switch decodingError {
-                        case .keyNotFound(let key, let context):
-                            print("🔍 [Vocabulary] 缺少键: \(key), 上下文: \(context)")
-                        case .typeMismatch(let type, let context):
-                            print("🔍 [Vocabulary] 类型不匹配: \(type), 上下文: \(context)")
-                        case .valueNotFound(let type, let context):
-                            print("🔍 [Vocabulary] 值未找到: \(type), 上下文: \(context)")
-                        case .dataCorrupted(let context):
-                            print("🔍 [Vocabulary] 数据损坏: \(context)")
-                        @unknown default:
-                            print("🔍 [Vocabulary] 未知解析错误")
-                        }
-                    }
-                    
-                    await MainActor.run {
-                        vocabularyAnalysisState = .failed("JSON解析失败: \(decodingError.localizedDescription)")
-                    }
-                }
-            } else {
-                print("🔍 [Vocabulary] 无法将响应转换为UTF8数据")
-                await MainActor.run {
-                    vocabularyAnalysisState = .failed("响应格式错误：无法转换为数据")
-                }
-            }
-        } catch {
-            print("🔍 [Vocabulary] LLM调用失败: \(error)")
-            print("🔍 [Vocabulary] 错误详情: \(error.localizedDescription)")
-            
-            await MainActor.run {
-                vocabularyAnalysisState = .failed("分析失败: \(error.localizedDescription)")
-            }
-        }
+        // 使用通用的解析逻辑
+        await performVocabularyAnalysis(with: fullText, isSelectiveMode: false)
     }
     
     /// 清理JSON响应，移除markdown格式等
@@ -873,6 +784,165 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     /// 重置生词解析状态
     func resetVocabularyAnalysis() {
         vocabularyAnalysisState = .idle
+    }
+    
+    /// 分析用户选择的特定单词
+    func analyzeSelectedWords(_ selectedWords: Set<String>) async {
+        print("🔍 [Vocabulary] 开始选择解析，选中单词数量: \(selectedWords.count)")
+        
+        guard !selectedWords.isEmpty else {
+            print("🔍 [Vocabulary] 失败：未选择任何单词")
+            await MainActor.run {
+                vocabularyAnalysisState = .failed("请选择要解析的单词")
+            }
+            return
+        }
+        
+        print("🔍 [Vocabulary] 选中的单词: \(Array(selectedWords).joined(separator: ", "))")
+        
+        await MainActor.run {
+            vocabularyAnalysisState = .analyzing
+        }
+        
+        // 将选中的单词组合成分析文本
+        let selectedText = Array(selectedWords).joined(separator: ",")
+        print("🔍 [Vocabulary] 分析文本: \(selectedText)")
+        
+        // 使用相同的提示词和解析逻辑
+        await performVocabularyAnalysis(with: selectedText, isSelectiveMode: true)
+    }
+    
+    /// 通用的生词解析逻辑（供全文解析和选择解析共用）
+    private func performVocabularyAnalysis(with text: String, isSelectiveMode: Bool = false) async {
+        let analysisType = isSelectiveMode ? "选择解析" : "全文解析"
+        print("🔍 [Vocabulary] 开始\(analysisType)，文本长度: \(text.count) 字符")
+        
+        // 构建提示词（与原有逻辑保持一致）
+        var prompt = """
+        你现在是一位专业的英语教学专家，我是一个英语四级的中国人，你现在正帮我从英语对话或文章中提炼英语中常用的Top25的难词，要求如下：
+        1、您的任务是分析给定文本中的所有语言难点，这些难点可能包括对非母语学习者具有挑战性的词汇、短语、俚语、缩写、简写以及网络用语等。
+        2、输出请遵循以下要求：
+        - 词汇：识别出句子中所有难词，包括短语/词块、俚语、缩写，不常见且不影响理解内容的词汇不用解析。
+        - 类型：包括短语/词块、俚语、缩写（Phrases, Slang, Abbreviations）
+        - 词性：使用n., v., adj., adv., phrase等标准缩写
+        - 音标：提供美式音标
+        - 中英混合句子：使用词汇造一个句子，除了该词汇外，其他均为中文，需要保证语法正确，通过在完整中文语境中嵌入单一核心英语术语，帮助学习者直观理解专业概念的实际用法，括号里面是英文句子。
+        3、输出示例如下,严格按照json格式输出，需要注意双引号问题：
+        {
+            "difficult_vocabulary": [
+                {
+                    "vocabulary": "go for it",
+                    "type": "Phrases",
+                    "part_of_speech": "phrase",
+                    "phonetic": "/ɡoʊ fɔːr ɪt/",
+                    "chinese_meaning": "努力争取；放手一搏",
+                    "chinese_english_sentence": "这个机会很难得，你应该go for it。（This opportunity is rare, you should go for it.）"
+                }
+            ]
+        }
+        处理内容如下：
+        \(text)
+        """
+        
+        if(isSelectiveMode){
+            prompt = """
+            你现在是一位专业的英语教学专家，请帮我解析我提供的英语词汇，要求如下：
+            1、请分析我给定的所有英语词汇
+            2、输出请遵循以下要求：
+            - 词汇：识别出句子中所有难词，包括短语/词块、俚语、缩写，不常见且不影响理解内容的词汇不用解析。
+            - 类型：包括短语/词块、俚语、缩写（Phrases, Slang, Abbreviations）
+            - 词性：使用n., v., adj., adv., phrase等标准缩写
+            - 音标：提供美式音标
+            - 中英混合句子：使用词汇造一个句子，除了该词汇外，其他均为中文，需要保证语法正确，通过在完整中文语境中嵌入单一核心英语术语，帮助学习者直观理解专业概念的实际用法，括号里面是英文句子。
+            3、输出示例如下,严格按照json格式输出，需要注意双引号问题：
+            {
+                "difficult_vocabulary": [
+                    {
+                        "vocabulary": "go for it",
+                        "type": "Phrases",
+                        "part_of_speech": "phrase",
+                        "phonetic": "/ɡoʊ fɔːr ɪt/",
+                        "chinese_meaning": "努力争取；放手一搏",
+                        "chinese_english_sentence": "这个机会很难得，你应该go for it。（This opportunity is rare, you should go for it.）"
+                    }
+                ]
+            }
+            处理内容如下：
+            \(text)
+            """
+        }
+        
+        print("🔍 [Vocabulary] 提示词长度: \(prompt.count) 字符")
+        
+        do {
+            print("🔍 [Vocabulary] 开始调用LLM服务...")
+            let response = try await llmService.sendChatMessage(prompt: prompt)
+            print("🔍 [Vocabulary] LLM响应长度: \(response.count) 字符")
+            print("🔍 [Vocabulary] LLM响应内容预览: \(String(response.prefix(200)))...")
+            
+            // 清理响应文本，移除可能的markdown格式
+            let cleanedResponse = cleanJSONResponse(response)
+            print("🔍 [Vocabulary] 清理后响应: \(cleanedResponse)")
+            
+            // 解析JSON响应
+            if let jsonData = cleanedResponse.data(using: .utf8) {
+                print("🔍 [Vocabulary] 开始解析JSON...")
+                
+                do {
+                    let analysisResponse = try JSONDecoder().decode(VocabularyAnalysisResponse.self, from: jsonData)
+                    print("🔍 [Vocabulary] JSON解析成功，生词数量: \(analysisResponse.difficultVocabulary.count)")
+                    
+                    // 打印每个生词的详细信息
+                    for (index, vocab) in analysisResponse.difficultVocabulary.enumerated() {
+                        print("🔍 [Vocabulary] 生词\(index + 1): \(vocab.vocabulary) - \(vocab.chineseMeaning)")
+                    }
+                    
+                    await MainActor.run {
+                        vocabularyAnalysisState = .completed(analysisResponse.difficultVocabulary)
+                    }
+                } catch let decodingError {
+                    print("🔍 [Vocabulary] JSON解析失败: \(decodingError)")
+                    await handleJSONDecodingError(decodingError as! DecodingError)
+                }
+            } else {
+                print("🔍 [Vocabulary] 无法将响应转换为UTF8数据")
+                await MainActor.run {
+                    vocabularyAnalysisState = .failed("响应格式错误：无法转换为数据")
+                }
+            }
+        } catch {
+            print("🔍 [Vocabulary] LLM调用失败: \(error)")
+            print("🔍 [Vocabulary] 错误详情: \(error.localizedDescription)")
+            
+            await MainActor.run {
+                vocabularyAnalysisState = .failed("分析失败: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    /// 处理JSON解码错误的通用方法
+    private func handleJSONDecodingError(_ decodingError: DecodingError) async {
+        print("🔍 [Vocabulary] 解析错误详情: \(decodingError.localizedDescription)")
+        
+        var errorDetail = ""
+        switch decodingError {
+        case .keyNotFound(let key, let context):
+            errorDetail = "缺少键: \(key), 上下文: \(context)"
+        case .typeMismatch(let type, let context):
+            errorDetail = "类型不匹配: \(type), 上下文: \(context)"
+        case .valueNotFound(let type, let context):
+            errorDetail = "值未找到: \(type), 上下文: \(context)"
+        case .dataCorrupted(let context):
+            errorDetail = "数据损坏: \(context)"
+        @unknown default:
+            errorDetail = "未知解析错误"
+        }
+        
+        print("🔍 [Vocabulary] \(errorDetail)")
+        
+        await MainActor.run {
+            vocabularyAnalysisState = .failed("JSON解析失败: \(decodingError.localizedDescription)")
+        }
     }
     
     // MARK: - 播放历史记录

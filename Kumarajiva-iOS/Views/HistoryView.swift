@@ -30,11 +30,11 @@ struct HistoryView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            filterToolbar
-            contentView
-        }
-        .overlay(playbackControlPanel, alignment: .bottom)
+            VStack(spacing: 0) {
+                filterToolbar
+                contentView
+            }
+            .overlay(playbackControlPanel, alignment: .bottom)
         .task {
             await viewModel.loadHistory(filter: selectedFilter)
         }
@@ -178,7 +178,7 @@ struct HistoryView: View {
             print("🔥 [HistoryView] showingSpeechPractice 设置为: \(showingSpeechPractice)")
         }) {
             HStack(spacing: 12) {
-                historyItemContent(for: history)
+            historyItemContent(for: history)
                 
                 // 添加右侧箭头图标
                 Image(systemName: "chevron.right")

@@ -4,31 +4,31 @@ struct ReviewView: View {
     @StateObject private var viewModel = ReviewViewModel()
     
     var body: some View {
-        Group {
-            if viewModel.isLoading {
+            Group {
+                if viewModel.isLoading {
                 LoadingView()
-            } else if let quiz = viewModel.currentQuiz {
+                } else if let quiz = viewModel.currentQuiz {
                 QuizView(quiz: quiz, progress: viewModel.progress, viewModel: viewModel) { isCorrect in
-                    Task {
-                        await viewModel.submitAnswer(word: quiz.word, isCorrect: isCorrect)
+                        Task {
+                            await viewModel.submitAnswer(word: quiz.word, isCorrect: isCorrect)
+                        }
                     }
-                }
-            } else if let progress = viewModel.progress {
-                CompletionView(progress: progress) {
-                    Task {
-                        await viewModel.reset()
+                } else if let progress = viewModel.progress {
+                    CompletionView(progress: progress) {
+                        Task {
+                            await viewModel.reset()
+                        }
                     }
-                }
-            } else {
+                } else {
                 ReviewEmptyStateView()
             }
         }
-        .alert("Error", isPresented: .constant(viewModel.error != nil)) {
-            Button("OK") {
-                viewModel.error = nil
-            }
-        } message: {
-            Text(viewModel.error ?? "")
+            .alert("Error", isPresented: .constant(viewModel.error != nil)) {
+                Button("OK") {
+                    viewModel.error = nil
+                }
+            } message: {
+                Text(viewModel.error ?? "")
         }
         .task {
             await viewModel.loadTodayWords()
@@ -104,9 +104,9 @@ struct CompletionView: View {
             
             VStack(spacing: 24) {
                 Spacer()
-                
+            
                 // 成功图标区域
-                VStack(spacing: 16) {
+            VStack(spacing: 16) {
                     ZStack {
                         // 背景圆圈 - 简化效果
                         Circle()
@@ -130,12 +130,12 @@ struct CompletionView: View {
                     
                     // 标题文字
                     VStack(spacing: 6) {
-                        Text("今日学习完成!")
+                Text("今日学习完成!")
                             .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundColor(.primary)
+                    .foregroundColor(.primary)
                             .multilineTextAlignment(.center)
-                        
-                        Text("正确率: \(calculateAccuracy(progress))%")
+                
+                Text("正确率: \(calculateAccuracy(progress))%")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(
                                 LinearGradient(
@@ -147,8 +147,8 @@ struct CompletionView: View {
                     }
                     .opacity(animateCheckmark ? 1.0 : 0)
                     .animation(.easeInOut(duration: 0.6).delay(0.5), value: animateCheckmark)
-                }
-                
+            }
+            
                 // 统计卡片区域 - 简化版本
                 HStack(spacing: 12) {
                     CompactStatCard(
@@ -170,7 +170,7 @@ struct CompletionView: View {
                     .opacity(animateStats ? 1.0 : 0)
                     .offset(y: animateStats ? 0 : 20)
                     .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.8), value: animateStats)
-                }
+            }
                 .padding(.horizontal, 20)
                 
                 // 准确率进度条 - 简化版本
@@ -178,15 +178,15 @@ struct CompletionView: View {
                     .opacity(animateStats ? 1.0 : 0)
                     .animation(.easeInOut(duration: 0.8).delay(0.9), value: animateStats)
                     .padding(.horizontal, 20)
-                
-                Spacer()
-                
-                // 重新开始按钮
-                Button(action: onReset) {
+            
+            Spacer()
+            
+            // 重新开始按钮
+            Button(action: onReset) {
                     HStack(spacing: 12) {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 16, weight: .medium))
-                        Text("重新开始")
+                Text("重新开始")
                             .font(.system(size: 16, weight: .semibold))
                     }
                     .foregroundColor(.white)
@@ -201,12 +201,12 @@ struct CompletionView: View {
                     )
                     .cornerRadius(12)
                     .shadow(color: Color.accentColor.opacity(0.4), radius: 8, x: 0, y: 4)
-                }
+            }
                 .opacity(animateStats ? 1.0 : 0)
                 .scaleEffect(animateStats ? 1.0 : 0.9)
                 .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(1.0), value: animateStats)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
             }
         }
         .onAppear {
@@ -247,9 +247,9 @@ struct CompactStatCard: View {
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
-                Text(title)
+            Text(title)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.secondary)
+                .foregroundColor(.secondary)
             }
         }
         .frame(maxWidth: .infinity)

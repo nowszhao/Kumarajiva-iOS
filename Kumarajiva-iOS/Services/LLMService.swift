@@ -158,7 +158,7 @@ class LLMService: ObservableObject {
         cookie: String? = nil
     ) async throws -> String {
         print("🤖 [LLM] 开始发送聊天消息")
-        print("🤖 [LLM] 提示词长度: \(prompt.count) 字符")
+        print("🤖 [LLM] 提示词 \(prompt)")
         
         let finalAgentId = agentId ?? defaultAgentId
         let finalModel = model ?? defaultModel

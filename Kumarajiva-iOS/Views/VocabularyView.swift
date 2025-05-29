@@ -322,11 +322,11 @@ struct VocabularyView: View {
             Spacer()
             
             // Results count
-            if !searchText.isEmpty || filterOption != .all {
-                Text("\(filteredVocabularies.count) 个结果")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-            }
+//            if !searchText.isEmpty || filterOption != .all {
+//                Text("\(filteredVocabularies.count) 个结果")
+//                    .font(.system(size: 12))
+//                    .foregroundColor(.secondary)
+//            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -358,11 +358,10 @@ struct VocabularyView: View {
                 .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
-                .swipeActions(edge: .trailing) {
+                .contextMenu {
                     Button(role: .destructive) {
-                        Task {
-                            await viewModel.deleteVocabulary(vocabulary)
-                        }
+                        vocabularyToDelete = vocabulary
+                        showingDeleteAlert = true
                     } label: {
                         Label("删除", systemImage: "trash")
                     }

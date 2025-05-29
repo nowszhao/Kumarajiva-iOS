@@ -323,6 +323,10 @@ struct DifficultVocabulary: Codable, Identifiable, Equatable {
 
 struct VocabularyAnalysisResponse: Codable {
     let difficultVocabulary: [DifficultVocabulary]
+    
+    enum CodingKeys: String, CodingKey {
+        case difficultVocabulary = "difficult_vocabulary"
+    }
 }
 
 // MARK: - 生词解析状态
