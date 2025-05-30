@@ -22,11 +22,26 @@ class PodcastDataService: ObservableObject {
     private var updateTask: Task<Void, Never>?
     
     init() {
+        print("🎧 [Data] PodcastDataService 初始化开始")
+        
         // 检查存储状态
         persistentStorage.checkStorageStatus()
         
+        // 直接在主线程同步加载数据，确保初始化完成时数据已可用
         loadPodcasts()
         loadSubtitleCache()
+        
+        print("🎧 [Data] PodcastDataService 初始化完成，播客数量: \(podcasts.count)")
+        
+        // 执行启动诊断
+        startupDiagnostics()
+        
+        // 异步验证数据完整性（不影响初始化）
+        DispatchQueue.main.async { [weak self] in
+            Task {
+                await self?.validateAndRepairData()
+            }
+        }
     }
     
     // MARK: - 公共方法
@@ -49,11 +64,14 @@ class PodcastDataService: ObservableObject {
             // 解析RSS
             let result = try await rssParser.parsePodcastRSS(from: rssURL)
             
-            // 保存到本地存储
-            savePodcast(result.podcast)
-            
             await MainActor.run {
+                // 先添加到内存数组
                 self.podcasts.append(result.podcast)
+                print("🎧 [Data] 播客已添加到内存，当前总数: \(self.podcasts.count)")
+                
+                // 然后保存到持久化存储
+                self.savePodcastsToPersistentStorage()
+                
                 self.isLoading = false
             }
             
@@ -385,12 +403,28 @@ class PodcastDataService: ObservableObject {
     // MARK: - 持久化存储操作
     
     private func loadPodcasts() {
-        self.podcasts = persistentStorage.loadPodcasts()
+        print("🎧 [Data] 开始加载播客数据...")
+        
+        let loadedPodcasts = persistentStorage.loadPodcasts()
+        
+        // 直接设置数据，确保Published属性触发UI更新
+        podcasts = loadedPodcasts
+        
         print("🎧 [Data] 从持久化存储加载了 \(podcasts.count) 个播客")
-    }
-    
-    private func savePodcast(_ podcast: Podcast) {
-        savePodcastsToPersistentStorage()
+        
+        // 输出详细加载信息用于调试
+        if podcasts.isEmpty {
+            print("🎧 [Data] 警告：没有从持久化存储中加载到任何播客数据")
+            print("🎧 [Data] 检查存储路径和文件是否存在")
+            persistentStorage.checkStorageStatus()
+        } else {
+            for (index, podcast) in podcasts.enumerated() {
+                print("🎧 [Data] 播客 \(index + 1): \(podcast.title) - \(podcast.episodes.count) 个节目")
+            }
+        }
+        
+        // 强制通知UI更新
+        objectWillChange.send()
     }
     
     private func updatePodcast(_ podcast: Podcast) {
@@ -485,6 +519,176 @@ class PodcastDataService: ObservableObject {
             } catch {
                 print("🎧 [Data] 保存字幕缓存到持久化存储失败: \(error)")
             }
+        }
+    }
+    
+    // MARK: - 数据验证和恢复
+    
+    /// 验证和修复数据完整性
+    func validateAndRepairData() async {
+        await MainActor.run {
+            print("🎧 [Data] 开始验证数据完整性...")
+            
+            var needsRepair = false
+            var repairedPodcasts: [Podcast] = []
+            
+            for podcast in self.podcasts {
+                // 验证播客基本信息
+                if podcast.title.isEmpty || podcast.rssURL.isEmpty {
+                    print("🎧 [Data] 发现损坏的播客数据: \(podcast.id)")
+                    needsRepair = true
+                    continue
+                }
+                
+                // 验证节目数据
+                var validEpisodes: [PodcastEpisode] = []
+                for episode in podcast.episodes {
+                    if !episode.title.isEmpty && !episode.audioURL.isEmpty {
+                        validEpisodes.append(episode)
+                    } else {
+                        print("🎧 [Data] 发现损坏的节目数据: \(episode.id)")
+                        needsRepair = true
+                    }
+                }
+                
+                if validEpisodes.count != podcast.episodes.count {
+                    var repairedPodcast = podcast
+                    repairedPodcast.episodes = validEpisodes
+                    repairedPodcasts.append(repairedPodcast)
+                    needsRepair = true
+                } else {
+                    repairedPodcasts.append(podcast)
+                }
+            }
+            
+            if needsRepair {
+                print("🎧 [Data] 数据需要修复，原有 \(self.podcasts.count) 个播客，修复后 \(repairedPodcasts.count) 个播客")
+                self.podcasts = repairedPodcasts
+                self.savePodcastsToPersistentStorage()
+            } else {
+                print("🎧 [Data] 数据完整性验证通过")
+            }
+        }
+    }
+    
+    /// 强制重新加载数据
+    func forceReloadData() async {
+        await MainActor.run {
+            print("🎧 [Data] 强制重新加载数据...")
+            
+            // 清空当前数据
+            self.podcasts.removeAll()
+            self.subtitleCache.removeAll()
+            
+            // 重新加载
+            self.loadPodcasts()
+            self.loadSubtitleCache()
+            
+            print("🎧 [Data] 数据重新加载完成，共 \(self.podcasts.count) 个播客")
+        }
+    }
+    
+    /// 启动诊断 - 检查所有可能的数据存储位置
+    func startupDiagnostics() {
+        print("🎧 [Diagnostics] =================== 启动诊断开始 ===================")
+        
+        // 1. 检查当前内存中的数据
+        print("🎧 [Diagnostics] 当前内存中的播客数量: \(podcasts.count)")
+        
+        // 2. 检查持久化存储
+        persistentStorage.checkStorageStatus()
+        
+        // 3. 直接检查文件系统
+        let fileManager = FileManager.default
+        let appSupportPath = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Kumarajiva")
+        let podcastFile = appSupportPath.appendingPathComponent("podcasts.json")
+        
+        print("🎧 [Diagnostics] 播客文件路径: \(podcastFile.path)")
+        print("🎧 [Diagnostics] 文件是否存在: \(fileManager.fileExists(atPath: podcastFile.path))")
+        
+        if fileManager.fileExists(atPath: podcastFile.path) {
+            do {
+                let data = try Data(contentsOf: podcastFile)
+                print("🎧 [Diagnostics] 文件大小: \(data.count) 字节")
+                
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let filePodcasts = try decoder.decode([Podcast].self, from: data)
+                print("🎧 [Diagnostics] 文件中的播客数量: \(filePodcasts.count)")
+                
+                for (index, podcast) in filePodcasts.enumerated() {
+                    print("🎧 [Diagnostics] 文件播客 \(index + 1): \(podcast.title)")
+                }
+            } catch {
+                print("🎧 [Diagnostics] 读取文件失败: \(error)")
+            }
+        }
+        
+        // 4. 检查UserDefaults
+        if let userData = UserDefaults.standard.data(forKey: "SavedPodcasts") {
+            do {
+                let decoder = JSONDecoder()
+                let userDefaultsPodcasts = try decoder.decode([Podcast].self, from: userData)
+                print("🎧 [Diagnostics] UserDefaults中的播客数量: \(userDefaultsPodcasts.count)")
+            } catch {
+                print("🎧 [Diagnostics] UserDefaults数据解码失败: \(error)")
+            }
+        } else {
+            print("🎧 [Diagnostics] UserDefaults中没有播客数据")
+        }
+        
+        // 5. 检查应用支持目录的完整内容
+        do {
+            let contents = try fileManager.contentsOfDirectory(at: appSupportPath, includingPropertiesForKeys: nil)
+            print("🎧 [Diagnostics] 应用支持目录内容:")
+            for url in contents {
+                let attributes = try fileManager.attributesOfItem(atPath: url.path)
+                let size = attributes[.size] as? UInt64 ?? 0
+                print("🎧 [Diagnostics] - \(url.lastPathComponent): \(size) 字节")
+                
+                // 特别检查临时文件，这可能包含实际数据
+                if url.lastPathComponent == "podcasts.json.tmp" && size > 100 {
+                    print("🎧 [Diagnostics] 发现临时文件包含数据，尝试恢复...")
+                    Task { @MainActor in
+                        await self.tryRecoverFromTempFile(tempFileURL: url)
+                    }
+                }
+            }
+        } catch {
+            print("🎧 [Diagnostics] 无法读取应用支持目录: \(error)")
+        }
+        
+        print("🎧 [Diagnostics] =================== 启动诊断结束 ===================")
+    }
+    
+    /// 尝试从临时文件恢复数据
+    private func tryRecoverFromTempFile(tempFileURL: URL) async {
+        do {
+            let data = try Data(contentsOf: tempFileURL)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            
+            let tempPodcasts = try decoder.decode([Podcast].self, from: data)
+            print("🎧 [Recovery] 临时文件中发现 \(tempPodcasts.count) 个播客")
+            
+            if tempPodcasts.count > 0 && podcasts.isEmpty {
+                print("🎧 [Recovery] 从临时文件恢复数据...")
+                
+                // 更新内存数据
+                podcasts = tempPodcasts
+                
+                // 保存到正式文件
+                savePodcastsToPersistentStorage()
+                
+                print("🎧 [Recovery] 数据恢复成功！现在有 \(podcasts.count) 个播客")
+                
+                // 清理临时文件
+                try? FileManager.default.removeItem(at: tempFileURL)
+                print("🎧 [Recovery] 临时文件已清理")
+            }
+        } catch {
+            print("🎧 [Recovery] 从临时文件恢复失败: \(error)")
         }
     }
 }

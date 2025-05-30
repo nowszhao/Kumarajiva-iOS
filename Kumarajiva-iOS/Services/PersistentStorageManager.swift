@@ -84,10 +84,19 @@ class PersistentStorageManager {
     
     /// 保存播客数据
     func savePodcasts(_ podcasts: [Podcast]) throws {
+        print("🎧 [Storage] 开始保存播客数据，共 \(podcasts.count) 个播客")
+        
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         
         let data = try encoder.encode(podcasts)
+        
+        // 创建备份文件（保存前先备份现有数据）
+        if FileManager.default.fileExists(atPath: podcastDataURL.path) {
+            createBackup()
+        }
+        
+        // 保存到主文件
         try data.write(to: podcastDataURL)
         
         // 确保文件不被排除在iCloud备份之外
@@ -97,10 +106,21 @@ class PersistentStorageManager {
         try mutableURL.setResourceValues(resourceValues)
         
         print("🎧 [Storage] 播客数据已保存到: \(podcastDataURL.path)")
+        print("🎧 [Storage] 保存的数据大小: \(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file))")
+        
+        // 验证保存是否成功
+        if let savedData = try? Data(contentsOf: podcastDataURL),
+           let verifyPodcasts = try? JSONDecoder().decode([Podcast].self, from: savedData) {
+            print("🎧 [Storage] 数据保存验证成功，重新读取了 \(verifyPodcasts.count) 个播客")
+        } else {
+            print("🎧 [Storage] 警告：数据保存验证失败")
+        }
     }
     
     /// 加载播客数据
     func loadPodcasts() -> [Podcast] {
+        print("🎧 [Storage] 开始加载播客数据...")
+        
         do {
             // 首先尝试从新的持久化位置加载
             if FileManager.default.fileExists(atPath: podcastDataURL.path) {
@@ -110,7 +130,15 @@ class PersistentStorageManager {
                 
                 let podcasts = try decoder.decode([Podcast].self, from: data)
                 print("🎧 [Storage] 从持久化存储加载了 \(podcasts.count) 个播客")
+                
+                // 验证数据完整性
+                for podcast in podcasts {
+                    print("🎧 [Storage] 验证播客: \(podcast.title) - \(podcast.episodes.count) 个节目")
+                }
+                
                 return podcasts
+            } else {
+                print("🎧 [Storage] 持久化文件不存在，尝试从UserDefaults迁移")
             }
             
             // 如果新位置没有数据，尝试从UserDefaults迁移
@@ -119,7 +147,13 @@ class PersistentStorageManager {
         } catch {
             print("🎧 [Storage] 加载播客数据失败: \(error)")
             
-            // 尝试从UserDefaults迁移
+            // 尝试从备份文件恢复
+            if let backupData = loadFromBackup() {
+                print("🎧 [Storage] 从备份文件恢复数据成功")
+                return backupData
+            }
+            
+            // 最后尝试从UserDefaults迁移
             return migrateFromUserDefaults()
         }
     }
@@ -266,5 +300,73 @@ class PersistentStorageManager {
         }
         
         return totalSize
+    }
+    
+    // MARK: - 备份和恢复机制
+    
+    private var backupPodcastDataURL: URL {
+        return applicationSupportURL.appendingPathComponent("podcasts_backup.json")
+    }
+    
+    /// 创建数据备份
+    private func createBackup() {
+        do {
+            if FileManager.default.fileExists(atPath: podcastDataURL.path) {
+                // 如果备份文件已存在，先删除
+                if FileManager.default.fileExists(atPath: backupPodcastDataURL.path) {
+                    try FileManager.default.removeItem(at: backupPodcastDataURL)
+                    print("🎧 [Storage] 删除已存在的备份文件")
+                }
+                
+                try FileManager.default.copyItem(at: podcastDataURL, to: backupPodcastDataURL)
+                print("🎧 [Storage] 数据备份创建成功")
+            }
+        } catch {
+            print("🎧 [Storage] 创建备份失败: \(error)")
+        }
+    }
+    
+    /// 从备份文件恢复数据
+    private func loadFromBackup() -> [Podcast]? {
+        do {
+            if FileManager.default.fileExists(atPath: backupPodcastDataURL.path) {
+                let data = try Data(contentsOf: backupPodcastDataURL)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                
+                let podcasts = try decoder.decode([Podcast].self, from: data)
+                print("🎧 [Storage] 从备份文件恢复了 \(podcasts.count) 个播客")
+                
+                // 恢复成功后，将备份数据复制回主文件
+                if FileManager.default.fileExists(atPath: podcastDataURL.path) {
+                    try FileManager.default.removeItem(at: podcastDataURL)
+                    print("🎧 [Storage] 删除损坏的主文件")
+                }
+                
+                try FileManager.default.copyItem(at: backupPodcastDataURL, to: podcastDataURL)
+                print("🎧 [Storage] 备份数据已恢复到主文件")
+                
+                return podcasts
+            }
+        } catch {
+            print("🎧 [Storage] 从备份恢复失败: \(error)")
+        }
+        
+        return nil
+    }
+    
+    /// 强制保存数据（应用退出时调用）
+    func forceSave(_ podcasts: [Podcast]) {
+        do {
+            try savePodcasts(podcasts)
+            // 同时保存到UserDefaults作为最后的保障
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(podcasts)
+            UserDefaults.standard.set(data, forKey: "SavedPodcasts")
+            UserDefaults.standard.synchronize()
+            print("🎧 [Storage] 强制保存完成，数据已保存到文件和UserDefaults")
+        } catch {
+            print("🎧 [Storage] 强制保存失败: \(error)")
+        }
     }
 } 

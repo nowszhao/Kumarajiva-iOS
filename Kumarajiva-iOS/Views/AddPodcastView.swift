@@ -96,18 +96,26 @@ struct AddPodcastView: View {
     private func addPodcast() {
         guard !rssURL.isEmpty else { return }
         
+        print("🎧 [AddPodcast] 开始添加播客: \(rssURL)")
         isLoading = true
         
         Task {
             do {
+                print("🎧 [AddPodcast] 调用 dataService.addPodcast")
                 try await dataService.addPodcast(rssURL: rssURL.trimmingCharacters(in: .whitespacesAndNewlines))
                 
                 await MainActor.run {
+                    print("🎧 [AddPodcast] 播客添加成功，当前播客数量: \(dataService.podcasts.count)")
+                    
+                    // 立即验证数据是否已保存
+                    dataService.startupDiagnostics()
+                    
                     isLoading = false
                     dismiss()
                 }
             } catch {
                 await MainActor.run {
+                    print("🎧 [AddPodcast] 播客添加失败: \(error)")
                     isLoading = false
                     alertMessage = error.localizedDescription
                     showingAlert = true

@@ -35,12 +35,62 @@ struct ListeningPracticeView: View {
                             .font(.title2)
                     }
                 }
+                
+                // 添加调试按钮（仅在DEBUG模式下显示）
+                #if DEBUG
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Menu {
+                        Button("启动诊断") {
+                            dataService.startupDiagnostics()
+                        }
+                        
+                        Button("强制重新加载数据") {
+                            Task {
+                                await dataService.forceReloadData()
+                            }
+                        }
+                        
+                        Button("验证数据完整性") {
+                            Task {
+                                await dataService.validateAndRepairData()
+                            }
+                        }
+                        
+                        Button("检查存储状态") {
+                            PersistentStorageManager.shared.checkStorageStatus()
+                        }
+                        
+                        Button("调试字幕缓存") {
+                            dataService.debugSubtitleCache()
+                        }
+                        
+                        Button("清除所有数据") {
+                            do {
+                                try PersistentStorageManager.shared.clearAllData()
+                                Task {
+                                    await dataService.forceReloadData()
+                                }
+                            } catch {
+                                print("清除数据失败: \(error)")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "gear")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                #endif
             }
             .sheet(isPresented: $showingAddPodcast) {
                 AddPodcastView()
             }
             .alert("提示", isPresented: $showingAlert) {
                 Button("确定", role: .cancel) { }
+                Button("重新加载数据") {
+                    Task {
+                        await dataService.forceReloadData()
+                    }
+                }
             } message: {
                 Text(alertMessage)
             }
@@ -56,8 +106,30 @@ struct ListeningPracticeView: View {
                 }
             }
             .onAppear {
-                // 页面出现时触发WhisperKit模型的后台预加载
-                WhisperKitService.shared.preloadModelInBackground()
+                print("🎧 [View] ListeningPracticeView 出现")
+                print("🎧 [View] 当前播客数量: \(dataService.podcasts.count)")
+                
+                // 视图出现时验证数据
+                Task {
+                    if dataService.podcasts.isEmpty {
+                        print("🎧 [View] 视图出现时发现播客列表为空，执行诊断和恢复")
+                        
+                        // 先执行诊断
+                        dataService.startupDiagnostics()
+                        
+                        // 尝试强制重新加载数据
+                        await dataService.forceReloadData()
+                        
+                        // 如果还是空的，检查是否真的应该有数据
+                        if dataService.podcasts.isEmpty {
+                            print("🎧 [View] 重新加载后仍然为空，这可能是首次使用应用")
+                        } else {
+                            print("🎧 [View] 数据恢复成功，现在有 \(dataService.podcasts.count) 个播客")
+                        }
+                    } else {
+                        print("🎧 [View] 播客数据正常，共 \(dataService.podcasts.count) 个播客")
+                    }
+                }
             }
         }
     }

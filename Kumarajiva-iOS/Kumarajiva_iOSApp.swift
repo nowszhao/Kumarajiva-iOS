@@ -39,11 +39,25 @@ struct Kumarajiva_iOSApp: App {
                     print("📱 [App] 应用进入后台，同步字幕缓存")
                     Task {
                         await dataService.syncSubtitleCacheToMainData()
+                        // 强制保存所有数据，确保不会丢失
+                        await MainActor.run {
+                            PersistentStorageManager.shared.forceSave(dataService.podcasts)
+                        }
                     }
                 case .active:
                     print("📱 [App] 应用变为活跃状态")
+                    // 应用重新激活时，重新加载数据以确保同步
+                    Task {
+                        await MainActor.run {
+                            dataService.objectWillChange.send()
+                        }
+                    }
                 case .inactive:
-                    print("📱 [App] 应用变为非活跃状态")
+                    print("📱 [App] 应用变为非活跃状态，预备保存数据")
+                    // 应用即将进入后台时也保存数据
+                    Task {
+                        await dataService.syncSubtitleCacheToMainData()
+                    }
                 @unknown default:
                     break
                 }
