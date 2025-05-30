@@ -10,20 +10,33 @@ struct PodcastPlayerView: View {
     @State private var showingErrorAlert = false
     @State private var errorAlertMessage = ""
     @State private var showingVocabularyAnalysis = false
+    // 新增：控制配置面板的显示状态
+    @State private var showingConfigPanel = false
+    // 新增：控制听力模式的状态
+    @State private var isListeningMode = false
     
     var body: some View {
-        VStack(spacing: 0) {
-            // 字幕显示区域
-            subtitleDisplayView
+        ZStack {
+            VStack(spacing: 0) {
+                // 字幕显示区域
+                subtitleDisplayView
+                
+                // 播放控制面板
+                playbackControlView
+            }
             
-            // 功能按钮区域
-            functionButtonsView
-            
-            // 播放控制面板
-            playbackControlView
+            // 听力模式浮层
+            if isListeningMode {
+                ListeningModeOverlay(
+                    isListeningMode: $isListeningMode,
+                    playerService: playerService
+                )
+                .transition(.opacity)
+            }
         }
 //        .navigationTitle("播放器")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar) // 隐藏底部TabBar
         .onAppear {
             // 只准备节目，不自动播放
             playerService.prepareEpisode(episode)
@@ -243,78 +256,29 @@ struct PodcastPlayerView: View {
         }
     }
     
-    // MARK: - 功能按钮区域
-    
-    private var functionButtonsView: some View {
-        HStack(spacing: 12) {
-            // 生词解析按钮
-            Button {
-                showingVocabularyAnalysis = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "text.magnifyingglass")
-                        .font(.system(size: 14, weight: .medium))
-                    Text("生词解析")
-                        .font(.system(size: 14, weight: .medium))
-                }
-                .foregroundColor(playerService.currentSubtitles.isEmpty ? .secondary : .accentColor)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(.systemGray6))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(playerService.currentSubtitles.isEmpty ? Color.clear : Color.accentColor.opacity(0.3), lineWidth: 1)
-                        )
-                )
-            }
-            .disabled(playerService.currentSubtitles.isEmpty)
-            
-            // 重新转录字幕按钮
-            Button {
-                Task {
-                    await playerService.generateSubtitlesForCurrentEpisode()
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 14, weight: .medium))
-                    Text("重新转录字幕")
-                        .font(.system(size: 14, weight: .medium))
-                }
-                .foregroundColor(playerService.isGeneratingSubtitles ? .secondary : .orange)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(.systemGray6))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(playerService.isGeneratingSubtitles ? Color.clear : Color.orange.opacity(0.3), lineWidth: 1)
-                        )
-                )
-            }
-            .disabled(playerService.isGeneratingSubtitles)
-            
-            Spacer()
-            
-            // 可以在这里添加更多功能按钮
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Color(.systemBackground))
-    }
-    
     // MARK: - 播放控制面板
     
     private var playbackControlView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 0) {
             // 进度条
             progressView
+                .padding(.bottom, 12)
             
-            // 播放控制按钮
+            // 主要播放控制按钮
             mainControlsView
+            
+            // 功能按钮区域（可展开/收起）
+            if showingConfigPanel {
+                Divider()
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                
+                functionButtonsView
+                    .transition(.asymmetric(
+                        insertion: .push(from: .bottom).combined(with: .opacity),
+                        removal: .push(from: .top).combined(with: .opacity)
+                    ))
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -354,6 +318,88 @@ struct PodcastPlayerView: View {
                     .foregroundColor(.secondary)
             }
         }
+    }
+    
+    // MARK: - 功能按钮区域
+    
+    private var functionButtonsView: some View {
+        HStack(spacing: 0) {
+            // 循环播放
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    playerService.toggleLoop()
+                }
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: playerService.playbackState.isLooping ? "repeat.1" : "repeat")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
+                    Text("循环")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+            }
+            
+            // 生词解析
+            Button {
+                if !playerService.currentSubtitles.isEmpty {
+                    showingVocabularyAnalysis = true
+                }
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: "text.magnifyingglass")
+                        .font(.system(size: 22, weight: .medium))
+                    Text("生词解析")
+                        .font(.system(size: 10, weight: .medium))
+                }
+                .foregroundColor(playerService.currentSubtitles.isEmpty ? .secondary : .primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+            }
+            .disabled(playerService.currentSubtitles.isEmpty)
+            
+            // 重新转录字幕
+            Button {
+                if !playerService.isGeneratingSubtitles {
+                    Task {
+                        await playerService.generateSubtitlesForCurrentEpisode()
+                    }
+                }
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 22, weight: .medium))
+                    Text("重新转录")
+                        .font(.system(size: 10, weight: .medium))
+                }
+                .foregroundColor(playerService.isGeneratingSubtitles ? .secondary : .primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+            }
+            .disabled(playerService.isGeneratingSubtitles)
+            
+            // 听力模式
+            Button {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isListeningMode = true
+                    showingConfigPanel = false
+                }
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: "headphones.circle")
+                        .font(.system(size: 22, weight: .medium))
+                    Text("听力模式")
+                        .font(.system(size: 10, weight: .medium))
+                }
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
     }
     
     private var mainControlsView: some View {
@@ -426,18 +472,19 @@ struct PodcastPlayerView: View {
             }
             .disabled(!playerService.hasNextSubtitle)
             
-            // 循环播放
+            // 更多设置按钮
             Button {
-                playerService.toggleLoop()
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showingConfigPanel.toggle()
+                }
             } label: {
                 VStack(spacing: 2) {
-                    Image(systemName: playerService.playbackState.isLooping ? "repeat.1" : "repeat")
+                    Image(systemName: showingConfigPanel ? "chevron.up" : "ellipsis")
                         .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
-                    Text("循环")
+                    Text("更多")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
                 }
+                .foregroundColor(showingConfigPanel ? .accentColor : .primary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
             }
@@ -612,6 +659,193 @@ struct SubtitleRowView: View {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+}
+
+// MARK: - 听力模式浮层
+struct ListeningModeOverlay: View {
+    @Binding var isListeningMode: Bool
+    let playerService: PodcastPlayerService
+    
+    @State private var showingFeedback = false
+    @State private var feedbackText = ""
+    @State private var feedbackIcon = ""
+    
+    var body: some View {
+        ZStack {
+            // 半透明背景
+            Color.black.opacity(0.85)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // 上半部分 - 上一句
+                Button {
+                    handlePreviousSubtitle()
+                } label: {
+                    VStack(spacing: 12) {
+                        Spacer()
+                        
+                        Image(systemName: "chevron.up.circle.fill")
+                            .font(.system(size: 60, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                        
+                        Text("上一句")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                        
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .simultaneousGesture(
+                    TapGesture(count: 2).onEnded {
+                        handlePlayPause()
+                    }
+                )
+                .disabled(!playerService.hasPreviousSubtitle)
+                .opacity(playerService.hasPreviousSubtitle ? 1.0 : 0.5)
+                
+                // 中间分隔线
+                Rectangle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 1)
+                    .padding(.horizontal, 40)
+                
+                // 下半部分 - 下一句
+                Button {
+                    handleNextSubtitle()
+                } label: {
+                    VStack(spacing: 12) {
+                        Spacer()
+                        
+                        Image(systemName: "chevron.down.circle.fill")
+                            .font(.system(size: 60, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                        
+                        Text("下一句")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                        
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .simultaneousGesture(
+                    TapGesture(count: 2).onEnded {
+                        handlePlayPause()
+                    }
+                )
+                .disabled(!playerService.hasNextSubtitle)
+                .opacity(playerService.hasNextSubtitle ? 1.0 : 0.5)
+            }
+            
+            // 顶部信息栏
+            VStack {
+                HStack {
+                    // 退出按钮
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            isListeningMode = false
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(.white.opacity(0.8))
+                            .background(Circle().fill(Color.black.opacity(0.3)))
+                    }
+                    
+                    Spacer()
+                    
+                    // 播放状态指示器
+                    HStack(spacing: 8) {
+                        Image(systemName: playerService.playbackState.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.white.opacity(0.8))
+                        
+                        Text("听力模式")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(Color.black.opacity(0.3))
+                    )
+                    
+                    Spacer()
+                    
+                    // 占位，保持对称
+                    Color.clear
+                        .frame(width: 30, height: 30)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                
+                Spacer()
+            }
+            
+            // 操作反馈
+            if showingFeedback {
+                VStack(spacing: 8) {
+                    Image(systemName: feedbackIcon)
+                        .font(.system(size: 40, weight: .medium))
+                        .foregroundColor(.white)
+                    
+                    Text(feedbackText)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.black.opacity(0.7))
+                )
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+    }
+    
+    private func handlePreviousSubtitle() {
+        guard playerService.hasPreviousSubtitle else { return }
+        
+        playerService.previousSubtitle()
+        showFeedback(text: "上一句", icon: "backward.end.fill")
+    }
+    
+    private func handleNextSubtitle() {
+        guard playerService.hasNextSubtitle else { return }
+        
+        playerService.nextSubtitle()
+        showFeedback(text: "下一句", icon: "forward.end.fill")
+    }
+    
+    private func handlePlayPause() {
+        playerService.togglePlayPause()
+        let isPlaying = playerService.playbackState.isPlaying
+        showFeedback(
+            text: isPlaying ? "播放" : "暂停",
+            icon: isPlaying ? "play.circle.fill" : "pause.circle.fill"
+        )
+    }
+    
+    private func showFeedback(text: String, icon: String) {
+        feedbackText = text
+        feedbackIcon = icon
+        
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showingFeedback = true
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showingFeedback = false
+            }
+        }
     }
 }
 
