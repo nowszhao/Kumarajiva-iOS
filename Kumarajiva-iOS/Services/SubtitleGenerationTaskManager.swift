@@ -15,6 +15,12 @@ enum SubtitleGenerationTaskStatus {
     case cancelled      // 已取消
 }
 
+// MARK: - 字幕分割模式
+enum SubtitleSegmentationMode {
+    case timeBased      // 基于时长分割（原有逻辑）
+    case sentenceBased  // 基于完整句子分割
+}
+
 // MARK: - 字幕生成任务
 class SubtitleGenerationTask: ObservableObject, Identifiable {
     let id = UUID()
@@ -22,6 +28,7 @@ class SubtitleGenerationTask: ObservableObject, Identifiable {
     let episodeName: String
     let audioURL: URL
     let quality: SubtitleQuality
+    let segmentationMode: SubtitleSegmentationMode  // 新增分割模式
     let createdAt: Date
     
     @Published var status: SubtitleGenerationTaskStatus = .pending
@@ -33,11 +40,12 @@ class SubtitleGenerationTask: ObservableObject, Identifiable {
     private var task: Task<Void, Never>?
     private var progressTask: Task<Void, Never>?
     
-    init(episodeId: String, episodeName: String, audioURL: URL, quality: SubtitleQuality = .medium) {
+    init(episodeId: String, episodeName: String, audioURL: URL, quality: SubtitleQuality = .medium, segmentationMode: SubtitleSegmentationMode = .sentenceBased) {
         self.episodeId = episodeId
         self.episodeName = episodeName
         self.audioURL = audioURL
         self.quality = quality
+        self.segmentationMode = segmentationMode
         self.createdAt = Date()
     }
     
@@ -328,7 +336,16 @@ class SubtitleGenerationTask: ObservableObject, Identifiable {
     private func createSubtitlesFromResult(_ result: TranscriptionResult) async -> [Subtitle] {
         // 使用WhisperKit的真实单词时间戳创建字幕段落
         if !result.allWords.isEmpty {
-            let segments = createSubtitleSegmentsFromWhisperResult(result)
+            let segments: [LocalTranscriptionSegment]
+            
+            // 根据分割模式选择不同的处理方法
+            switch segmentationMode {
+            case .sentenceBased:
+                segments = createSubtitleSegmentsFromWhisperResultBySentence(result)
+            case .timeBased:
+                segments = createSubtitleSegmentsFromWhisperResult(result)
+            }
+            
             return segments.map { segment in
                 Subtitle(
                     startTime: segment.start,
@@ -340,7 +357,7 @@ class SubtitleGenerationTask: ObservableObject, Identifiable {
                 )
             }
         } else {
-            // 回退到文本分割方法
+            // 回退到文本分割方法（本身就是按句子分割）
             let duration = TimeInterval(result.segments.last?.end ?? 0)
             let segments = createSubtitleSegments(from: result.text, audioDuration: duration)
             return segments.map { segment in
@@ -431,6 +448,76 @@ class SubtitleGenerationTask: ObservableObject, Identifiable {
         return segments
     }
     
+    // MARK: - 基于完整句子的字幕分割方法
+    
+    private func createSubtitleSegmentsFromWhisperResultBySentence(_ result: TranscriptionResult) -> [LocalTranscriptionSegment] {
+        guard !result.allWords.isEmpty else {
+            return createSubtitleSegments(from: result.text, audioDuration: TimeInterval(result.segments.last?.end ?? 0))
+        }
+        
+        let maxDuration: TimeInterval = 10.0  // 允许更长的句子
+        let minDuration: TimeInterval = 1.0
+        
+        var segments: [LocalTranscriptionSegment] = []
+        var currentWords: [WordTiming] = []
+        var segmentStartTime: TimeInterval = 0
+        
+        for (index, word) in result.allWords.enumerated() {
+            if currentWords.isEmpty {
+                segmentStartTime = TimeInterval(word.start)
+            }
+            
+            currentWords.append(word)
+            
+            let currentDuration = TimeInterval(word.end) - segmentStartTime
+            let isLastWord = index == result.allWords.count - 1
+            
+            // 判断是否是句子结束
+            let isSentenceEnd = isSentenceEndPoint(word)
+            
+            let shouldEndSegment = (
+                isSentenceEnd ||  // 优先在句子结束时分割
+                (currentDuration >= maxDuration && isGoodBreakPoint(word)) ||  // 超长句子在好的断点分割
+                isLastWord  // 最后一个词
+            )
+            
+            if shouldEndSegment {
+                let segmentText = currentWords.map { $0.word }.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                // 跳过空的段落
+                if !segmentText.isEmpty {
+                    let segmentEndTime = TimeInterval(word.end)
+                    let finalEndTime = max(segmentEndTime, segmentStartTime + minDuration)
+                    
+                    let segment = LocalTranscriptionSegment(
+                        start: segmentStartTime,
+                        end: finalEndTime,
+                        text: segmentText,
+                        avgLogprob: nil,
+                        words: currentWords.map { whisperWordToSubtitleWord($0) }
+                    )
+                    
+                    segments.append(segment)
+                }
+                currentWords = []
+            }
+        }
+        
+        return segments
+    }
+    
+    // 判断是否是句子结束点（更严格的句子结束判断）
+    private func isSentenceEndPoint(_ word: WordTiming) -> Bool {
+        let sentenceEndPunctuation = CharacterSet(charactersIn: ".!?")
+        return word.word.rangeOfCharacter(from: sentenceEndPunctuation) != nil
+    }
+    
+    // 增强的断点判断（包括逗号、分号等）
+    private func isGoodBreakPoint(_ word: WordTiming) -> Bool {
+        let punctuation = CharacterSet(charactersIn: ".!?;,:")
+        return word.word.rangeOfCharacter(from: punctuation) != nil
+    }
+    
     private func createSubtitleSegments(from text: String, audioDuration: TimeInterval) -> [LocalTranscriptionSegment] {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else { return [] }
@@ -465,11 +552,6 @@ class SubtitleGenerationTask: ObservableObject, Identifiable {
         }
         
         return segments
-    }
-    
-    private func isGoodBreakPoint(_ word: WordTiming) -> Bool {
-        let punctuation = CharacterSet(charactersIn: ".!?;,:")
-        return word.word.rangeOfCharacter(from: punctuation) != nil
     }
     
     private func whisperWordToSubtitleWord(_ wordTiming: WordTiming) -> SubtitleWord {
@@ -522,7 +604,7 @@ class SubtitleGenerationTaskManager: ObservableObject {
     
     // MARK: - 公共方法
     
-    func createTask(for episode: PodcastEpisode, quality: SubtitleQuality = .medium) -> SubtitleGenerationTask? {
+    func createTask(for episode: PodcastEpisode, quality: SubtitleQuality = .medium, segmentationMode: SubtitleSegmentationMode = .sentenceBased) -> SubtitleGenerationTask? {
         guard let audioURL = URL(string: episode.audioURL) else {
             print("🎯 [TaskManager] 无效的音频URL: \(episode.audioURL)")
             return nil
@@ -538,7 +620,8 @@ class SubtitleGenerationTaskManager: ObservableObject {
             episodeId: episode.id,
             episodeName: episode.title,
             audioURL: audioURL,
-            quality: quality
+            quality: quality,
+            segmentationMode: segmentationMode
         )
         
         // 监听任务状态变化
