@@ -12,6 +12,10 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     @Published var currentSubtitles: [Subtitle] = []
     @Published var errorMessage: String?
     
+    // 新增：音频准备状态
+    @Published var audioPreparationState: AudioPreparationState = .idle
+    @Published var audioPreparationProgress: Double = 0.0
+    
     // 字幕生成状态（基于任务管理器）
     @Published var isGeneratingSubtitles: Bool = false
     @Published var subtitleGenerationProgress: Double = 0.0
@@ -172,15 +176,15 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
             return .success
         }
         
-        // 上一个命令（上一句字幕）
+        // 上一个命令（快退5个单词）
         commandCenter.previousTrackCommand.addTarget { [weak self] _ in
-            self?.previousSubtitle()
+            self?.seekBackwardWords(wordCount: 5)
             return .success
         }
         
-        // 下一个命令（下一句字幕）
+        // 下一个命令（快进5个单词）
         commandCenter.nextTrackCommand.addTarget { [weak self] _ in
-            self?.nextSubtitle()
+            self?.seekForwardWords(wordCount: 5)
             return .success
         }
     }
@@ -208,27 +212,37 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     
     /// 准备播放节目但不自动开始播放
     func prepareEpisode(_ episode: PodcastEpisode) {
-        // 如果是同一个节目，不需要重新准备
-        if playbackState.currentEpisode?.id == episode.id {
-            print("🎧 [Player] 节目已准备: \(episode.title)")
-            return
-        }
-        
         // 重置生成标志
         shouldContinueGeneration = true
         
+        // 检查是否是同一个节目
+        let isSameEpisode = playbackState.currentEpisode?.id == episode.id
+        
+        if isSameEpisode && audioPreparationState == .audioReady {
+            print("🎧 [Player] 节目已准备且音频就绪: \(episode.title)")
+            return
+        }
+        
+        // 如果是不同的节目或音频未准备好，重新准备
+        if !isSameEpisode {
+            // 重置所有状态
+            playbackState.currentEpisode = episode
+            playbackState.isPlaying = false
+            playbackState.currentTime = 0
+            playbackState.currentSubtitleIndex = nil
+            audioPreparationState = .idle
+            audioPreparationProgress = 0.0
+            
+            print("🎧 [Player] 切换到新节目，重置状态: \(episode.title)")
+        }
+        
         playbackState.currentEpisode = episode
-        // 不自动设置为播放状态
-        playbackState.currentTime = 0
         
         // 加载已有字幕
         loadExistingSubtitles(for: episode)
         
         // 准备音频但不播放
         prepareAudio(from: episode.audioURL)
-        
-        // 移除自动字幕生成逻辑，改为手动触发
-        // 用户需要通过"重新转录字幕"按钮手动生成字幕
         
         print("🎧 [Player] 准备节目（不自动播放）: \(episode.title)")
     }
@@ -241,57 +255,33 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     private func loadAndPlayAudio(from urlString: String) {
         guard let url = URL(string: urlString) else {
             errorMessage = "无效的音频URL"
+            audioPreparationState = .failed(URLError(.badURL))
             return
         }
         
+        // 设置准备状态
+        audioPreparationState = .preparing
+        audioPreparationProgress = 0.0
+        print("🎧 [Player] 开始加载并播放音频: \(urlString)")
+        
         Task {
             do {
+                // 模拟下载进度
+                await MainActor.run {
+                    self.audioPreparationProgress = 0.1
+                }
+                
                 let (data, _) = try await URLSession.shared.data(from: url)
+                
+                await MainActor.run {
+                    self.audioPreparationProgress = 0.8
+                }
                 
                 await MainActor.run {
                     // 检查是否仍有当前节目（防止在加载过程中被停止）
                     guard self.playbackState.currentEpisode != nil else {
                         print("🎧 [Player] 音频加载完成但播放已停止，跳过播放")
-            return
-        }
-        
-                    do {
-                        self.audioPlayer = try AVAudioPlayer(data: data)
-                        self.audioPlayer?.prepareToPlay()
-                        
-                        // 启用速度控制和设置代理
-                        self.audioPlayer?.enableRate = true
-                        self.audioPlayer?.rate = self.playbackState.playbackRate
-                        self.audioPlayer?.delegate = self
-                        
-                        self.playbackState.duration = self.audioPlayer?.duration ?? 0
-                        self.startPlayback()
-                    } catch {
-                        self.errorMessage = "音频播放失败: \(error.localizedDescription)"
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = "音频加载失败: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
-    
-    private func prepareAudio(from urlString: String) {
-        guard let url = URL(string: urlString) else {
-            errorMessage = "无效的音频URL"
-            return
-        }
-        
-        Task {
-            do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-            
-            await MainActor.run {
-                    // 检查是否仍有当前节目（防止在加载过程中被停止）
-                    guard self.playbackState.currentEpisode != nil else {
-                        print("🎧 [Player] 音频加载完成但播放已停止，跳过准备")
+                        self.audioPreparationState = .idle
                         return
                     }
                     
@@ -305,15 +295,89 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
                         self.audioPlayer?.delegate = self
                         
                         self.playbackState.duration = self.audioPlayer?.duration ?? 0
-                        // 不自动开始播放，只准备音频
-                        print("🎧 [Player] 音频准备完成，等待用户操作")
+                        
+                        // 设置准备完成状态
+                        self.audioPreparationState = .audioReady
+                        self.audioPreparationProgress = 1.0
+                        
+                        print("🎧 [Player] 音频准备完成，开始播放，时长: \(self.formatTime(self.playbackState.duration))")
+                        self.startPlayback()
                     } catch {
-                        self.errorMessage = "音频准备失败: \(error.localizedDescription)"
+                        self.errorMessage = "音频播放失败: \(error.localizedDescription)"
+                        self.audioPreparationState = .failed(error)
+                        print("🎧 [Player] 音频播放失败: \(error)")
                     }
                 }
-        } catch {
-            await MainActor.run {
+            } catch {
+                await MainActor.run {
                     self.errorMessage = "音频加载失败: \(error.localizedDescription)"
+                    self.audioPreparationState = .failed(error)
+                    print("🎧 [Player] 音频加载失败: \(error)")
+                }
+            }
+        }
+    }
+    
+    private func prepareAudio(from urlString: String) {
+        guard let url = URL(string: urlString) else {
+            errorMessage = "无效的音频URL"
+            audioPreparationState = .failed(URLError(.badURL))
+            return
+        }
+        
+        // 设置准备状态
+        audioPreparationState = .preparing
+        audioPreparationProgress = 0.0
+        print("🎧 [Player] 开始准备音频: \(urlString)")
+        
+        Task {
+            do {
+                // 模拟下载进度
+                await MainActor.run {
+                    self.audioPreparationProgress = 0.1
+                }
+                
+                let (data, _) = try await URLSession.shared.data(from: url)
+                
+                await MainActor.run {
+                    self.audioPreparationProgress = 0.8
+                }
+            
+                await MainActor.run {
+                    // 检查是否仍有当前节目（防止在加载过程中被停止）
+                    guard self.playbackState.currentEpisode != nil else {
+                        print("🎧 [Player] 音频加载完成但播放已停止，跳过准备")
+                        self.audioPreparationState = .idle
+                        return
+                    }
+                    
+                    do {
+                        self.audioPlayer = try AVAudioPlayer(data: data)
+                        self.audioPlayer?.prepareToPlay()
+                        
+                        // 启用速度控制和设置代理
+                        self.audioPlayer?.enableRate = true
+                        self.audioPlayer?.rate = self.playbackState.playbackRate
+                        self.audioPlayer?.delegate = self
+                        
+                        self.playbackState.duration = self.audioPlayer?.duration ?? 0
+                        
+                        // 设置准备完成状态
+                        self.audioPreparationState = .audioReady
+                        self.audioPreparationProgress = 1.0
+                        
+                        print("🎧 [Player] 音频准备完成，时长: \(self.formatTime(self.playbackState.duration))")
+                    } catch {
+                        self.errorMessage = "音频准备失败: \(error.localizedDescription)"
+                        self.audioPreparationState = .failed(error)
+                        print("🎧 [Player] 音频准备失败: \(error)")
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = "音频加载失败: \(error.localizedDescription)"
+                    self.audioPreparationState = .failed(error)
+                    print("🎧 [Player] 音频加载失败: \(error)")
                 }
             }
         }
@@ -353,6 +417,12 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
     }
     
     func resumePlayback() {
+        // 检查音频是否准备就绪
+        guard audioPreparationState == .audioReady else {
+            print("🎧 [Player] 音频未准备就绪，无法恢复播放")
+            return
+        }
+        
         audioPlayer?.play()
         playbackState.isPlaying = true
         startPlaybackTimer()
@@ -371,6 +441,11 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         playbackState.currentTime = 0
         playbackState.currentSubtitleIndex = nil
         playbackState.currentEpisode = nil
+        
+        // 重置音频准备状态
+        audioPreparationState = .idle
+        audioPreparationProgress = 0.0
+        
         stopPlaybackTimer()
         
         // 清除锁屏显示信息
@@ -391,7 +466,109 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         playbackState.currentTime = time
     }
     
+    // MARK: - 时间跳转控制
+    func seekBackward(seconds: TimeInterval = 5.0) {
+        guard let audioPlayer = audioPlayer else { return }
+        
+        let newTime = max(0, audioPlayer.currentTime - seconds)
+        audioPlayer.currentTime = newTime
+        playbackState.currentTime = newTime
+        
+        print("🎧 [Player] 快退 \(seconds) 秒到: \(formatTime(newTime))")
+    }
+    
+    func seekForward(seconds: TimeInterval = 5.0) {
+        guard let audioPlayer = audioPlayer else { return }
+        
+        let duration = audioPlayer.duration
+        let newTime = min(duration, audioPlayer.currentTime + seconds)
+        audioPlayer.currentTime = newTime
+        playbackState.currentTime = newTime
+        
+        print("🎧 [Player] 快进 \(seconds) 秒到: \(formatTime(newTime))")
+    }
+    
+    // MARK: - 单词跳转控制
+    func seekBackwardWords(wordCount: Int = 5) {
+        guard let audioPlayer = audioPlayer else { return }
+        
+        let currentTime = audioPlayer.currentTime
+        let targetTime = findTimeForWordOffset(from: currentTime, wordOffset: -wordCount)
+        
+        audioPlayer.currentTime = targetTime
+        playbackState.currentTime = targetTime
+        
+        print("🎧 [Player] 快退 \(wordCount) 个单词到: \(formatTime(targetTime))")
+    }
+    
+    func seekForwardWords(wordCount: Int = 5) {
+        guard let audioPlayer = audioPlayer else { return }
+        
+        let currentTime = audioPlayer.currentTime
+        let duration = audioPlayer.duration
+        let targetTime = min(duration, findTimeForWordOffset(from: currentTime, wordOffset: wordCount))
+        
+        audioPlayer.currentTime = targetTime
+        playbackState.currentTime = targetTime
+        
+        print("🎧 [Player] 快进 \(wordCount) 个单词到: \(formatTime(targetTime))")
+    }
+    
+    // MARK: - 单词跳转辅助方法
+    private func findTimeForWordOffset(from currentTime: TimeInterval, wordOffset: Int) -> TimeInterval {
+        // 收集所有单词并按时间排序
+        var allWords: [(word: SubtitleWord, subtitleIndex: Int)] = []
+        
+        for (subtitleIndex, subtitle) in currentSubtitles.enumerated() {
+            for word in subtitle.words {
+                allWords.append((word: word, subtitleIndex: subtitleIndex))
+            }
+        }
+        
+        // 按开始时间排序
+        allWords.sort { $0.word.startTime < $1.word.startTime }
+        
+        // 找到当前时间对应的单词索引
+        var currentWordIndex = 0
+        for (index, wordData) in allWords.enumerated() {
+            if currentTime >= wordData.word.startTime && currentTime <= wordData.word.endTime {
+                currentWordIndex = index
+                break
+            } else if currentTime < wordData.word.startTime {
+                // 如果当前时间在单词之前，使用这个单词
+                currentWordIndex = index
+                break
+            } else if index == allWords.count - 1 {
+                // 如果到了最后一个单词，使用最后一个
+                currentWordIndex = index
+            }
+        }
+        
+        // 计算目标单词索引
+        let targetWordIndex = max(0, min(allWords.count - 1, currentWordIndex + wordOffset))
+        
+        // 返回目标单词的开始时间
+        if targetWordIndex < allWords.count {
+            return allWords[targetWordIndex].word.startTime
+        } else {
+            return currentTime
+        }
+    }
+    
+    // MARK: - 时间格式化辅助方法
+    func formatTime(_ time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+    
     func togglePlayPause() {
+        // 检查音频是否准备就绪
+        guard audioPreparationState == .audioReady else {
+            print("🎧 [Player] 音频未准备就绪，无法播放")
+            return
+        }
+        
         if playbackState.isPlaying {
             pausePlayback()
         } else {
@@ -473,15 +650,9 @@ class PodcastPlayerService: NSObject, ObservableObject, AVAudioPlayerDelegate {
         return currentIndex < currentSubtitles.count - 1
     }
     
-    func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%d:%02d", minutes, seconds)
-    }
-    
     private func startPlaybackTimer() {
         playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            guard let self = self, let player = self.audioPlayer else { return }
+            guard let self = self, let _ = self.audioPlayer else { return }
             
             DispatchQueue.main.async {
                 self.updatePlaybackTime()
@@ -1099,3 +1270,27 @@ extension PodcastPlayerService {
 }
 
 // MARK: - 播放状态模型已在Podcast.swift中定义 
+
+// MARK: - 音频准备状态枚举
+enum AudioPreparationState: Equatable {
+    case idle           // 空闲状态
+    case preparing      // 准备中
+    case audioReady     // 已准备好
+    case failed(Error)  // 准备失败
+    
+    // 实现Equatable协议
+    static func == (lhs: AudioPreparationState, rhs: AudioPreparationState) -> Bool {
+        switch (lhs, rhs) {
+        case (.idle, .idle):
+            return true
+        case (.preparing, .preparing):
+            return true
+        case (.audioReady, .audioReady):
+            return true
+        case (.failed, .failed):
+            return true // 对于错误状态，我们只比较类型不比较具体错误内容
+        default:
+            return false
+        }
+    }
+}

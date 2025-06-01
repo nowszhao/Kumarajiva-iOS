@@ -100,6 +100,31 @@ class APIService {
         return response.success
     }
     
+    func updateVocabulary(_ vocabulary: VocabularyItem) async throws -> Bool {
+        let word = vocabulary.word.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? vocabulary.word
+        let url = "\(baseURL)/vocab/\(word)"
+        print("🔄 [Update] 开始更新单词: \(vocabulary.word)")
+        print("🔄 [Update] 请求URL: \(url)")
+        
+        let updateData = VocabularyUpdateData(
+            word: vocabulary.word,
+            definitions: vocabulary.definitions,
+            pronunciation: vocabulary.pronunciation ?? [:],
+            memoryMethod: vocabulary.memoryMethod,
+            mastered: vocabulary.mastered > 0,
+            timestamp: vocabulary.timestamp
+        )
+        
+        do {
+            let response: UpdateVocabularyResponse = try await putWithEncoder(url, body: updateData)
+            print("🔄 [Update] 更新成功: \(response.success)")
+            return response.success
+        } catch {
+            print("🔄 [Update] 更新失败: \(error)")
+            throw error
+        }
+    }
+    
     func importVocabularies(_ request: VocabularyImportRequest) async throws -> Bool {
         let url = "\(baseURL)/vocab/import"
         print("📦 Request url: \(url)")
@@ -255,6 +280,74 @@ class APIService {
         }
     }
     
+    private func putWithEncoder<T: Decodable, U: Codable>(_ url: String, body: U) async throws -> T {
+        guard let url = URL(string: url) else {
+            throw APIError.invalidURL
+        }
+        print("\n\n#################start###################")
+        print("📦 PUT Request url: \(url)")
+        var request = URLRequest(url: url)
+        request.httpMethod = HTTPMethod.put.rawValue
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // 添加认证头
+        let authHeaders = authService.getAuthHeaders()
+        for (key, value) in authHeaders {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
+        // 使用JSONEncoder编码Codable对象
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        request.httpBody = try encoder.encode(body)
+        
+        if let bodyData = request.httpBody,
+           let bodyString = String(data: bodyData, encoding: .utf8) {
+            print("📦 PUT Request body: \(bodyString)")
+        }
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            print("📥 PUT Response received")
+            if let httpResponse = response as? HTTPURLResponse {
+                print("📊 PUT Status code: \(httpResponse.statusCode)")
+                
+                // 检查认证状态
+                if httpResponse.statusCode == 401 {
+                    throw APIError.unauthorized
+                }
+            }
+            
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("📦 PUT Response data: \(responseString)")
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                throw APIError.invalidResponse
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                
+                let response = try decoder.decode(T.self, from: data)
+                print("✅ Successfully decoded PUT response")
+                
+                print("#################end###################\n\n")
+
+                return response
+            } catch {
+                print("❌ PUT Decoding error: \(error)")
+                throw APIError.decodingError(error)
+            }
+        } catch {
+            print("❌ PUT Network error: \(error)")
+            throw APIError.networkError(error)
+        }
+    }
+    
     private func request<T: Decodable>(_ method: HTTPMethod, url: String, body: [String: Any]? = nil) async throws -> T {
         guard let url = URL(string: url) else {
             throw APIError.invalidURL
@@ -340,7 +433,6 @@ class APIService {
             print("❌ Network error: \(error)")
             throw APIError.networkError(error)
         }
-        
     }
     
     private func getRaw<T: Decodable>(_ url: String) async throws -> T {
@@ -398,6 +490,7 @@ class APIService {
         case get = "GET"
         case post = "POST"
         case delete = "DELETE"
+        case put = "PUT"
     }
 }
 
@@ -543,6 +636,28 @@ struct VocabularyItem: Codable, Identifiable, Equatable {
         self.isLocallyModified = true
         self.isLocallyDeleted = false
     }
+    
+    init(
+        word: String,
+        definitions: [VocabularyDefinition],
+        memoryMethod: String? = nil,
+        pronunciation: [String: String]? = nil,
+        mastered: Int = 0,
+        timestamp: Int64,
+        userId: Int? = nil,
+        isNewlyAdded: Bool? = nil
+    ) {
+        self.word = word
+        self.definitions = definitions
+        self.memoryMethod = memoryMethod
+        self.pronunciation = pronunciation
+        self.mastered = mastered
+        self.timestamp = timestamp
+        self.userId = userId
+        self.isNewlyAdded = isNewlyAdded
+        self.isLocallyModified = false
+        self.isLocallyDeleted = false
+    }
 }
 
 struct VocabularyDefinition: Codable, Equatable {
@@ -568,6 +683,32 @@ struct VocabularyImportData: Codable {
         case word, definitions, pronunciation, mastered, timestamp
         case memoryMethod = "memory_method"
     }
+}
+
+// MARK: - Vocabulary Update Models
+
+struct VocabularyUpdateData: Codable {
+    let word: String
+    let definitions: [VocabularyDefinition]
+    let pronunciation: [String: String]
+    let memoryMethod: String?
+    let mastered: Bool
+    let timestamp: Int64
+    
+    enum CodingKeys: String, CodingKey {
+        case word, definitions, pronunciation, mastered, timestamp
+        case memoryMethod = "memory_method"
+    }
+}
+
+struct UpdateVocabularyResponse: Codable {
+    let success: Bool
+    let data: UpdateData
+}
+
+struct UpdateData: Codable {
+    let success: Bool
+    let changes: Int
 }
 
 // MARK: - Legacy Import Model (保持向后兼容)

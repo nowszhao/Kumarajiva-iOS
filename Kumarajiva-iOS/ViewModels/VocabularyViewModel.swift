@@ -187,6 +187,28 @@ class VocabularyViewModel: ObservableObject {
         }
     }
     
+    func updateVocabulary(_ vocabulary: VocabularyItem) async {
+        do {
+            print("🔄 [Update] 开始更新生词: \(vocabulary.word)")
+            
+            let success = try await apiService.updateVocabulary(vocabulary)
+            
+            if success {
+                // 找到并更新本地列表中的词汇
+                if let index = vocabularies.firstIndex(where: { $0.word == vocabulary.word }) {
+                    vocabularies[index] = vocabulary
+                    cacheVocabularies()
+                    print("✅ 已更新生词 '\(vocabulary.word)' 并保存到缓存")
+                }
+            } else {
+                error = "更新失败，请重试"
+            }
+        } catch {
+            print("❌ 更新生词时出错: \(error)")
+            handleError(error)
+        }
+    }
+    
     // 清除缓存（可选方法，用于调试或设置中）
     func clearCache() {
         UserDefaults.standard.removeObject(forKey: cacheKey)

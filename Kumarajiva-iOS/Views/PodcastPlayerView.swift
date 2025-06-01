@@ -27,14 +27,13 @@ struct PodcastPlayerView: View {
             
             // 听力模式浮层
             if isListeningMode {
-                ListeningModeOverlay(
-                    isListeningMode: $isListeningMode,
+                OptimizedListeningModeView(
+                    isPresented: $isListeningMode,
                     playerService: playerService
                 )
                 .transition(.opacity)
             }
         }
-//        .navigationTitle("播放器")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar) // 隐藏底部TabBar
         .onAppear {
@@ -81,6 +80,28 @@ struct PodcastPlayerView: View {
                 Text(formatDate(episode.publishDate))
                     .font(.caption)
                     .foregroundColor(.secondary)
+                
+                // 音频状态指示器
+                if playerService.audioPreparationState != .audioReady {
+                    HStack(spacing: 6) {
+                        switch playerService.audioPreparationState {
+                        case .preparing:
+                            ProgressView()
+                                .scaleEffect(0.7)
+                        case .failed:
+                            Image(systemName: "exclamationmark.triangle")
+                                .foregroundColor(.red)
+                        default:
+                            Image(systemName: "waveform.badge.exclamationmark")
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Text(audioStatusText)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 4)
+                }
             }
             .padding(.horizontal)
             
@@ -292,10 +313,13 @@ struct PodcastPlayerView: View {
             Slider(
                 value: Binding(
                     get: { 
-                        guard playerService.playbackState.duration > 0 else { return 0 }
+                        // 只有在音频准备就绪时才显示真实进度
+                        guard playerService.audioPreparationState == .audioReady,
+                              playerService.playbackState.duration > 0 else { return 0 }
                         return playerService.playbackState.currentTime / playerService.playbackState.duration
                     },
                     set: { newValue in
+                        guard playerService.audioPreparationState == .audioReady else { return }
                         let newTime = newValue * playerService.playbackState.duration
                         playerService.seek(to: newTime)
                     }
@@ -304,6 +328,7 @@ struct PodcastPlayerView: View {
             )
             .accentColor(.accentColor)
             .frame(height: 10) // 减少触摸区域高度
+            .disabled(playerService.audioPreparationState != .audioReady)
             
             // 时间显示
             HStack {
@@ -313,9 +338,23 @@ struct PodcastPlayerView: View {
                 
                 Spacer()
                 
-                Text(playerService.formatTime(playerService.playbackState.duration))
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(.secondary)
+                // 显示总时长或准备状态
+                Group {
+                    switch playerService.audioPreparationState {
+                    case .preparing:
+                        Text("准备中...")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.accentColor)
+                    case .failed:
+                        Text("加载失败")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.red)
+                    default:
+                        Text(playerService.formatTime(playerService.playbackState.duration))
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
         }
     }
@@ -440,21 +479,53 @@ struct PodcastPlayerView: View {
                     Text("上一句")
                         .font(.system(size: 10, weight: .medium))
                 }
-                .foregroundColor(playerService.hasPreviousSubtitle ? .primary : .secondary)
+                .foregroundColor(isAudioReady && playerService.hasPreviousSubtitle ? .primary : .secondary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
             }
-            .disabled(!playerService.hasPreviousSubtitle)
+            .disabled(!isAudioReady || !playerService.hasPreviousSubtitle)
             
             // 播放/暂停
             Button {
                 playerService.togglePlayPause()
             } label: {
-                Image(systemName: playerService.playbackState.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 55))
-                    .foregroundColor(.accentColor)
+                ZStack {
+                    // 根据音频准备状态显示不同的图标
+                    switch playerService.audioPreparationState {
+                    case .idle, .failed:
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 45))
+                            .foregroundColor(.secondary)
+                    case .preparing:
+                        // 显示准备进度
+                        ZStack {
+                            Circle()
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 4)
+                                .frame(width: 45, height: 45)
+                            
+                            Circle()
+                                .trim(from: 0, to: playerService.audioPreparationProgress)
+                                .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                                .frame(width: 45, height: 45)
+                                .rotationEffect(.degrees(-90))
+                                .animation(.easeInOut(duration: 0.3), value: playerService.audioPreparationProgress)
+                            
+                            // 使用音频波形图标，更符合音频准备状态
+                            Image(systemName: "waveform")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.accentColor)
+                                .rotationEffect(.degrees(playerService.audioPreparationProgress * 360))
+                                .animation(.easeInOut(duration: 0.5), value: playerService.audioPreparationProgress)
+                        }
+                    case .audioReady:
+                        Image(systemName: playerService.playbackState.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 45))
+                            .foregroundColor(.accentColor)
+                    }
+                }
             }
             .frame(maxWidth: .infinity)
+            .disabled(playerService.audioPreparationState == .preparing)
             
             // 下一句
             Button {
@@ -466,11 +537,11 @@ struct PodcastPlayerView: View {
                     Text("下一句")
                         .font(.system(size: 10, weight: .medium))
                 }
-                .foregroundColor(playerService.hasNextSubtitle ? .primary : .secondary)
+                .foregroundColor(isAudioReady && playerService.hasNextSubtitle ? .primary : .secondary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
             }
-            .disabled(!playerService.hasNextSubtitle)
+            .disabled(!isAudioReady || !playerService.hasNextSubtitle)
             
             // 更多设置按钮
             Button {
@@ -528,6 +599,24 @@ struct PodcastPlayerView: View {
         return playerService.subtitleGenerationStatusText
     }
     
+    // 新增：音频准备状态相关计算属性
+    private var isAudioReady: Bool {
+        return playerService.audioPreparationState == .audioReady
+    }
+    
+    private var audioStatusText: String {
+        switch playerService.audioPreparationState {
+        case .idle:
+            return "待准备"
+        case .preparing:
+            return "准备中 \(Int(playerService.audioPreparationProgress * 100))%"
+        case .audioReady:
+            return "已就绪"
+        case .failed(let error):
+            return "准备失败: \(error.localizedDescription)"
+        }
+    }
+    
     // MARK: - 辅助方法
     
     private func formatDate(_ date: Date) -> String {
@@ -541,6 +630,12 @@ struct PodcastPlayerView: View {
         Task {
             await playerService.generateSubtitlesForCurrentEpisode()
         }
+    }
+    
+    private func formatTime(_ time: TimeInterval) -> String {
+        let minutes = Int(time) / 60
+        let seconds = Int(time) % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 
@@ -662,216 +757,8 @@ struct SubtitleRowView: View {
     }
 }
 
-// MARK: - 听力模式浮层
-struct ListeningModeOverlay: View {
-    @Binding var isListeningMode: Bool
-    let playerService: PodcastPlayerService
-    
-    @State private var showingFeedback = false
-    @State private var feedbackText = ""
-    @State private var feedbackIcon = ""
-    
-    var body: some View {
-        ZStack {
-            // 半透明背景
-            Color.black.opacity(0.85)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // 上半部分 - 上一句
-                Button {
-                    handlePreviousSubtitle()
-                } label: {
-                    VStack(spacing: 12) {
-                        Spacer()
-                        
-                        Image(systemName: "chevron.up.circle.fill")
-                            .font(.system(size: 60, weight: .medium))
-                            .foregroundColor(.white.opacity(0.8))
-                        
-                        Text("上一句")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(PlainButtonStyle())
-                .simultaneousGesture(
-                    TapGesture(count: 2).onEnded {
-                        handlePlayPause()
-                    }
-                )
-                .disabled(!playerService.hasPreviousSubtitle)
-                .opacity(playerService.hasPreviousSubtitle ? 1.0 : 0.5)
-                
-                // 中间分隔线
-                Rectangle()
-                    .fill(Color.white.opacity(0.3))
-                    .frame(height: 1)
-                    .padding(.horizontal, 40)
-                
-                // 下半部分 - 下一句
-                Button {
-                    handleNextSubtitle()
-                } label: {
-                    VStack(spacing: 12) {
-                        Spacer()
-                        
-                        Image(systemName: "chevron.down.circle.fill")
-                            .font(.system(size: 60, weight: .medium))
-                            .foregroundColor(.white.opacity(0.8))
-                        
-                        Text("下一句")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(PlainButtonStyle())
-                .simultaneousGesture(
-                    TapGesture(count: 2).onEnded {
-                        handlePlayPause()
-                    }
-                )
-                .disabled(!playerService.hasNextSubtitle)
-                .opacity(playerService.hasNextSubtitle ? 1.0 : 0.5)
-            }
-            
-            // 顶部信息栏
-            VStack {
-                HStack {
-                    // 退出按钮
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            isListeningMode = false
-                        }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(.white.opacity(0.8))
-                            .background(Circle().fill(Color.black.opacity(0.3)))
-                    }
-                    
-                    Spacer()
-                    
-                    // 播放状态指示器
-                    HStack(spacing: 8) {
-                        Image(systemName: playerService.playbackState.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white.opacity(0.8))
-                        
-                        Text("听力模式")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white.opacity(0.9))
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule()
-                            .fill(Color.black.opacity(0.3))
-                    )
-                    
-                    Spacer()
-                    
-                    // 占位，保持对称
-                    Color.clear
-                        .frame(width: 30, height: 30)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                
-                Spacer()
-            }
-            
-            // 操作反馈
-            if showingFeedback {
-                VStack(spacing: 8) {
-                    Image(systemName: feedbackIcon)
-                        .font(.system(size: 40, weight: .medium))
-                        .foregroundColor(.white)
-                    
-                    Text(feedbackText)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white)
-                }
-                .padding(20)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.black.opacity(0.7))
-                )
-                .transition(.scale.combined(with: .opacity))
-            }
-        }
-    }
-    
-    private func handlePreviousSubtitle() {
-        guard playerService.hasPreviousSubtitle else { return }
-        
-        playerService.previousSubtitle()
-        showFeedback(text: "上一句", icon: "backward.end.fill")
-    }
-    
-    private func handleNextSubtitle() {
-        guard playerService.hasNextSubtitle else { return }
-        
-        playerService.nextSubtitle()
-        showFeedback(text: "下一句", icon: "forward.end.fill")
-    }
-    
-    private func handlePlayPause() {
-        playerService.togglePlayPause()
-        let isPlaying = playerService.playbackState.isPlaying
-        showFeedback(
-            text: isPlaying ? "播放" : "暂停",
-            icon: isPlaying ? "play.circle.fill" : "pause.circle.fill"
-        )
-    }
-    
-    private func showFeedback(text: String, icon: String) {
-        feedbackText = text
-        feedbackIcon = icon
-        
-        withAnimation(.easeInOut(duration: 0.2)) {
-            showingFeedback = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                showingFeedback = false
-            }
-        }
-    }
-}
 
 // MARK: - 预览
 #Preview {
-    NavigationView {
-        PodcastPlayerView(episode: PodcastEpisode(
-            title: "示例播客节目",
-            description: "这是一个示例播客节目的描述。",
-            audioURL: "https://example.com/episode.mp3",
-            duration: 1800,
-            publishDate: Date(),
-            subtitles: [
-                Subtitle(
-                    startTime: 0,
-                    endTime: 5,
-                    text: "欢迎收听本期播客节目。",
-                    confidence: 0.95
-                ),
-                Subtitle(
-                    startTime: 5,
-                    endTime: 12,
-                    text: "今天我们将讨论一个非常有趣的话题。",
-                    confidence: 0.88
-                )
-            ]
-        ))
-    }
-} 
+    PodcastPlayerView(episode: PodcastEpisode.example)
+}

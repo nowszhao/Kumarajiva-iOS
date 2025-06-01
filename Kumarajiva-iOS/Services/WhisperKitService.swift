@@ -843,7 +843,7 @@ class WhisperKitService: NSObject, ObservableObject, @preconcurrency AVAudioReco
             withoutTimestamps: false,
             wordTimestamps: true, // 关键：启用单词时间戳
             clipTimestamps: [0.0],
-            concurrentWorkerCount: 2,
+            concurrentWorkerCount: 4,
             chunkingStrategy: ChunkingStrategy.none
         )
         

@@ -102,21 +102,21 @@ struct CompletionView: View {
             )
             .ignoresSafeArea()
             
-            VStack(spacing: 24) {
+            VStack(spacing: 32) {
                 Spacer()
             
                 // 成功图标区域
-            VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     ZStack {
                         // 背景圆圈 - 简化效果
                         Circle()
                             .fill(Color.green.opacity(0.15))
-                            .frame(width: 90, height: 90)
+                            .frame(width: 100, height: 100)
                             .scaleEffect(animateCheckmark ? 1.0 : 0.8)
                         
                         // 主图标
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 48, weight: .medium))
+                            .font(.system(size: 52, weight: .medium))
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [Color.green, Color.green.opacity(0.8)],
@@ -129,17 +129,17 @@ struct CompletionView: View {
                     }
                     
                     // 标题文字
-                    VStack(spacing: 6) {
-                Text("今日学习完成!")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    VStack(spacing: 8) {
+                        Text("今日学习完成!")
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary)
                             .multilineTextAlignment(.center)
-                
-                Text("正确率: \(calculateAccuracy(progress))%")
-                            .font(.system(size: 16, weight: .medium))
+                        
+                        Text("正确率: \(calculateAccuracy(progress))%")
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(
                                 LinearGradient(
-                                    colors: [Color.secondary, Color.secondary.opacity(0.8)],
+                                    colors: [Color.green, Color.green.opacity(0.7)],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -147,10 +147,10 @@ struct CompletionView: View {
                     }
                     .opacity(animateCheckmark ? 1.0 : 0)
                     .animation(.easeInOut(duration: 0.6).delay(0.5), value: animateCheckmark)
-            }
+                }
             
-                // 统计卡片区域 - 简化版本
-                HStack(spacing: 12) {
+                // 统计卡片区域
+                HStack(spacing: 16) {
                     CompactStatCard(
                         title: "总题数",
                         value: "\(progress.totalWords)",
@@ -170,43 +170,57 @@ struct CompletionView: View {
                     .opacity(animateStats ? 1.0 : 0)
                     .offset(y: animateStats ? 0 : 20)
                     .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.8), value: animateStats)
-            }
-                .padding(.horizontal, 20)
+                }
+                .padding(.horizontal, 24)
                 
-                // 准确率进度条 - 简化版本
+                // 准确率进度条
                 CompactAccuracyView(accuracy: calculateAccuracy(progress))
                     .opacity(animateStats ? 1.0 : 0)
                     .animation(.easeInOut(duration: 0.8).delay(0.9), value: animateStats)
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 24)
             
-            Spacer()
-            
-            // 重新开始按钮
-            Button(action: onReset) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "arrow.clockwise")
+                Spacer()
+                
+                // 主要行动区域 - 鼓励继续学习
+                VStack(spacing: 16) {
+                    // 鼓励文字
+                    VStack(spacing: 4) {
+                        Text("太棒了！")
                             .font(.system(size: 16, weight: .medium))
-                Text("重新开始")
-                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                        
+                        Text("继续保持这个学习节奏")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
                     }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.accentColor, Color.accentColor.opacity(0.8)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                    .opacity(animateStats ? 1.0 : 0)
+                    .animation(.easeInOut(duration: 0.6).delay(1.1), value: animateStats)
+                    
+                    // 次要操作 - 重新开始按钮（低调样式）
+                    Button(action: onReset) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("重新练习")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(Color(.systemBackground))
+                                )
                         )
-                    )
-                    .cornerRadius(12)
-                    .shadow(color: Color.accentColor.opacity(0.4), radius: 8, x: 0, y: 4)
-            }
-                .opacity(animateStats ? 1.0 : 0)
-                .scaleEffect(animateStats ? 1.0 : 0.9)
-                .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(1.0), value: animateStats)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
+                    }
+                    .opacity(animateStats ? 1.0 : 0)
+                    .scaleEffect(animateStats ? 1.0 : 0.9)
+                    .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(1.2), value: animateStats)
+                }
+                .padding(.bottom, 50)
             }
         }
         .onAppear {
@@ -229,39 +243,39 @@ struct CompactStatCard: View {
     let color: Color
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             // 图标区域
             ZStack {
                 Circle()
                     .fill(color.opacity(0.15))
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                 
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: 20, weight: .medium))
                     .foregroundColor(color)
             }
             
             // 数值和标题
-            VStack(spacing: 2) {
+            VStack(spacing: 4) {
                 Text(value)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
-            Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .padding(.horizontal, 12)
+        .padding(.vertical, 20)
+        .padding(.horizontal, 16)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 16)
                 .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
+                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(color.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(color.opacity(0.15), lineWidth: 1)
                 )
         )
     }
@@ -273,16 +287,16 @@ struct CompactAccuracyView: View {
     @State private var progress: CGFloat = 0
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             HStack {
                 Text("正确率")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.secondary)
                 
                 Spacer()
                 
                 Text("\(accuracy)%")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundColor(accuracy >= 80 ? .green : accuracy >= 60 ? .orange : .red)
             }
             
@@ -290,12 +304,12 @@ struct CompactAccuracyView: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     // 背景
-                    RoundedRectangle(cornerRadius: 3)
+                    RoundedRectangle(cornerRadius: 4)
                         .fill(Color(.systemGray5))
-                        .frame(height: 6)
+                        .frame(height: 8)
                     
                     // 进度
-                    RoundedRectangle(cornerRadius: 3)
+                    RoundedRectangle(cornerRadius: 4)
                         .fill(
                             LinearGradient(
                                 colors: accuracy >= 80 ? [Color.green, Color.green.opacity(0.7)] :
@@ -305,18 +319,18 @@ struct CompactAccuracyView: View {
                                 endPoint: .trailing
                             )
                         )
-                        .frame(width: geometry.size.width * progress, height: 6)
-                        .animation(.easeInOut(duration: 1.0), value: progress)
+                        .frame(width: geometry.size.width * progress, height: 8)
+                        .animation(.easeInOut(duration: 1.2), value: progress)
                 }
             }
-            .frame(height: 6)
+            .frame(height: 8)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
         .background(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+                .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
         )
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

@@ -94,6 +94,35 @@ struct PodcastEpisode: Identifiable, Codable {
             return "未生成"
         }
     }
+    
+    // MARK: - 预览示例
+    static let example = PodcastEpisode(
+        title: "示例播客节目",
+        description: "这是一个用于预览的示例播客节目。内容包含了关于人工智能和技术发展的讨论。",
+        audioURL: "https://example.com/episode.mp3",
+        duration: 1800, // 30分钟
+        publishDate: Date(),
+        subtitles: [
+            Subtitle(
+                startTime: 0,
+                endTime: 5,
+                text: "欢迎收听本期播客节目。",
+                confidence: 0.95
+            ),
+            Subtitle(
+                startTime: 5,
+                endTime: 12,
+                text: "今天我们将讨论人工智能的发展趋势。",
+                confidence: 0.88
+            ),
+            Subtitle(
+                startTime: 12,
+                endTime: 20,
+                text: "首先，让我们回顾一下过去一年AI技术的重大突破。",
+                confidence: 0.92
+            )
+        ]
+    )
 }
 
 // MARK: - 增强字幕模型

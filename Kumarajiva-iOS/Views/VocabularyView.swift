@@ -9,6 +9,8 @@ struct VocabularyView: View {
     @State private var showingMenu = false
     @State private var filterOption: FilterOption = .all
     @State private var sortOrder: SortOrder = .newestFirst
+    @State private var showingEditSheet = false
+    @State private var vocabularyToEdit: VocabularyItem?
     
     enum FilterOption: String, CaseIterable {
         case all = "全部"
@@ -149,6 +151,17 @@ struct VocabularyView: View {
         } message: {
             if let error = viewModel.error {
                 Text(error)
+            }
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            if let vocabulary = vocabularyToEdit {
+                EditVocabularyView(vocabulary: vocabulary) { updatedVocabulary in
+                    Task {
+                        await viewModel.updateVocabulary(updatedVocabulary)
+                    }
+                    showingEditSheet = false
+                    vocabularyToEdit = nil
+                }
             }
         }
     }
@@ -364,6 +377,13 @@ struct VocabularyView: View {
                         showingDeleteAlert = true
                     } label: {
                         Label("删除", systemImage: "trash")
+                    }
+                    
+                    Button(action: {
+                        vocabularyToEdit = vocabulary
+                        showingEditSheet = true
+                    }) {
+                        Label("编辑", systemImage: "pencil")
                     }
                 }
             }
@@ -632,4 +652,195 @@ struct VocabularyCard: View {
 
 #Preview {
     VocabularyView()
+}
+
+// MARK: - Edit Vocabulary View
+
+struct EditVocabularyView: View {
+    let originalVocabulary: VocabularyItem
+    let onSave: (VocabularyItem) -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var word: String
+    @State private var definitions: [EditableDefinition]
+    @State private var americanPronunciation: String
+    @State private var britishPronunciation: String
+    @State private var memoryMethod: String
+    @State private var mastered: Bool
+    
+    init(vocabulary: VocabularyItem, onSave: @escaping (VocabularyItem) -> Void) {
+        self.originalVocabulary = vocabulary
+        self.onSave = onSave
+        
+        _word = State(initialValue: vocabulary.word)
+        _definitions = State(initialValue: vocabulary.definitions.map { EditableDefinition(pos: $0.pos, meaning: $0.meaning) })
+        _americanPronunciation = State(initialValue: vocabulary.pronunciation?["American"] ?? "")
+        _britishPronunciation = State(initialValue: vocabulary.pronunciation?["British"] ?? "")
+        _memoryMethod = State(initialValue: vocabulary.memoryMethod ?? "")
+        _mastered = State(initialValue: vocabulary.mastered > 0)
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("单词信息") {
+                    HStack {
+                        Text("单词")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(word)
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Section("发音") {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("美式发音")
+                                .font(.system(size: 15, weight: .medium))
+                                .frame(width: 80, alignment: .leading)
+                            TextField("如：/əˈmerɪkən/", text: $americanPronunciation)
+                                .font(.system(size: 15))
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                        
+                        HStack {
+                            Text("英式发音")
+                                .font(.system(size: 15, weight: .medium))
+                                .frame(width: 80, alignment: .leading)
+                            TextField("如：/əˈmerɪkən/", text: $britishPronunciation)
+                                .font(.system(size: 15))
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                
+                Section("释义") {
+                    ForEach($definitions) { $definition in
+                        VStack(spacing: 8) {
+                            HStack {
+                                Text("词性")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .frame(width: 50, alignment: .leading)
+                                TextField("如：n. / v. / adj.", text: $definition.pos)
+                                    .font(.system(size: 15))
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                            }
+                            
+                            HStack(alignment: .top) {
+                                Text("释义")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .frame(width: 50, alignment: .leading)
+                                    .padding(.top, 8)
+                                TextField("请输入中文释义", text: $definition.meaning, axis: .vertical)
+                                    .font(.system(size: 15))
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    .lineLimit(3...6)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .background(Color(.systemGray6).opacity(0.5))
+                        .cornerRadius(8)
+                    }
+                    .onDelete(perform: deleteDefinition)
+                    
+                    Button(action: addDefinition) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.blue)
+                            Text("添加释义")
+                                .font(.system(size: 15, weight: .medium))
+                        }
+                    }
+                }
+                
+                Section("记忆方法") {
+                    TextField("请输入记忆方法...", text: $memoryMethod, axis: .vertical)
+                        .font(.system(size: 15))
+                        .lineLimit(5...10)
+                        .textFieldStyle(.plain)
+                }
+                
+                Section("掌握状态") {
+                    Toggle("已掌握", isOn: $mastered)
+                        .font(.system(size: 16))
+                }
+            }
+            .navigationTitle("编辑单词")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("保存") {
+                        saveVocabulary()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(definitions.isEmpty || definitions.allSatisfy { $0.pos.isEmpty || $0.meaning.isEmpty })
+                }
+            }
+        }
+    }
+    
+    private func addDefinition() {
+        definitions.append(EditableDefinition(pos: "", meaning: ""))
+    }
+    
+    private func deleteDefinition(at offsets: IndexSet) {
+        definitions.remove(atOffsets: offsets)
+    }
+    
+    private func saveVocabulary() {
+        // 构建更新后的发音字典
+        var pronunciation: [String: String] = [:]
+        if !americanPronunciation.isEmpty {
+            pronunciation["American"] = americanPronunciation
+        }
+        if !britishPronunciation.isEmpty {
+            pronunciation["British"] = britishPronunciation
+        }
+        
+        // 过滤掉空的释义
+        let validDefinitions = definitions
+            .filter { !$0.pos.isEmpty && !$0.meaning.isEmpty }
+            .map { VocabularyDefinition(pos: $0.pos, meaning: $0.meaning) }
+        
+        // 创建更新后的词汇项
+        let updatedVocabulary = VocabularyItem(
+            word: originalVocabulary.word,
+            definitions: validDefinitions,
+            memoryMethod: memoryMethod.isEmpty ? nil : memoryMethod,
+            pronunciation: pronunciation.isEmpty ? nil : pronunciation,
+            mastered: mastered ? 1 : 0,
+            timestamp: Date().timeIntervalSince1970Milliseconds,
+            userId: originalVocabulary.userId,
+            isNewlyAdded: originalVocabulary.isNewlyAdded
+        )
+        
+        onSave(updatedVocabulary)
+    }
+}
+
+// MARK: - Editable Definition Model
+
+struct EditableDefinition: Identifiable {
+    let id = UUID()
+    var pos: String
+    var meaning: String
+}
+
+// MARK: - Extensions
+
+extension Date {
+    var timeIntervalSince1970Milliseconds: Int64 {
+        return Int64(self.timeIntervalSince1970 * 1000)
+    }
 } 
