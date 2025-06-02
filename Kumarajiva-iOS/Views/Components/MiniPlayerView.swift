@@ -3,6 +3,7 @@ import SwiftUI
 struct MiniPlayerView: View {
     @StateObject private var playerService = PodcastPlayerService.shared
     @State private var showingPlayer = false
+    @State private var showingPlaylist = false
     
     var body: some View {
         if playerService.isPlaying, let episodeTitle = playerService.currentEpisodeTitle {
@@ -27,6 +28,15 @@ struct MiniPlayerView: View {
                     
                     // 播放控制按钮
                     HStack(spacing: 16) {
+                        // 播放列表按钮
+                        Button {
+                            showingPlaylist = true
+                        } label: {
+                            Image(systemName: "list.bullet")
+                                .font(.title3)
+                                .foregroundColor(.accentColor)
+                        }
+                        
                         // 播放/暂停按钮
                         Button {
                             playerService.togglePlayPause()
@@ -42,7 +52,7 @@ struct MiniPlayerView: View {
                         } label: {
                             Image(systemName: "stop.fill")
                                 .font(.title3)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.red)
                         }
                     }
                 }
@@ -61,6 +71,9 @@ struct MiniPlayerView: View {
                 if let episode = playerService.playbackState.currentEpisode {
                     PodcastPlayerView(episode: episode)
                 }
+            }
+            .sheet(isPresented: $showingPlaylist) {
+                PlaylistView()
             }
         }
     }

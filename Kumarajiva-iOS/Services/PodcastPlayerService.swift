@@ -221,51 +221,7 @@ class PodcastPlayerService: NSObject, ObservableObject {
         }
     }
     
-    // MARK: - 播放控制
-    func playEpisode(_ episode: PodcastEpisode) {
-        
-        
-        // 在播放新节目前停止现有播放
-        if playbackState.currentEpisode?.id != episode.id {
-            cleanupAudioPlayer()
-        }
-        
-        // 设置新的当前节目
-        playbackState.currentEpisode = episode
-        currentSubtitles = episode.subtitles
-        
-        
-        // 根据音频类型设置时长逻辑
-        if isYouTubeAudio(episode.audioURL) {
-            // YouTube音频：直接使用Episode中的准确时长（来自YouTube官方数据）
-            playbackState.duration = episode.duration
-            print("🎧 [Player] YouTube音频使用Episode准确时长: \(formatTime(episode.duration))")
-        } else {
-            // 播客音频：优先使用Episode时长，但允许音频流覆盖
-            if episode.duration > 0 {
-                playbackState.duration = episode.duration
-                print("🎧 [Player] 播客音频使用Episode时长: \(formatTime(episode.duration))")
-            } else {
-                // 如果Episode没有时长，会在Duration观察者中设置
-                print("🎧 [Player] 播客音频等待从音频流获取时长")
-            }
-        }
-        
-        
-        // 检查是否已经有音频播放器且URL相同
-        if let currentURL = (audioPlayer?.currentItem?.asset as? AVURLAsset)?.url,
-           currentURL.absoluteString == episode.audioURL {
-            print("🎧 [Player] 音频URL相同，继续使用现有播放器")
-            resumePlayback()
-            return
-        }
-        
-        
-        // 为新的音频URL准备播放器
-        prepareAudioForPlayback(episode: episode)
-        
-    }
-    
+     
     /// 准备播放节目但不自动开始播放
     func prepareEpisode(_ episode: PodcastEpisode) {
                 
@@ -280,428 +236,148 @@ class PodcastPlayerService: NSObject, ObservableObject {
             return
         }
         
-        // 如果是不同的节目或音频未准备好，重新准备
+        // 如果是不同的节目，先完全清空状态
         if !isSameEpisode {
+            print("🎧 [Player] 切换到新节目，清空所有状态: \(episode.title)")
+            
+            // 停止当前播放和清理资源
+            pausePlayback()
+            cleanupAudioPlayer()
+            
             // 重置所有状态
-            playbackState.currentEpisode = episode
+            currentSubtitles = []
+            playbackState.currentEpisode = nil
             playbackState.isPlaying = false
             playbackState.currentTime = 0
+            playbackState.duration = 0
             playbackState.currentSubtitleIndex = nil
             audioPreparationState = .idle
             audioPreparationProgress = 0.0
-            
-            print("🎧 [Player] 切换到新节目，重置状态: \(episode.title)")
+            isGeneratingSubtitles = false
+            subtitleGenerationProgress = 0.0
+            errorMessage = nil
         }
         
+        // 设置新节目
         playbackState.currentEpisode = episode
         
         // 加载已有字幕
         loadExistingSubtitles(for: episode)
         
         // 准备音频但不播放
-       prepareAudio(from: episode.audioURL)
+        prepareAudio(from: episode.audioURL)
         
         print("🎧 [Player] 准备节目（不自动播放）: \(episode.title)")
     }
     
-    /// 为新的Episode准备音频播放
-    private func prepareAudioForPlayback(episode: PodcastEpisode) {
+    /// 立即清空当前播放状态，用于切换节目时避免显示旧内容
+    func clearCurrentPlaybackState() {
+        print("🎧 [Player] 清空当前播放状态")
         
-        
-        // 重置生成标志
-        shouldContinueGeneration = true
+        // 清空字幕
+        currentSubtitles = []
         
         // 重置播放状态
+        playbackState.currentEpisode = nil
         playbackState.isPlaying = false
         playbackState.currentTime = 0
+        playbackState.duration = 0
         playbackState.currentSubtitleIndex = nil
+        
+        // 重置音频准备状态
         audioPreparationState = .idle
         audioPreparationProgress = 0.0
         
-        // 开始播放音频
-        loadAndPlayAudio(from: episode.audioURL)
+        // 停止字幕生成
+        isGeneratingSubtitles = false
+        subtitleGenerationProgress = 0.0
         
-        print("🎧 [Player] 为新Episode准备音频播放: \(episode.title)")
-        
+        // 清除错误信息
+        errorMessage = nil
     }
+    
     
     private func loadExistingSubtitles(for episode: PodcastEpisode) {
         currentSubtitles = episode.subtitles
         print("🎧 [Player] 加载已有字幕: \(episode.subtitles.count) 条")
+        
+        // 验证字幕数据质量
+        validateSubtitleData()
     }
     
-    private func loadAndPlayAudio(from urlString: String) {
-        
-        
-        guard let url = URL(string: urlString) else {
-            errorMessage = "无效的音频URL"
-            audioPreparationState = .failed(URLError(.badURL))
+    /// 验证字幕数据质量（调试用）
+    private func validateSubtitleData() {
+        guard !currentSubtitles.isEmpty else {
+            print("⚠️ [Player] 字幕验证：字幕列表为空")
             return
         }
         
-        // 设置准备状态
-        audioPreparationState = .preparing
-        audioPreparationProgress = 0.0
-        lastLoggedLoadedDuration = 0  // 重置加载进度跟踪
-        print("🎧 [Player] 开始加载并播放音频: \(urlString)")
+        print("🔍 [Player] 字幕数据验证开始...")
         
+        var validSubtitles = 0
+        var invalidSubtitles = 0
+        var totalDuration: TimeInterval = 0
+        var shortSubtitles = 0 // 少于0.1秒的字幕
+        var veryShortSubtitles = 0 // 少于0.01秒的字幕
         
-        // 检查是否仍有当前节目（防止在加载过程中被停止）
-        guard self.playbackState.currentEpisode != nil else {
-            print("🎧 [Player] 音频加载时发现没有当前节目，跳过播放")
-            self.audioPreparationState = .idle
-            return
-        }
-        
-        
-        // 清理旧的播放器和观察者
-        cleanupAudioPlayer()
-        
-        
-        
-        // 先检查音频文件是否可访问
-        checkAudioFileAccessibility(url: url) { [weak self] isAccessible, fileSize, serverResponse in
-            DispatchQueue.main.async {
-                if isAccessible {
-                    print("🎧 [Player] ✅ 音频文件可访问，大小: \(fileSize ?? "未知"), 响应: \(serverResponse ?? "无")")
-                    self?.proceedWithAudioLoading(url: url, urlString: urlString)
-                } else {
-                    print("🎧 [Player] ❌ 音频文件不可访问")
-                    self?.errorMessage = "音频文件不可访问，请重新下载"
-                    self?.audioPreparationState = .failed(URLError(.cannotConnectToHost))
-                }
-            }
-        }
-        
-    }
-    
-    /// 检查音频文件可访问性
-    private func checkAudioFileAccessibility(url: URL, completion: @escaping (Bool, String?, String?) -> Void) {
-        
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "HEAD"  // 只获取头部信息，不下载内容
-        request.timeoutInterval = 10.0  // 10秒超时
-        
-        // 添加适当的请求头
-        request.setValue("Kumarajiva-iOS/2.0 (iPhone; iOS)", forHTTPHeaderField: "User-Agent")
-        request.setValue("*/*", forHTTPHeaderField: "Accept")
-        
-        print("🎧 [Player] 检查音频文件可访问性: \(url.absoluteString)")
-        
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                print("🎧 [Player] 文件检查失败: \(error.localizedDescription)")
-                completion(false, nil, error.localizedDescription)
-                return
-            }
+        for (index, subtitle) in currentSubtitles.enumerated() {
+            let duration = subtitle.endTime - subtitle.startTime
+            totalDuration += duration
             
-            if let httpResponse = response as? HTTPURLResponse {
-                print("🎧 [Player] 服务器响应状态: \(httpResponse.statusCode)")
+            // 检查时间戳有效性
+            if subtitle.startTime >= 0 && subtitle.endTime > subtitle.startTime && duration > 0 {
+                validSubtitles += 1
                 
-                let isAccessible = (200...299).contains(httpResponse.statusCode)
-                let contentLength = httpResponse.value(forHTTPHeaderField: "Content-Length")
-                let serverInfo = "Status: \(httpResponse.statusCode)"
-                
-                if let length = contentLength, let size = Int64(length) {
-                    let sizeInMB = Double(size) / (1024 * 1024)
-                    completion(isAccessible, String(format: "%.1f MB", sizeInMB), serverInfo)
-                } else {
-                    completion(isAccessible, "未知大小", serverInfo)
+                if duration < 0.1 {
+                    shortSubtitles += 1
+                    if duration < 0.01 {
+                        veryShortSubtitles += 1
+                        print("⚠️ [Player] 极短字幕 [\(index)]: \(String(format: "%.4f", duration))s - '\(subtitle.text)'")
+                    }
                 }
             } else {
-                completion(false, nil, "无效响应")
-            }
-        }
-        
-        task.resume()
-        
-    }
-    
-    /// 继续音频加载流程
-    private func proceedWithAudioLoading(url: URL, urlString: String) {
-        
-        
-        // 为YouTube文件服务创建优化的AVAsset配置
-        let asset: AVURLAsset
-        if isYouTubeAudio(urlString) {
-            asset = AVURLAsset(url: url)
-             
-            print("🎧 [Player] YouTube音频跳过异步加载，直接创建播放器")
-            handleAssetLoadingDirectly(asset: asset, url: url)
-            
-            
-            return
-        } else {
-            // 标准音频流
-            asset = AVURLAsset(url: url)
-            print("🎧 [Player] 标准音频流创建AVAsset")
-        }
-        
-        
-        // 播客音频：保持原有的异步加载流程
-        let requiredKeys = ["duration", "playable"]  // 移除tracks，减少加载时间
-        print("🎧 [Player] 开始异步加载音频属性: \(requiredKeys)")
-        
-        
-        // 创建异步加载任务
-        currentAssetLoadingTask = DispatchWorkItem { [weak self] in
-            DispatchQueue.main.async {
-                // 检查任务是否已被取消
-                guard let self = self, let task = self.currentAssetLoadingTask, !task.isCancelled else {
-                    print("🎧 [Player] 异步加载任务已取消")
-                    return
-                }
-                
-                self.handleAssetLoading(asset: asset, requiredKeys: requiredKeys, url: url)
-                self.currentAssetLoadingTask = nil
-            }
-        }
-        
-        // 添加加载进度监控
-        let startTime = Date()
-        print("🎧 [Player] 开始异步加载，时间: \(startTime)")
-        
-        asset.loadValuesAsynchronously(forKeys: requiredKeys) { [weak self] in
-            let loadTime = Date().timeIntervalSince(startTime)
-            print("🎧 [Player] 异步加载完成，耗时: \(String(format: "%.2f", loadTime))秒")
-            
-            guard let self = self, let task = self.currentAssetLoadingTask, !task.isCancelled else {
-                print("🎧 [Player] 异步加载完成但任务已取消")
-                return
+                invalidSubtitles += 1
+                print("❌ [Player] 无效字幕 [\(index)]: \(subtitle.startTime) -> \(subtitle.endTime) - '\(subtitle.text)'")
             }
             
-            // 清除超时定时器（在主线程）
-            DispatchQueue.main.async {
-                self.clearLoadingTimeout()
-            }
-            
-            // 执行处理任务
-            DispatchQueue.main.async(execute: task)
-        }
-        
-        // 设置更短的超时监控（播客音频30秒）
-        setupLoadingTimeout(timeout: 30.0)
-    }
-    
-    /// 直接处理资源（跳过异步加载）
-    private func handleAssetLoadingDirectly(asset: AVURLAsset, url: URL) {
-        
-        
-        // 确保仍在准备状态且有当前节目
-        guard audioPreparationState == .preparing,
-              playbackState.currentEpisode != nil else {
-            print("🎧 [Player] 直接加载时状态已改变，跳过处理")
-            return
-        }
-        
-        print("🎧 [Player] ✅ 跳过属性验证，直接创建播放器")
-        
-        // 先检查网络连接状态
-        checkNetworkConditions(for: url)
-        
-        // 创建播放项，YouTube音频使用最激进的快速配置
-        let playerItem = AVPlayerItem(asset: asset)
-        
-        // YouTube音频：优化缓冲策略，平衡启动速度和播放稳定性
-        playerItem.preferredForwardBufferDuration = 2.0  // 增加到2秒缓冲，确保播放稳定性
-        playerItem.canUseNetworkResourcesForLiveStreamingWhilePaused = false  // 暂停时不使用网络
-        
-        // 尝试设置更激进的缓冲策略
-        if #available(iOS 10.0, *) {
-            playerItem.preferredMaximumResolution = CGSize(width: 1, height: 1)  // 最小分辨率（音频无效果）
-        }
-        
-        print("🎧 [Player] YouTube音频优化缓冲：2秒缓冲，禁用暂停时网络请求")
-        
-        
-        
-        // 创建新的AVPlayer
-        self.audioPlayer = AVPlayer(playerItem: playerItem)
-        
-        
-        // 平衡的播放器配置
-        if #available(iOS 10.0, *) {
-            audioPlayer?.automaticallyWaitsToMinimizeStalling = true  // 改为true，让AVPlayer决定最佳时机
-            print("🎧 [Player] YouTube音频配置：让AVPlayer智能决定播放时机")
-        }
-        
-        // 设置播放器观察者（在设置播放速率之前）
-        setupPlayerObservers()
-        
-        print("🎧 [Player] AVPlayer创建完成，等待缓冲后开始播放")
-        
-        
-        
-        // 智能播放启动：等待最少缓冲后立即开始
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            if let player = self.audioPlayer, let item = player.currentItem {
-                // 检查是否有足够的缓冲或者播放项已准备好
-                if !item.isPlaybackBufferEmpty || item.isPlaybackLikelyToKeepUp {
-                    print("🎧 [Player] 🚀 检测到缓冲数据，立即开始播放")
-                    player.play()
-                    self.playbackState.isPlaying = true
-                } else {
-                    print("🎧 [Player] ⏳ 等待更多缓冲数据...")
-                    // 设置自动播放监听
-                    self.waitForBufferAndPlay()
+            // 详细输出前3个字幕
+            if index < 3 {
+                print("📝 [Player] 字幕 [\(index)]: \(formatTime(subtitle.startTime)) -> \(formatTime(subtitle.endTime)) (\(String(format: "%.3f", duration))s)")
+                print("   文本: '\(subtitle.text)'")
+                print("   单词数: \(subtitle.words.count)")
+                if !subtitle.words.isEmpty {
+                    let firstWord = subtitle.words[0]
+                    let lastWord = subtitle.words[subtitle.words.count - 1]
+                    print("   单词时间范围: \(formatTime(firstWord.startTime)) -> \(formatTime(lastWord.endTime))")
                 }
             }
         }
         
-        // 更新锁屏显示信息
-        if let episode = playbackState.currentEpisode {
-            updateNowPlayingInfo()
-            print("🎧 [Player] 更新锁屏显示信息: \(episode.title)")
+        let averageDuration = totalDuration / Double(currentSubtitles.count)
+        
+        print("📊 [Player] 字幕数据统计:")
+        print("   总数: \(currentSubtitles.count)")
+        print("   有效: \(validSubtitles), 无效: \(invalidSubtitles)")
+        print("   平均时长: \(String(format: "%.2f", averageDuration))s")
+        print("   短字幕(<0.1s): \(shortSubtitles)")
+        print("   极短字幕(<0.01s): \(veryShortSubtitles)")
+        
+        if let firstSubtitle = currentSubtitles.first, let lastSubtitle = currentSubtitles.last {
+            print("   时间范围: \(formatTime(firstSubtitle.startTime)) -> \(formatTime(lastSubtitle.endTime))")
         }
         
-        print("🎧 [Player] 开始播放: \(playbackState.currentEpisode?.title ?? "未知")")
+        // 警告信息
+        if veryShortSubtitles > 0 {
+            print("⚠️ [Player] 发现 \(veryShortSubtitles) 个极短字幕，可能影响播放体验")
+        }
         
-        // 监控播放启动状态（使用更频繁的检查和网络诊断）
-        monitorYouTubePlaybackWithNetworkDiagnosis()
+        if invalidSubtitles > 0 {
+            print("❌ [Player] 发现 \(invalidSubtitles) 个无效字幕，需要检查解析逻辑")
+        }
+        
+        print("🔍 [Player] 字幕数据验证完成\n")
     }
     
-    /// 等待缓冲并自动播放
-    private func waitForBufferAndPlay() {
-        guard let player = audioPlayer, let item = player.currentItem else { return }
-        
-        // 设置缓冲观察者
-        let observer = item.observe(\.isPlaybackLikelyToKeepUp, options: [.new]) { [weak self] item, _ in
-            if item.isPlaybackLikelyToKeepUp && self?.playbackState.isPlaying == false {
-                print("🎧 [Player] ✅ 缓冲充足，自动开始播放")
-                player.play()
-                self?.playbackState.isPlaying = true
-            }
-        }
-        
-//        // 3秒后强制播放（即使缓冲不足）
-//        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-//            observer.invalidate()
-//            if player.rate == 0 && self.playbackState.isPlaying == false {
-//                print("🎧 [Player] ⏰ 3秒超时，强制开始播放")
-//                player.play()
-//                self.playbackState.isPlaying = true
-//            }
-//        }
-    }
-    
-    /// 检查网络连接状况
-    private func checkNetworkConditions(for url: URL) {
-        print("🌐 [Network] 开始网络状况检查...")
-        
-        // 简单的ping测试
-        var request = URLRequest(url: url)
-        request.httpMethod = "HEAD"
-        request.timeoutInterval = 5.0
-        request.setValue("Kumarajiva-iOS/2.0", forHTTPHeaderField: "User-Agent")
-        
-        let startTime = Date()
-        let task = URLSession.shared.dataTask(with: request) { _, response, error in
-            let responseTime = Date().timeIntervalSince(startTime)
-            
-            DispatchQueue.main.async {
-                if let httpResponse = response as? HTTPURLResponse {
-                    print("🌐 [Network] 网络检查完成: 状态=\(httpResponse.statusCode), 响应时间=\(String(format: "%.3f", responseTime))秒")
-                    
-                    if responseTime > 2.0 {
-                        print("🌐 [Network] ⚠️ 网络响应较慢，可能影响音频加载")
-                    } else if responseTime < 0.5 {
-                        print("🌐 [Network] ✅ 网络响应良好")
-                    }
-                } else {
-                    print("🌐 [Network] ❌ 网络检查失败: \(error?.localizedDescription ?? "未知错误")")
-                }
-            }
-        }
-        task.resume()
-    }
-    
-    /// 处理资源加载完成
-    private func handleAssetLoading(asset: AVURLAsset, requiredKeys: [String], url: URL) {
-        // 确保仍在准备状态且有当前节目
-        guard audioPreparationState == .preparing,
-              playbackState.currentEpisode != nil else {
-            print("🎧 [Player] 音频属性加载完成，但状态已改变，跳过处理")
-            return
-        }
-        
-        print("🎧 [Player] 开始验证音频属性...")
-        
-        // 检查每个关键属性的加载状态
-        for key in requiredKeys {
-            var error: NSError?
-            let status = asset.statusOfValue(forKey: key, error: &error)
-            
-            switch status {
-            case .loaded:
-                print("🎧 [Player] ✅ 属性加载成功: \(key)")
-            case .failed:
-                print("🎧 [Player] ❌ 属性加载失败: \(key), 错误: \(error?.localizedDescription ?? "未知")")
-                errorMessage = "音频文件损坏或格式不支持"
-                audioPreparationState = .failed(error ?? URLError(.cannotDecodeContentData))
-                return
-            case .cancelled:
-                print("🎧 [Player] ⚠️ 属性加载被取消: \(key)")
-                return
-            default:
-                print("🎧 [Player] ⚠️ 属性加载状态未知: \(key)")
-            }
-        }
-        
-        // 快速检查音频是否可播放
-        if !asset.isPlayable {
-            print("🎧 [Player] ❌ 音频资源不可播放")
-            errorMessage = "音频文件不可播放，可能格式不支持"
-            audioPreparationState = .failed(URLError(.cannotDecodeContentData))
-            return
-        }
-        
-        print("🎧 [Player] ✅ 音频属性验证通过，开始创建播放器")
-        
-        // 创建播放项，YouTube音频使用快速配置
-        let playerItem = AVPlayerItem(asset: asset)
-        
-        // 优化YouTube音频的缓冲设置
-        if let episode = playbackState.currentEpisode, isYouTubeAudio(episode.audioURL) {
-            // 设置较小的缓冲时间，快速开始播放
-            playerItem.preferredForwardBufferDuration = 3.0  // 减少到3秒缓冲
-            print("🎧 [Player] YouTube音频优化：设置3秒前向缓冲，快速启动")
-        } else {
-            // 播客音频使用默认缓冲策略
-            playerItem.preferredForwardBufferDuration = 10.0  // 10秒缓冲
-        }
-        
-        // 创建新的AVPlayer
-        self.audioPlayer = AVPlayer(playerItem: playerItem)
-        
-        // 对YouTube音频，启用自动等待网络
-        if let episode = playbackState.currentEpisode, isYouTubeAudio(episode.audioURL) {
-            if #available(iOS 10.0, *) {
-                audioPlayer?.automaticallyWaitsToMinimizeStalling = false  // 关闭自动等待，快速开始
-                print("🎧 [Player] YouTube音频关闭自动等待，优先快速启动")
-            }
-        }
-        
-        // 设置播放器观察者
-        setupPlayerObservers()
-        
-        print("🎧 [Player] AVPlayer创建完成，开始流式播放")
-        
-        // 更新锁屏显示信息
-        if let episode = playbackState.currentEpisode {
-            updateNowPlayingInfo()
-            print("🎧 [Player] 更新锁屏显示信息: \(episode.title)")
-        }
-        
-        // 开始播放
-        audioPlayer?.play()
-        playbackState.isPlaying = true
-        
-        print("🎧 [Player] 开始播放: \(playbackState.currentEpisode?.title ?? "未知")")
-        
-        // 监控播放启动状态（播客音频）
-        monitorPlaybackStartup()
-    }
     
     /// 监控播放启动状态（播客音频）
     private func monitorPlaybackStartup() {
@@ -745,31 +421,7 @@ class PodcastPlayerService: NSObject, ObservableObject {
         }
     }
     
-    /// 设置加载超时
-    private func setupLoadingTimeout(timeout: TimeInterval) {
-        // 清除之前的定时器
-        loadingTimeoutTimer?.invalidate()
-        
-        // 设置超时
-        loadingTimeoutTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
-            guard let self = self else { return }
-            
-            // 检查是否仍在准备状态
-            if self.audioPreparationState == .preparing {
-                print("🎧 [Player] ❌ 音频加载超时 (\(timeout)秒)")
-                
-                // 取消异步加载任务
-                self.currentAssetLoadingTask?.cancel()
-                self.currentAssetLoadingTask = nil
-                
-                self.errorMessage = "音频加载超时，请检查网络连接或重试"
-                self.audioPreparationState = .failed(URLError(.timedOut))
-                
-                // 清理播放器
-                self.cleanupAudioPlayer()
-            }
-        }
-    }
+  
     
     /// 清除加载超时定时器
     private func clearLoadingTimeout() {
@@ -863,25 +515,20 @@ class PodcastPlayerService: NSObject, ObservableObject {
                     if duration.isFinite && !duration.isNaN && duration > 0 {
                         guard let self = self, let episode = self.playbackState.currentEpisode else { return }
                         
-                        if self.isYouTubeAudio(episode.audioURL) {
-                            // YouTube音频：保持Episode准确时长，忽略音频流时长
-                            print("🎧 [Player] YouTube音频保持Episode准确时长(\(self.formatTime(episode.duration)))，忽略音频流时长(\(self.formatTime(duration)))")
+                        // 使用音频流时长
+                        if episode.duration <= 0 {
+                            self.playbackState.duration = duration
+                            print("🎧 [Player] 播客音频从音频流获取时长: \(self.formatTime(duration))")
                         } else {
-                            // 播客音频：使用音频流时长（原有逻辑）
-                            if episode.duration <= 0 {
+                            // 检查是否有显著差异
+                            let timeDifference = abs(duration - episode.duration)
+                            if timeDifference > 10 {
                                 self.playbackState.duration = duration
-                                print("🎧 [Player] 播客音频从音频流获取时长: \(self.formatTime(duration))")
+                                print("🎧 [Player] 播客音频流时长(\(self.formatTime(duration)))与Episode时长(\(self.formatTime(episode.duration)))差异较大，使用音频流时长")
                             } else {
-                                // 检查是否有显著差异
-                                let timeDifference = abs(duration - episode.duration)
-                                if timeDifference > 10 {
-                                    self.playbackState.duration = duration
-                                    print("🎧 [Player] 播客音频流时长(\(self.formatTime(duration)))与Episode时长(\(self.formatTime(episode.duration)))差异较大，使用音频流时长")
-                                } else {
-                                    // 保持Episode时长，但需要显式设置到playbackState
-                                    self.playbackState.duration = episode.duration
-                                    print("🎧 [Player] 播客音频保持Episode时长(\(self.formatTime(episode.duration)))，音频流时长(\(self.formatTime(duration)))差异不大")
-                                }
+                                // 保持Episode时长，但需要显式设置到playbackState
+                                self.playbackState.duration = episode.duration
+                                print("🎧 [Player] 播客音频保持Episode时长(\(self.formatTime(episode.duration)))，音频流时长(\(self.formatTime(duration)))差异不大")
                             }
                         }
                     } else {
@@ -1124,7 +771,11 @@ class PodcastPlayerService: NSObject, ObservableObject {
                     currentTime: currentTime,
                     duration: playbackState.duration
                 )
+                
+                // 注释掉频繁的episode打印，避免日志噪音
+                // print("zch====currentEpisode:",episode)
             }
+            
             
             // 更新字幕索引
             updateCurrentSubtitleIndex()
@@ -1186,12 +837,7 @@ class PodcastPlayerService: NSObject, ObservableObject {
         
         print("🎧 [Player] 开始播放: \(playbackState.currentEpisode?.title ?? "未知")")
         
-        // 监控播放启动状态（YouTube音频使用更频繁的检查）
-        if let episode = playbackState.currentEpisode, isYouTubeAudio(episode.audioURL) {
-            monitorYouTubePlaybackWithNetworkDiagnosis()
-        } else {
-            monitorPlaybackStartup()
-        }
+        monitorPlaybackStartup()
     }
     
     func pausePlayback() {
@@ -1466,17 +1112,28 @@ class PodcastPlayerService: NSObject, ObservableObject {
             return
         }
         
+        // 改进的字幕匹配逻辑：增加容差和更详细的日志
+        var matchedIndex: Int? = nil
+        
         for (index, subtitle) in currentSubtitles.enumerated() {
-            if currentTime >= subtitle.startTime && currentTime <= subtitle.endTime {
+            let timeTolerance: TimeInterval = 0.1 // 100ms 容差
+            let isInTimeRange = currentTime >= (subtitle.startTime - timeTolerance) && 
+                              currentTime <= (subtitle.endTime + timeTolerance)
+            
+            if isInTimeRange {
+                matchedIndex = index
+                
+                // 只有在切换到新字幕时才打印日志
                 if playbackState.currentSubtitleIndex != index {
-                    // 如果开启了循环播放且已有当前字幕，不允许自动跳转到下一条字幕
+                    
+                    // 检查是否开启了循环播放且已有当前字幕，不允许自动跳转到下一条字幕
                     if playbackState.isLooping && playbackState.currentSubtitleIndex != nil {
                         print("🎧 [Player] 循环播放模式：阻止自动跳转到下一条字幕")
                         return
                     }
                     
                     playbackState.currentSubtitleIndex = index
-                    print("🎧 [Player] 字幕切换到索引: \(index)")
+                    print("🎧 [Player] ✅ 字幕切换到索引: \(index)")
                     
                     // 字幕切换时更新锁屏显示信息
                     updateNowPlayingInfo()
@@ -1487,9 +1144,38 @@ class PodcastPlayerService: NSObject, ObservableObject {
         
         // 如果没有找到匹配的字幕，清除当前索引（但在循环播放模式下保持当前字幕）
         if playbackState.currentSubtitleIndex != nil && !playbackState.isLooping {
+            let previousIndex = playbackState.currentSubtitleIndex!
+            print("🎯 [Player] 没有匹配的字幕，清除索引 \(previousIndex) (时间: \(formatTime(currentTime)))")
+            
+            // 检查最近的字幕，看看是否刚好在间隙中
+            if let nearestSubtitle = findNearestSubtitle(to: currentTime) {
+                let distance = min(abs(currentTime - nearestSubtitle.subtitle.startTime), 
+                                 abs(currentTime - nearestSubtitle.subtitle.endTime))
+                print("🎯 [Player] 最近字幕距离: \(String(format: "%.2f", distance))s, 索引: \(nearestSubtitle.index)")
+            }
+            
             playbackState.currentSubtitleIndex = nil
             print("🎧 [Player] 清除字幕索引：当前无活动字幕")
         }
+    }
+    
+    /// 查找最接近当前时间的字幕（调试用）
+    private func findNearestSubtitle(to time: TimeInterval) -> (subtitle: Subtitle, index: Int)? {
+        var nearestSubtitle: (subtitle: Subtitle, index: Int)?
+        var minDistance = Double.infinity
+        
+        for (index, subtitle) in currentSubtitles.enumerated() {
+            let distanceToStart = abs(time - subtitle.startTime)
+            let distanceToEnd = abs(time - subtitle.endTime)
+            let distance = min(distanceToStart, distanceToEnd)
+            
+            if distance < minDistance {
+                minDistance = distance
+                nearestSubtitle = (subtitle, index)
+            }
+        }
+        
+        return nearestSubtitle
     }
     
     // MARK: - 字幕生成
@@ -2069,141 +1755,202 @@ class PodcastPlayerService: NSObject, ObservableObject {
         return audioURL.contains("107.148.21.15:5000/files/audio")
     }
     
-    /// 专门为YouTube音频监控播放启动（带网络诊断）
-    private func monitorYouTubePlaybackWithNetworkDiagnosis() {
-        let checkTimes: [TimeInterval] = [0.2, 0.5, 1.0, 2.0, 3.0, 5.0]  // 减少检查次数，优化时间点
+    // MARK: - 播放列表管理
+    
+    /// 删除指定节目的播放记录
+    func removePlaybackRecord(episodeId: String) {
+        playbackRecords.removeValue(forKey: episodeId)
+        savePlaybackRecords()
+        print("🎧 [Player] 删除播放记录: \(episodeId)")
+    }
+    
+    /// 清空所有播放记录
+    func clearAllPlaybackRecords() {
+        playbackRecords.removeAll()
+        savePlaybackRecords()
+        print("🎧 [Player] 清空所有播放记录")
+    }
+    
+    /// 获取播放列表中的节目信息（增强版，支持YouTube视频）
+    func getEpisodeFromRecord(_ record: EpisodePlaybackRecord) -> PodcastEpisode? {
+        // 检查当前播放的节目是否匹配
+        if let currentEpisode = playbackState.currentEpisode,
+           currentEpisode.id == record.episodeId {
+            return currentEpisode
+        }
         
-        for (index, delay) in checkTimes.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                guard let player = self.audioPlayer else { return }
+        // 首先从数据服务中获取episode信息（RSS播客）
+        if let episode = PodcastDataService.shared.getEpisode(by: record.episodeId) {
+            return episode
+        }
+        
+        // 对于YouTube视频，我们需要返回一个占位Episode，让UI能正常显示
+        // 真正的播放会在playEpisodeFromRecord中异步处理
+        if record.episodeId.count == 11 && record.episodeId.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" }) {
+//            print("🎧 [Player] 检测到YouTube视频ID，创建占位Episode: \(record.episodeId)")
+            
+            // 创建一个占位Episode用于显示
+            return PodcastEpisode(
+                id: record.episodeId,
+                title: "正在加载视频信息...",
+                description: "YouTube视频",
+                audioURL: "", // 空的，需要重新提取
+                duration: record.duration,
+                publishDate: record.lastPlayedDate
+            )
+        }
+        
+        return nil
+    }
+    
+    /// 从YouTube数据服务获取视频信息（异步版本）
+    @MainActor
+    private func getYouTubeVideoById(_ videoId: String) async -> YouTubeVideo? {
+        let youtubeService = YouTubeDataService.shared
+        
+        // 遍历所有订阅的YouTuber查找视频
+        for youtuber in youtubeService.youtubers {
+            if let video = youtuber.videos.first(where: { $0.videoId == videoId }) {
+                return video
+            }
+        }
+        
+        print("🎧 [Player] YouTube视频未在订阅列表中找到: \(videoId)")
+        return nil
+    }
+    
+    /// 从播放记录恢复播放episode（增强版，支持YouTube视频）
+    func playEpisodeFromRecord(_ record: EpisodePlaybackRecord) {
+        print("🎧 [Player] 从播放记录恢复播放: \(record.episodeId)")
+        
+        // 如果是当前播放的节目，只需要切换播放状态
+        if let currentEpisode = playbackState.currentEpisode,
+           currentEpisode.id == record.episodeId {
+            print("🎧 [Player] 切换当前播放节目的播放状态")
+            togglePlayPause()
+            return
+        }
+        
+        // 获取完整的episode信息
+        guard let episode = getEpisodeFromRecord(record) else {
+            print("🎧 [Player] ❌ 无法找到对应的episode: \(record.episodeId)")
+            errorMessage = "无法找到该播客节目，可能已被删除"
+            return
+        }
+        
+        print("🎧 [Player] ✅ 找到episode: \(episode.title)")
+        
+        // 检查是否为YouTube视频且缺少音频URL
+        if episode.audioURL.isEmpty && isYouTubeVideoId(record.episodeId) {
+            print("🎧 [Player] 检测到YouTube视频缺少音频URL，开始重新提取...")
+            
+            // 异步重新提取YouTube音频URL
+            Task {
+                await reextractYouTubeAudio(for: episode, record: record)
+            }
+            return
+        }
+        
+        // 准备播放新的episode
+        prepareEpisode(episode)
+        
+        // 跳转到上次播放的位置
+        if record.currentTime > 0 && record.currentTime < record.duration {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.seek(to: record.currentTime)
+                print("🎧 [Player] 跳转到上次播放位置: \(self?.formatTime(record.currentTime) ?? "0:00")")
+            }
+        }
+        
+        // 开始播放
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.resumePlayback()
+            print("🎧 [Player] 开始播放恢复的episode")
+        }
+    }
+    
+    /// 重新提取YouTube音频URL并开始播放
+    private func reextractYouTubeAudio(for episode: PodcastEpisode, record: EpisodePlaybackRecord) async {
+        do {
+            print("🎧 [Player] 开始处理YouTube视频: \(episode.id)")
+            
+            // 首先尝试从YouTube数据服务获取视频信息
+            if let youtubeVideo = await getYouTubeVideoById(episode.id) {
+                print("🎧 [Player] ✅ 从YouTube数据服务找到视频信息: \(youtubeVideo.title)")
                 
-                let rate = player.rate
-                let currentTime = player.currentTime().seconds
-                let isPlaying = self.playbackState.isPlaying
-                
-                print("🎧 [Player] YouTube诊断 #\(index + 1) (\(delay)秒后): rate=\(rate), time=\(self.formatTime(currentTime)), isPlaying=\(isPlaying)")
-                
-                // 检查播放项状态
-                if let item = player.currentItem {
-                    let bufferEmpty = item.isPlaybackBufferEmpty
-                    let likelyToKeepUp = item.isPlaybackLikelyToKeepUp
-                    let accessLog = item.accessLog()
-                    
-                    // 优化用户体验：在缓冲阶段给出更友好的提示
-                    if bufferEmpty && !likelyToKeepUp {
-                        if index <= 1 {  // 前0.5秒内
-                            print("🎧 [Player] YouTube音频正在建立连接... (\(String(format: "%.1f", delay))秒)")
-                        } else if index <= 3 {  // 0.5-2秒
-                            print("🎧 [Player] YouTube音频缓冲中，即将开始播放... (\(String(format: "%.1f", delay))秒)")
-                        } else {  // 2秒后
-                            print("🎧 [Player] YouTube音频深度缓冲中，网络可能较慢... (\(String(format: "%.1f", delay))秒)")
-                        }
-                    } else {
-                        print("🎧 [Player] YouTube播放项状态: 缓冲空=\(bufferEmpty), 可流畅播放=\(likelyToKeepUp)")
-                    }
-                    
-                    // 打印网络访问日志信息（简化输出）
-                    if let events = accessLog?.events, !events.isEmpty, index == 2 {  // 只在1秒时打印一次
-                        let latestEvent = events.last!
-                        print("🌐 [Network] 传输状态: 速率=\(Int(latestEvent.observedBitrate/1000))kbps, 服务器=\(latestEvent.serverAddress ?? "YouTube代理")")
+                // 检查是否有有效的音频URL
+                if let audioURL = youtubeVideo.audioURL, !audioURL.isEmpty {
+                    await MainActor.run {
+                        // 使用现有的音频URL
+                        let updatedEpisode = PodcastEpisode(
+                            id: youtubeVideo.videoId,
+                            title: youtubeVideo.title,
+                            description: youtubeVideo.description ?? "",
+                            audioURL: audioURL,
+                            duration: youtubeVideo.duration,
+                            publishDate: youtubeVideo.publishDate,
+                            subtitles: youtubeVideo.subtitles
+                        )
                         
-                        // 检查是否有网络问题
-                        if latestEvent.observedBitrate < 100000 { // 调整到100kbps阈值
-                            print("🌐 [Network] ⚠️ 网络速度较慢，播放可能需要更多缓冲时间")
-                        }
+                        self.startPlaybackWithRecord(updatedEpisode, record: record)
                     }
-                    
-                    // 检查加载进度
-                    if let timeRange = item.loadedTimeRanges.first?.timeRangeValue {
-                        let loadedDuration = CMTimeGetSeconds(CMTimeAdd(timeRange.start, timeRange.duration))
-                        if index <= 1 && loadedDuration > 0 {  // 前0.5秒显示加载进度
-                            print("🎧 [Player] ✅ 开始缓冲: \(self.formatTime(loadedDuration))")
-                        }
-                        
-                        // 如果缓冲时间足够但仍然无法播放，尝试强制播放
-                        if loadedDuration > 2.0 && bufferEmpty && rate == 0 {  // 增加到2秒缓冲
-                            print("🎧 [Player] 🔄 缓冲充足，尝试启动播放...")
-                            player.play()
-                        }
-                    }
-                    
-                    // YouTube音频特殊处理：更温和的播放尝试
-                    if isPlaying && rate == 0 {
-                        if bufferEmpty {
-                            if index <= 2 {  // 前1秒
-                                print("🎧 [Player] ⏳ YouTube音频正常缓冲启动中...")
-                            } else if index >= 3 { // 2秒后
-                                print("🎧 [Player] 🔄 尝试重新连接播放")
-                                player.seek(to: CMTime(seconds: 0, preferredTimescale: 1000)) { finished in
-                                    if finished {
-                                        player.play()
-                                    }
-                                }
-                            }
-                        } else {
-                            print("🎧 [Player] 🔄 检测到缓冲内容，重启播放")
-                            player.play()
-                            player.rate = 1.0
-                        }
-                    }
-                    
-                    // 检查播放开始情况
-                    if rate > 0 && currentTime > 0 {
-                        print("🎧 [Player] ✅ YouTube音频播放启动成功！当前播放时间: \(self.formatTime(currentTime))")
-                        self.audioPreparationState = .audioReady
-                        return
-                    }
+                    return
                 }
+            }
+            
+            print("🎧 [Player] 需要重新提取YouTube音频: \(episode.id)")
+            
+            // 使用YouTubeAudioExtractor重新提取音频
+            let downloadResult = try await YouTubeAudioExtractor.shared.extractAudioAndSubtitles(from: episode.id)
+            
+            await MainActor.run {
+                print("🎧 [Player] ✅ YouTube音频重新提取成功")
                 
-                // 最后一次检查，如果还是没有开始播放，进行最终诊断
-                if index == checkTimes.count - 1 && isPlaying && rate == 0 {
-                    print("🎧 [Player] ⚠️ YouTube音频5秒后播放启动较慢，进行诊断...")
-                    self.performFinalPlaybackDiagnosis()
-                }
+                // 创建更新的episode
+                let updatedEpisode = PodcastEpisode(
+                    id: episode.id,
+                    title: downloadResult.videoInfo?.title ?? episode.title,
+                    description: downloadResult.videoInfo?.description ?? episode.description,
+                    audioURL: downloadResult.audioURL,
+                    duration: downloadResult.videoInfo?.duration ?? episode.duration,
+                    publishDate: episode.publishDate,
+                    subtitles: downloadResult.subtitles.isEmpty ? episode.subtitles : downloadResult.subtitles
+                )
+                
+                self.startPlaybackWithRecord(updatedEpisode, record: record)
+            }
+            
+        } catch {
+            await MainActor.run {
+                print("🎧 [Player] ❌ YouTube音频处理失败: \(error)")
+                self.errorMessage = "无法加载该YouTube视频的音频，请稍后重试"
             }
         }
     }
     
-    /// 最终播放诊断
-    private func performFinalPlaybackDiagnosis() {
-        guard let player = audioPlayer, let item = player.currentItem else {
-            print("🔍 [Diagnosis] 播放器或播放项为空")
-            return
-        }
+    /// 启动播放并跳转到记录位置的通用方法
+    private func startPlaybackWithRecord(_ episode: PodcastEpisode, record: EpisodePlaybackRecord) {
+        // 准备播放
+        self.prepareEpisode(episode)
         
-        print("🔍 [Diagnosis] === 最终播放诊断 ===")
-        print("🔍 [Diagnosis] 播放器状态: \(player.status.rawValue)")
-        print("🔍 [Diagnosis] 播放项状态: \(item.status.rawValue)")
-        print("🔍 [Diagnosis] 播放速率: \(player.rate)")
-        print("🔍 [Diagnosis] 时间: \(formatTime(player.currentTime().seconds))")
-        
-        if let error = item.error {
-            print("🔍 [Diagnosis] 播放项错误: \(error.localizedDescription)")
-        }
-        
-        if let errorLog = item.errorLog() {
-            print("🔍 [Diagnosis] 错误日志事件数: \(errorLog.events.count)")
-            for event in errorLog.events {
-                print("🔍 [Diagnosis] 错误: \(event.errorComment ?? "无描述")")
+        // 跳转到上次播放的位置
+        if record.currentTime > 0 && record.currentTime < record.duration {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.seek(to: record.currentTime)
+                print("🎧 [Player] 跳转到上次播放位置: \(self?.formatTime(record.currentTime) ?? "0:00")")
             }
         }
         
-        // 尝试最后的恢复策略
-        print("🔍 [Diagnosis] 尝试最后的恢复策略...")
-        
-        // 1. 重新设置播放速率
-        player.rate = 1.0
-        
-        // 2. 如果有缓冲内容，强制播放
-        if !item.isPlaybackBufferEmpty {
-            print("🔍 [Diagnosis] 发现缓冲内容，强制播放")
-            player.play()
+        // 开始播放
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.resumePlayback()
+            print("🎧 [Player] 开始播放YouTube音频")
         }
-        
-        // 3. 设置错误信息
-        if player.rate == 0 {
-            errorMessage = "YouTube音频播放启动失败，可能是网络连接或服务器问题"
-        }
+    }
+    
+    /// 检查是否为YouTube视频ID格式
+    private func isYouTubeVideoId(_ id: String) -> Bool {
+        return id.count == 11 && id.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" })
     }
 }
 

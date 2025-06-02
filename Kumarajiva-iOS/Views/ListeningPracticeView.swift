@@ -36,50 +36,6 @@ struct ListeningPracticeView: View {
                     }
                 }
                 
-                // 添加调试按钮（仅在DEBUG模式下显示）
-                #if DEBUG
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Menu {
-                        Button("启动诊断") {
-                            dataService.startupDiagnostics()
-                        }
-                        
-                        Button("强制重新加载数据") {
-                            Task {
-                                await dataService.forceReloadData()
-                            }
-                        }
-                        
-                        Button("验证数据完整性") {
-                            Task {
-                                await dataService.validateAndRepairData()
-                            }
-                        }
-                        
-                        Button("检查存储状态") {
-                            PersistentStorageManager.shared.checkStorageStatus()
-                        }
-                        
-                        Button("调试字幕缓存") {
-                            dataService.debugSubtitleCache()
-                        }
-                        
-                        Button("清除所有数据") {
-                            do {
-                                try PersistentStorageManager.shared.clearAllData()
-                                Task {
-                                    await dataService.forceReloadData()
-                                }
-                            } catch {
-                                print("清除数据失败: \(error)")
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "gear")
-                            .foregroundColor(.secondary)
-                    }
-                }
-                #endif
             }
             .sheet(isPresented: $showingAddPodcast) {
                 AddPodcastView()

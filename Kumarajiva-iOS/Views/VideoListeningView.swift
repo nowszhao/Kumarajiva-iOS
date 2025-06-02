@@ -35,32 +35,6 @@ struct VideoListeningView: View {
                             .font(.title2)
                     }
                 }
-                
-                // 添加调试按钮（仅在DEBUG模式下显示）
-                #if DEBUG
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Menu {
-                        Button("刷新所有YouTuber") {
-                            Task {
-                                await dataService.refreshAllYouTubers()
-                            }
-                        }
-                        
-                        Button("强制重新加载数据") {
-                            Task {
-                                await dataService.forceReloadData()
-                            }
-                        }
-                        
-                        Button("清除所有数据") {
-                            // TODO: 实现清除YouTube数据的功能
-                        }
-                    } label: {
-                        Image(systemName: "gear")
-                            .foregroundColor(.secondary)
-                    }
-                }
-                #endif
             }
             .sheet(isPresented: $showingAddYouTuber) {
                 AddYouTuberView()

@@ -37,6 +37,9 @@ struct PodcastPlayerView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar) // 隐藏底部TabBar
         .onAppear {
+            // 立即清空播放器状态，防止显示上一个节目的字幕
+            playerService.clearCurrentPlaybackState()
+            
             // 只准备节目，不自动播放
             playerService.prepareEpisode(episode)
         }

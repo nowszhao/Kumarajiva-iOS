@@ -296,7 +296,7 @@ class YouTubeDataService: ObservableObject {
         
         components.queryItems = [
             URLQueryItem(name: "id", value: channelId),
-            URLQueryItem(name: "limit", value: "20")
+            URLQueryItem(name: "limit", value: "100")
         ]
         
         guard let url = components.url else {

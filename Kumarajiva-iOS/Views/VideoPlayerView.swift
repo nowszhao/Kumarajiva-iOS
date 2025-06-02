@@ -46,6 +46,7 @@ struct VideoPlayerView: View {
             // 准备视频播放（需要适配YouTube视频）
             prepareVideoForPlayback()
             
+            
         }
         .onDisappear {
             // 离开页面时音频继续播放
@@ -297,57 +298,57 @@ struct VideoPlayerView: View {
                         .font(.headline)
                         .foregroundColor(.secondary)
                     
-                    Text("点击下方按钮生成字幕")
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
+                    // Text("点击下方按钮生成字幕")
+                    //     .font(.body)
+                    //     .foregroundColor(.secondary)
+                    //     .multilineTextAlignment(.center)
                     
-                    Button {
-                        generateSubtitlesManually()
-                    } label: {
-                        Label("生成字幕", systemImage: "waveform.and.mic")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(isWhisperKitReady ? Color.accentColor : Color.gray)
-                            .cornerRadius(12)
-                    }
-                    .disabled(!isWhisperKitReady)
-                    .padding(.top, 8)
+                    // Button {
+                    //     generateSubtitlesManually()
+                    // } label: {
+                    //     Label("生成字幕", systemImage: "waveform.and.mic")
+                    //         .font(.headline)
+                    //         .foregroundColor(.white)
+                    //         .padding()
+                    //         .background(isWhisperKitReady ? Color.accentColor : Color.gray)
+                    //         .cornerRadius(12)
+                    // }
+                    // .disabled(!isWhisperKitReady)
+                    // .padding(.top, 8)
                     
-                    if !isWhisperKitReady {
-                        VStack(spacing: 8) {
-                            if WhisperKitService.shared.shouldPromptForModelDownload() {
-                                Button {
-                                    Task {
-                                        await WhisperKitService.shared.smartDownloadModel()
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "icloud.and.arrow.down")
-                                        Text("下载WhisperKit模型")
-                                    }
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.blue)
-                                    .cornerRadius(8)
-                                }
-                            } else {
-                                Text("请先在\"我的\"页面设置中配置WhisperKit")
-                                    .font(.caption)
-                                    .foregroundColor(.orange)
-                                    .multilineTextAlignment(.center)
-                            }
+                    // if !isWhisperKitReady {
+                    //     VStack(spacing: 8) {
+                    //         if WhisperKitService.shared.shouldPromptForModelDownload() {
+                    //             Button {
+                    //                 Task {
+                    //                     await WhisperKitService.shared.smartDownloadModel()
+                    //                 }
+                    //             } label: {
+                    //                 HStack {
+                    //                     Image(systemName: "icloud.and.arrow.down")
+                    //                     Text("下载WhisperKit模型")
+                    //                 }
+                    //                 .font(.caption)
+                    //                 .foregroundColor(.white)
+                    //                 .padding(.horizontal, 12)
+                    //                 .padding(.vertical, 6)
+                    //                 .background(Color.blue)
+                    //                 .cornerRadius(8)
+                    //             }
+                    //         } else {
+                    //             Text("请先在\"我的\"页面设置中配置WhisperKit")
+                    //                 .font(.caption)
+                    //                 .foregroundColor(.orange)
+                    //                 .multilineTextAlignment(.center)
+                    //         }
                             
-                            Text("当前状态: \(whisperStatusText)")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        .padding(.top, 4)
-                    }
+                    //         Text("当前状态: \(whisperStatusText)")
+                    //             .font(.caption2)
+                    //             .foregroundColor(.secondary)
+                    //             .multilineTextAlignment(.center)
+                    //     }
+                    //     .padding(.top, 4)
+                    // }
                 }
             }
         }
@@ -741,6 +742,9 @@ struct VideoPlayerView: View {
     private func prepareVideoForPlayback() {
         print("📺 [VideoPlayer] 准备视频播放: \(video.title)")
         
+        // 立即清空播放器状态，防止显示上一个视频的字幕
+        playerService.clearCurrentPlaybackState()
+        
         // 使用YouTube音频提取器v2.0获取音频和字幕
         Task {
             do {
@@ -770,7 +774,7 @@ struct VideoPlayerView: View {
                         videoInfo: downloadResult.videoInfo
                     )
                     // 开始播放
-                    playerService.playEpisode(mockEpisode)
+                    playerService.prepareEpisode(mockEpisode)
                     
                     print("📺 [VideoPlayer] ✅ 开始播放YouTube音频，包含 \(downloadResult.subtitles.count) 条SRT字幕")
                 }
