@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7E6E6F872DEBE537005360CE /* YouTubeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 7E6E6F862DEBE537005360CE /* YouTubeKit */; };
 		7ED405E02DCE4ECD005B89F9 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 7ED405DF2DCE4ECD005B89F9 /* WhisperKit */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7ED405E02DCE4ECD005B89F9 /* WhisperKit in Frameworks */,
+				7E6E6F872DEBE537005360CE /* YouTubeKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +86,7 @@
 			name = "Kumarajiva-iOS";
 			packageProductDependencies = (
 				7ED405DF2DCE4ECD005B89F9 /* WhisperKit */,
+				7E6E6F862DEBE537005360CE /* YouTubeKit */,
 			);
 			productName = "Kumarajiva-iOS";
 			productReference = 7E69EBDE2D58B28A00CECFDC /* Kumarajiva-iOS.app */;
@@ -115,6 +118,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				7ED405DE2DCE4ECD005B89F9 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				7E6E6F852DEBE537005360CE /* XCRemoteSwiftPackageReference "YouTubeKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7E69EBDF2D58B28A00CECFDC /* Products */;
@@ -279,19 +283,23 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Kumarajiva-iOS/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = Kumarajiva;
+				INFOPLIST_KEY_CFBundleDisplayName = LEiP;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "需要使用麦克风录制您的发音进行语音识别";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "需要使用语音识别功能来评估您的口语表现";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fun.coda.ios.app.Kumarajivaios;
+				PRODUCT_BUNDLE_IDENTIFIER = fun.coda.ios.app.leip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -313,19 +321,23 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Kumarajiva-iOS/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = Kumarajiva;
+				INFOPLIST_KEY_CFBundleDisplayName = LEiP;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "需要使用麦克风录制您的发音进行语音识别";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "需要使用语音识别功能来评估您的口语表现";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportsDocumentBrowser = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fun.coda.ios.app.Kumarajivaios;
+				PRODUCT_BUNDLE_IDENTIFIER = fun.coda.ios.app.leip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -358,6 +370,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		7E6E6F852DEBE537005360CE /* XCRemoteSwiftPackageReference "YouTubeKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/alexeichhorn/YouTubeKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.2.7;
+			};
+		};
 		7ED405DE2DCE4ECD005B89F9 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/argmaxinc/WhisperKit.git";
@@ -369,6 +389,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		7E6E6F862DEBE537005360CE /* YouTubeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7E6E6F852DEBE537005360CE /* XCRemoteSwiftPackageReference "YouTubeKit" */;
+			productName = YouTubeKit;
+		};
 		7ED405DF2DCE4ECD005B89F9 /* WhisperKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7ED405DE2DCE4ECD005B89F9 /* XCRemoteSwiftPackageReference "WhisperKit" */;

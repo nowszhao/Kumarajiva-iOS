@@ -42,7 +42,7 @@ struct SpeechPracticeRecord: Identifiable, Codable {
         } else {
             // 相对路径 - 构建完整路径
             let containerURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let recordingsDirectory = containerURL.appendingPathComponent("KumarajivaWhisperRecordings", isDirectory: true)
+            let recordingsDirectory = containerURL.appendingPathComponent("WhisperRecordings", isDirectory: true)
             audioURL = recordingsDirectory.appendingPathComponent(urlString)
         }
         
@@ -58,7 +58,7 @@ struct SpeechPracticeRecord: Identifiable, Codable {
         
         // 存储相对路径而非绝对路径
         let containerURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let recordingsDirectory = containerURL.appendingPathComponent("KumarajivaWhisperRecordings", isDirectory: true)
+        let recordingsDirectory = containerURL.appendingPathComponent("WhisperRecordings", isDirectory: true)
         
         if audioURL.path.hasPrefix(recordingsDirectory.path) {
             // 如果是在录音目录下的文件，只存储相对路径

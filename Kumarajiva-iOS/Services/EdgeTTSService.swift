@@ -12,7 +12,7 @@ class EdgeTTSService {
     private init() {
         // Create cache directory in the app's shared container that is accessible via Files app
         let containerURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let edgeTTSDirectory = containerURL.appendingPathComponent("KumarajivaEdgeTTS", isDirectory: true)
+        let edgeTTSDirectory = containerURL.appendingPathComponent("EdgeTTS", isDirectory: true)
         cacheDirectory = edgeTTSDirectory
         
         do {

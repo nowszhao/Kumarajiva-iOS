@@ -8,10 +8,12 @@ class PersistentStorageManager {
     private var applicationSupportURL: URL
     private let podcastDataURL: URL
     private let subtitleCacheURL: URL
+    private let youtuberDataURL: URL
     
     // 存储文件名
     private let podcastsFileName = "podcasts.json"
     private let subtitleCacheFileName = "subtitle_cache.json"
+    private let youtubersFileName = "youtubers.json"
     
     private init() {
         // 获取应用程序支持目录 - 这个目录在APP重装后会保留
@@ -24,7 +26,7 @@ class PersistentStorageManager {
                 in: .userDomainMask,
                 appropriateFor: nil,
                 create: true
-            ).appendingPathComponent("Kumarajiva", isDirectory: true)
+            ).appendingPathComponent("LEiP", isDirectory: true)
             
             // 创建Kumarajiva子目录
             if !fileManager.fileExists(atPath: applicationSupportURL.path) {
@@ -45,17 +47,19 @@ class PersistentStorageManager {
             // 设置文件路径
             podcastDataURL = applicationSupportURL.appendingPathComponent(podcastsFileName)
             subtitleCacheURL = applicationSupportURL.appendingPathComponent(subtitleCacheFileName)
+            youtuberDataURL = applicationSupportURL.appendingPathComponent(youtubersFileName)
             
             print("🎧 [Storage] 持久化存储初始化完成")
             print("🎧 [Storage] 播客数据路径: \(podcastDataURL.path)")
             print("🎧 [Storage] 字幕缓存路径: \(subtitleCacheURL.path)")
+            print("📺 [Storage] YouTuber数据路径: \(youtuberDataURL.path)")
             
         } catch {
             // 如果无法创建应用程序支持目录，回退到文档目录
             print("🎧 [Storage] 无法创建应用程序支持目录，回退到文档目录: \(error)")
             
             let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            applicationSupportURL = documentsURL.appendingPathComponent("KumarajivaPersistent", isDirectory: true)
+            applicationSupportURL = documentsURL.appendingPathComponent("Persistent", isDirectory: true)
             
             do {
                 if !fileManager.fileExists(atPath: applicationSupportURL.path) {
@@ -73,6 +77,7 @@ class PersistentStorageManager {
                 
                 podcastDataURL = applicationSupportURL.appendingPathComponent(podcastsFileName)
                 subtitleCacheURL = applicationSupportURL.appendingPathComponent(subtitleCacheFileName)
+                youtuberDataURL = applicationSupportURL.appendingPathComponent(youtubersFileName)
                 
             } catch {
                 fatalError("无法创建持久化存储目录: \(error)")
@@ -227,6 +232,91 @@ class PersistentStorageManager {
         }
     }
     
+    // MARK: - YouTuber数据存储
+    
+    /// 保存YouTuber数据
+    func saveYouTubers(_ youtubers: [YouTuber]) throws {
+        print("📺 [Storage] 开始保存YouTuber数据，共 \(youtubers.count) 个YouTuber")
+        
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        
+        let data = try encoder.encode(youtubers)
+        
+        // 创建备份文件（保存前先备份现有数据）
+        if FileManager.default.fileExists(atPath: youtuberDataURL.path) {
+            createYouTuberBackup()
+        }
+        
+        // 保存到主文件
+        try data.write(to: youtuberDataURL)
+        
+        // 确保文件不被排除在iCloud备份之外
+        var resourceValues = URLResourceValues()
+        resourceValues.isExcludedFromBackup = false
+        var mutableURL = youtuberDataURL
+        try mutableURL.setResourceValues(resourceValues)
+        
+        print("📺 [Storage] YouTuber数据已保存到: \(youtuberDataURL.path)")
+        print("📺 [Storage] 保存的数据大小: \(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file))")
+        
+        // 验证保存是否成功 - 使用相同的日期策略
+        if let savedData = try? Data(contentsOf: youtuberDataURL) {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            
+            if let verifyYouTubers = try? decoder.decode([YouTuber].self, from: savedData) {
+                print("📺 [Storage] YouTuber数据保存验证成功，重新读取了 \(verifyYouTubers.count) 个YouTuber")
+                
+                // 验证每个YouTuber的视频数量
+                for youtuber in verifyYouTubers {
+                    print("📺 [Storage] 验证保存数据 - YouTuber: \(youtuber.title), 视频: \(youtuber.videos.count) 个")
+                }
+            } else {
+                print("📺 [Storage] 警告：YouTuber数据保存验证失败 - 解码错误")
+            }
+        } else {
+            print("📺 [Storage] 警告：YouTuber数据保存验证失败 - 读取文件错误")
+        }
+    }
+    
+    /// 加载YouTuber数据
+    func loadYouTubers() throws -> [YouTuber] {
+        print("📺 [Storage] 开始加载YouTuber数据...")
+        
+        do {
+            if FileManager.default.fileExists(atPath: youtuberDataURL.path) {
+                let data = try Data(contentsOf: youtuberDataURL)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                
+                let youtubers = try decoder.decode([YouTuber].self, from: data)
+                print("📺 [Storage] 从持久化存储加载了 \(youtubers.count) 个YouTuber")
+                
+                // 验证数据完整性
+                for youtuber in youtubers {
+                    print("📺 [Storage] 验证YouTuber: \(youtuber.title) - \(youtuber.videos.count) 个视频")
+                }
+                
+                return youtubers
+            } else {
+                print("📺 [Storage] YouTuber数据文件不存在")
+                return []
+            }
+            
+        } catch {
+            print("📺 [Storage] 加载YouTuber数据失败: \(error)")
+            
+            // 尝试从备份文件恢复
+            if let backupData = loadYouTuberFromBackup() {
+                print("📺 [Storage] 从备份文件恢复YouTuber数据成功")
+                return backupData
+            }
+            
+            throw error
+        }
+    }
+    
     // MARK: - 存储状态检查
     
     /// 检查存储目录状态
@@ -308,6 +398,10 @@ class PersistentStorageManager {
         return applicationSupportURL.appendingPathComponent("podcasts_backup.json")
     }
     
+    private var backupYouTuberDataURL: URL {
+        return applicationSupportURL.appendingPathComponent("youtubers_backup.json")
+    }
+    
     /// 创建数据备份
     private func createBackup() {
         do {
@@ -323,6 +417,24 @@ class PersistentStorageManager {
             }
         } catch {
             print("🎧 [Storage] 创建备份失败: \(error)")
+        }
+    }
+    
+    /// 创建YouTuber数据备份
+    private func createYouTuberBackup() {
+        do {
+            if FileManager.default.fileExists(atPath: youtuberDataURL.path) {
+                // 如果备份文件已存在，先删除
+                if FileManager.default.fileExists(atPath: backupYouTuberDataURL.path) {
+                    try FileManager.default.removeItem(at: backupYouTuberDataURL)
+                    print("📺 [Storage] 删除已存在的YouTuber备份文件")
+                }
+                
+                try FileManager.default.copyItem(at: youtuberDataURL, to: backupYouTuberDataURL)
+                print("📺 [Storage] YouTuber数据备份创建成功")
+            }
+        } catch {
+            print("📺 [Storage] 创建YouTuber备份失败: \(error)")
         }
     }
     
@@ -350,6 +462,35 @@ class PersistentStorageManager {
             }
         } catch {
             print("🎧 [Storage] 从备份恢复失败: \(error)")
+        }
+        
+        return nil
+    }
+    
+    /// 从备份文件恢复YouTuber数据
+    private func loadYouTuberFromBackup() -> [YouTuber]? {
+        do {
+            if FileManager.default.fileExists(atPath: backupYouTuberDataURL.path) {
+                let data = try Data(contentsOf: backupYouTuberDataURL)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                
+                let youtubers = try decoder.decode([YouTuber].self, from: data)
+                print("📺 [Storage] 从备份文件恢复了 \(youtubers.count) 个YouTuber")
+                
+                // 恢复成功后，将备份数据复制回主文件
+                if FileManager.default.fileExists(atPath: youtuberDataURL.path) {
+                    try FileManager.default.removeItem(at: youtuberDataURL)
+                    print("📺 [Storage] 删除损坏的YouTuber主文件")
+                }
+                
+                try FileManager.default.copyItem(at: backupYouTuberDataURL, to: youtuberDataURL)
+                print("📺 [Storage] YouTuber备份数据已恢复到主文件")
+                
+                return youtubers
+            }
+        } catch {
+            print("📺 [Storage] 从YouTuber备份恢复失败: \(error)")
         }
         
         return nil

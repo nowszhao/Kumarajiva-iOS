@@ -88,7 +88,7 @@ class SpeechRecognitionService: NSObject, ObservableObject {
         
         // Get persistent storage directory for recordings
         let containerURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let recordingsDirectory = containerURL.appendingPathComponent("KumarajivaSpeechRecordings", isDirectory: true)
+        let recordingsDirectory = containerURL.appendingPathComponent("SpeechRecordings", isDirectory: true)
         
         // Create recordings directory if it doesn't exist
         if !FileManager.default.fileExists(atPath: recordingsDirectory.path) {

@@ -601,7 +601,7 @@ class PodcastDataService: ObservableObject {
         // 3. 直接检查文件系统
         let fileManager = FileManager.default
         let appSupportPath = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Kumarajiva")
+            .appendingPathComponent("LEiP")
         let podcastFile = appSupportPath.appendingPathComponent("podcasts.json")
         
         print("🎧 [Diagnostics] 播客文件路径: \(podcastFile.path)")

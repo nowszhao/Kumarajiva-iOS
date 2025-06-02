@@ -1,18 +1,16 @@
 import SwiftUI
 
-struct PodcastPlayerView: View {
-    let episode: PodcastEpisode
+struct VideoPlayerView: View {
+    let video: YouTubeVideo
     @StateObject private var playerService = PodcastPlayerService.shared
     @StateObject private var taskManager = SubtitleGenerationTaskManager.shared
     @Environment(\.dismiss) private var dismiss
     
-    // 添加状态变量来防止意外回退
+    // 状态变量
     @State private var showingErrorAlert = false
-    @State private var errorAlertMessage = ""
+    @State private var errorMessage = ""
     @State private var showingVocabularyAnalysis = false
-    // 新增：控制配置面板的显示状态
     @State private var showingConfigPanel = false
-    // 新增：控制听力模式的状态
     @State private var isListeningMode = false
     
     var body: some View {
@@ -37,20 +35,18 @@ struct PodcastPlayerView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar) // 隐藏底部TabBar
         .onAppear {
-            // 只准备节目，不自动播放
-            playerService.prepareEpisode(episode)
+            // 准备视频播放（需要适配YouTube视频）
+            
+            prepareVideoForPlayback()
         }
         .onDisappear {
-            // 离开页面时不停止播放，让音频继续在后台播放
-            // 用户可以通过底部的MiniPlayerView控制播放
-            print("🎧 [PlayerView] 页面消失，音频继续播放")
+            // 离开页面时音频继续播放
+            print("📺 [VideoPlayer] 页面消失，音频继续播放")
         }
-        // 添加错误处理，但不自动回退页面
         .onReceive(playerService.$errorMessage) { errorMessage in
             if let error = errorMessage {
-                errorAlertMessage = error
+                self.errorMessage = error
                 showingErrorAlert = true
-                // 清除错误消息，避免重复显示
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     playerService.errorMessage = nil
                 }
@@ -59,7 +55,7 @@ struct PodcastPlayerView: View {
         .alert("提示", isPresented: $showingErrorAlert) {
             Button("确定", role: .cancel) { }
         } message: {
-            Text(errorAlertMessage)
+            Text(errorMessage)
         }
         .sheet(isPresented: $showingVocabularyAnalysis) {
             VocabularyAnalysisView(playerService: playerService)
@@ -70,16 +66,33 @@ struct PodcastPlayerView: View {
     
     private var subtitleDisplayView: some View {
         VStack(spacing: 16) {
-            // 节目信息
+            // 视频信息
             VStack(spacing: 8) {
-                Text(episode.title)
+                Text(video.title)
                     .font(.headline)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                 
-                Text(formatDate(episode.publishDate))
+                Text(formatDate(video.publishDate))
                     .font(.caption)
                     .foregroundColor(.secondary)
+                
+                // 视频时长和观看次数
+                HStack {
+                    Label(formatDuration(video.duration), systemImage: "clock")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    if let viewCount = video.viewCount {
+                        Text("•")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Label(viewCount, systemImage: "eye")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
                 
                 // 音频状态指示器
                 if playerService.audioPreparationState != .audioReady {
@@ -139,11 +152,11 @@ struct PodcastPlayerView: View {
             Divider()
             
             // 字幕内容
-                    if playerService.currentSubtitles.isEmpty {
-                        emptySubtitleView
-                    } else {
+            if playerService.currentSubtitles.isEmpty {
+                emptySubtitleView
+            } else {
                 ScrollView {
-                        subtitleListView
+                    subtitleListView
                 }
                 .background(Color(.systemBackground))
             }
@@ -183,9 +196,9 @@ struct PodcastPlayerView: View {
                                 .foregroundColor(.green)
                                 .fontWeight(.bold)
                         } else {
-                        Text("\(Int(playerService.subtitleGenerationProgress * 100))%")
-                            .font(.headline)
-                            .fontWeight(.semibold)
+                            Text("\(Int(playerService.subtitleGenerationProgress * 100))%")
+                                .font(.headline)
+                                .fontWeight(.semibold)
                         }
                     }
                     
@@ -246,10 +259,10 @@ struct PodcastPlayerView: View {
                                     .cornerRadius(8)
                                 }
                             } else {
-                            Text("请先在\"我的\"页面设置中配置WhisperKit")
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                                .multilineTextAlignment(.center)
+                                Text("请先在\"我的\"页面设置中配置WhisperKit")
+                                    .font(.caption)
+                                    .foregroundColor(.orange)
+                                    .multilineTextAlignment(.center)
                             }
                             
                             Text("当前状态: \(whisperStatusText)")
@@ -277,26 +290,20 @@ struct PodcastPlayerView: View {
                             playerService.seek(to: subtitle.startTime)
                         }
                     )
-                    .id(index) // 为每个字幕行添加ID
+                    .id(index)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 16)
             .onChange(of: playerService.playbackState.currentSubtitleIndex) { oldIndex, newIndex in
-                // 当当前字幕索引改变时，自动滚动到可见区域
                 if let index = newIndex {
-                    // 使用更平滑的动画，确保字幕在屏幕中央
                     withAnimation(.easeInOut(duration: 0.3)) {
                         proxy.scrollTo(index, anchor: .center)
                     }
-                    print("🎧 [PlayerView] 字幕滚动：滚动到索引 \(index)")
-                } else if oldIndex != nil {
-                    // 如果从有字幕变为无字幕，保持当前位置
-                    print("🎧 [PlayerView] 字幕滚动：当前无活动字幕")
+                    print("📺 [VideoPlayer] 字幕滚动：滚动到索引 \(index)")
                 }
             }
             .onAppear {
-                // 页面出现时，如果有当前字幕，滚动到该位置
                 if let currentIndex = playerService.playbackState.currentSubtitleIndex {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         withAnimation(.easeInOut(duration: 0.5)) {
@@ -344,7 +351,6 @@ struct PodcastPlayerView: View {
             Slider(
                 value: Binding(
                     get: { 
-                        // 只有在音频准备就绪时才显示真实进度
                         guard playerService.audioPreparationState == .audioReady,
                               playerService.playbackState.duration > 0 else { return 0 }
                         return playerService.playbackState.currentTime / playerService.playbackState.duration
@@ -358,7 +364,7 @@ struct PodcastPlayerView: View {
                 in: 0...1
             )
             .accentColor(.accentColor)
-            .frame(height: 10) // 减少触摸区域高度
+            .frame(height: 10)
             .disabled(playerService.audioPreparationState != .audioReady)
             
             // 时间显示
@@ -369,7 +375,6 @@ struct PodcastPlayerView: View {
                 
                 Spacer()
                 
-                // 显示总时长或准备状态
                 Group {
                     switch playerService.audioPreparationState {
                     case .preparing:
@@ -390,8 +395,7 @@ struct PodcastPlayerView: View {
         }
     }
     
-    // MARK: - 功能按钮区域
-    
+    // 功能按钮和主控制区域代码与PodcastPlayerView相同
     private var functionButtonsView: some View {
         HStack(spacing: 0) {
             // 循环播放
@@ -414,8 +418,13 @@ struct PodcastPlayerView: View {
             
             // 生词解析
             Button {
+                // 如果当前已有字幕（包括SRT字幕），直接显示分析
                 if !playerService.currentSubtitles.isEmpty {
                     showingVocabularyAnalysis = true
+                } else {
+                    // 如果没有字幕，提示用户先生成字幕
+                    errorMessage = "请先生成字幕再进行生词解析"
+                    showingErrorAlert = true
                 }
             } label: {
                 VStack(spacing: 2) {
@@ -424,17 +433,16 @@ struct PodcastPlayerView: View {
                     Text("生词解析")
                         .font(.system(size: 10, weight: .medium))
                 }
-                .foregroundColor(playerService.currentSubtitles.isEmpty ? .secondary : .primary)
+                .foregroundColor(!playerService.currentSubtitles.isEmpty ? .primary : .secondary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
             }
-            .disabled(playerService.currentSubtitles.isEmpty)
             
             // 重新转录字幕
             Button {
                 if !playerService.isGeneratingSubtitles {
                     Task {
-                        await playerService.generateSubtitlesForCurrentEpisode()
+                        await generateSubtitlesForVideo()
                     }
                 }
             } label: {
@@ -476,7 +484,7 @@ struct PodcastPlayerView: View {
         HStack(spacing: 0) {
             // 播放速度
             Menu {
-                ForEach([0.5, 0.6, 0.65,0.7, 0.75, 1.0, 1.25, 1.5, 2.0], id: \.self) { rate in
+                ForEach([0.5, 0.6, 0.65, 0.7, 0.75, 1.0, 1.25, 1.5, 2.0], id: \.self) { rate in
                     Button {
                         playerService.setPlaybackRate(Float(rate))
                     } label: {
@@ -521,14 +529,12 @@ struct PodcastPlayerView: View {
                 playerService.togglePlayPause()
             } label: {
                 ZStack {
-                    // 根据音频准备状态显示不同的图标
                     switch playerService.audioPreparationState {
                     case .idle, .failed:
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: 45))
                             .foregroundColor(.secondary)
                     case .preparing:
-                        // 显示准备进度
                         ZStack {
                             Circle()
                                 .stroke(Color.gray.opacity(0.3), lineWidth: 4)
@@ -541,7 +547,6 @@ struct PodcastPlayerView: View {
                                 .rotationEffect(.degrees(-90))
                                 .animation(.easeInOut(duration: 0.3), value: playerService.audioPreparationProgress)
                             
-                            // 使用音频波形图标，更符合音频准备状态
                             Image(systemName: "waveform")
                                 .font(.system(size: 18, weight: .medium))
                                 .foregroundColor(.accentColor)
@@ -596,10 +601,6 @@ struct PodcastPlayerView: View {
     
     // MARK: - 计算属性
     
-    private var currentTask: SubtitleGenerationTask? {
-        return taskManager.getTask(for: episode.id)
-    }
-    
     private var isWhisperKitReady: Bool {
         return UserSettings.shared.speechRecognitionServiceType == .whisperKit &&
                WhisperKitService.shared.modelDownloadState == .ready
@@ -630,7 +631,6 @@ struct PodcastPlayerView: View {
         return playerService.subtitleGenerationStatusText
     }
     
-    // 新增：音频准备状态相关计算属性
     private var isAudioReady: Bool {
         return playerService.audioPreparationState == .audioReady
     }
@@ -656,140 +656,137 @@ struct PodcastPlayerView: View {
         return formatter.string(from: date)
     }
     
-    private func generateSubtitlesManually() {
-        // 手动触发字幕生成
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration) / 60
+        let seconds = Int(duration) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+    
+    private func prepareVideoForPlayback() {
+        print("📺 [VideoPlayer] 准备视频播放: \(video.title)")
+        
+        // 使用YouTube音频提取器v2.0获取音频和字幕
         Task {
-            await playerService.generateSubtitlesForCurrentEpisode()
-        }
-    }
-    
-    private func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%d:%02d", minutes, seconds)
-    }
-}
-
-// MARK: - 字幕行视图
-struct SubtitleRowView: View {
-    let subtitle: Subtitle
-    let isActive: Bool
-    let currentTime: TimeInterval?
-    let onTap: () -> Void
-    
-    init(subtitle: Subtitle, isActive: Bool, currentTime: TimeInterval? = nil, onTap: @escaping () -> Void) {
-        self.subtitle = subtitle
-        self.isActive = isActive
-        self.currentTime = currentTime
-        self.onTap = onTap
-    }
-    
-    var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 8) {
-                // 时间和单词统计信息 - 移到上方
-                HStack {
-                    Text(formatTime(subtitle.startTime))
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundColor(isActive ? .accentColor : .secondary)
-                    
-                    Spacer()
-                    
-                        Text("\(subtitle.words.count)词")
-                        .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, isActive ? 16 : 12)
-                .padding(.top, 8)
-                
-                // 字幕文本区域
-                VStack(alignment: .leading, spacing: 0) {
-                    if isActive && !subtitle.words.isEmpty, let time = currentTime {
-                        // 当前活动字幕 - 显示单词高亮
-                        wordHighlightText(for: time)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 16)
-                    } else {
-                        // 普通字幕文本
-                        Text(subtitle.text)
-                            .font(.system(size: 15, weight: isActive ? .medium : .regular))
-                            .foregroundColor(isActive ? .primary : .secondary)
-                            .lineSpacing(3)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, isActive ? 12 : 10)
-                            .padding(.horizontal, isActive ? 16 : 12)
+            do {
+                // 从YouTube URL中提取视频ID
+                guard let videoId = YouTubeAudioExtractor.shared.extractVideoId(from: video.youtubeURL) else {
+                    await MainActor.run {
+                        errorMessage = "无法从URL中提取视频ID"
+                        showingErrorAlert = true
                     }
+                    return
                 }
-                .padding(.bottom, 8)
-            }
-            .background(
-                RoundedRectangle(cornerRadius: isActive ? 14 : 10)
-                    .fill(isActive ? Color.accentColor.opacity(0.08) : Color(.systemGray6).opacity(0.5))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: isActive ? 14 : 10)
-                            .stroke(isActive ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: isActive ? 2 : 0)
+                
+                print("📺 [VideoPlayer] 提取到视频ID: \(videoId)")
+                
+                // 使用新的下载模式API提取音频流和字幕
+                let downloadResult = try await YouTubeAudioExtractor.shared.extractAudioAndSubtitles(from: videoId)
+                
+                print("📺 [VideoPlayer] ✅ 音频和字幕提取成功")
+                print("📺 [VideoPlayer] 音频URL: \(downloadResult.audioURL.prefix(100))...")
+                print("📺 [VideoPlayer] 字幕数量: \(downloadResult.subtitles.count)")
+                // 使用音频流URL和字幕创建Episode并开始播放
+                await MainActor.run {
+                    // 创建包含SRT字幕的模拟Episode对象
+                    let mockEpisode = createMockEpisodeFromVideo(
+                        audioURL: downloadResult.audioURL,
+                        subtitles: downloadResult.subtitles,
+                        videoInfo: downloadResult.videoInfo
                     )
+                    // 开始播放
+                    playerService.playEpisode(mockEpisode)
+                    
+//                    playerService.prepareEpisode(mockEpisode)
+                    print("📺 [VideoPlayer] ✅ 开始播放YouTube音频，包含 \(downloadResult.subtitles.count) 条SRT字幕")
+                }
+                
+            } catch {
+                await MainActor.run {
+                    print("📺 [VideoPlayer] 音频流提取失败: \(error)")
+                    
+                    // 根据错误类型提供不同的用户友好信息
+                    if let youtubeError = error as? YouTubeExtractionError {
+                        switch youtubeError {
+                        case .networkError:
+                            errorMessage = "网络连接失败，请检查网络设置"
+                        case .videoNotFound:
+                            errorMessage = "视频不存在或无法访问"
+                        case .serverError(let message):
+                            errorMessage = "服务器错误: \(message)"
+                        case .downloadFailed(let message):
+                            errorMessage = "下载失败: \(message)"
+                        case .timeout:
+                            errorMessage = "下载超时，请稍后重试"
+                        case .taskCancelled:
+                            errorMessage = "下载已取消"
+                        default:
+                            errorMessage = "播放失败：\(youtubeError.localizedDescription)"
+                        }
+                    } else {
+                        errorMessage = "播放失败，请稍后重试或检查网络连接"
+                    }
+                    
+                    showingErrorAlert = true
+                }
+            }
+        }
+    }
+    
+    /// 检查URL是否为YouTube URL
+    private func isYouTubeURL(_ url: String) -> Bool {
+        return YouTubeAudioExtractor.shared.isYouTubeURL(url)
+    }
+    
+    /// 创建模拟Episode对象从视频信息（更新版本，支持SRT字幕）
+    private func createMockEpisodeFromVideo(audioURL: String, subtitles: [Subtitle] = [], videoInfo: VideoInfo? = nil) -> PodcastEpisode {
+        // 将YouTube视频转换为PodcastEpisode格式以复用现有播放器
+        // 如果有来自后端的视频信息，使用更准确的数据
+        if let info = videoInfo {
+            return PodcastEpisode(
+                id: video.videoId,
+                title: info.title,
+                description: info.description,
+                audioURL: audioURL,
+                duration: info.duration,
+                publishDate: video.publishDate,
+                subtitles: subtitles,
+                subtitleGenerationDate: Date(), // VTT字幕是预生成的
+                subtitleVersion: "vtt_1.0"  // 更新为VTT版本
             )
-            .animation(.easeInOut(duration: 0.2), value: isActive)
-            .padding(.horizontal, 2)
-            .padding(.vertical, 3)
+        } else {
+            // 回退到原始视频信息
+            return PodcastEpisode(
+                id: video.videoId,
+                title: video.title,
+                description: video.description ?? "",
+                audioURL: audioURL,
+                duration: video.duration,
+                publishDate: video.publishDate,
+                subtitles: subtitles,
+                subtitleGenerationDate: Date(),
+                subtitleVersion: "vtt_1.0"  // 更新为VTT版本
+            )
         }
-        .buttonStyle(PlainButtonStyle())
     }
     
-    /// 单词高亮文本 - 仿iPhone播客效果
-    private func wordHighlightText(for currentTime: TimeInterval) -> some View {
-        Text(buildAttributedString(for: currentTime))
-            .font(.system(size: 15, weight: .medium))
-            .lineSpacing(3)
-            .multilineTextAlignment(.leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
+    private func generateSubtitlesManually() {
+        Task { @MainActor in
+            await generateSubtitlesForVideo()
+        }
     }
     
-    /// 构建带高亮的属性字符串 - 优化颜色和效果
-    private func buildAttributedString(for currentTime: TimeInterval) -> AttributedString {
-        var attributedString = AttributedString()
-        
-        for (index, word) in subtitle.words.enumerated() {
-            var wordString = AttributedString(word.word)
-            
-            // 根据播放时间设置单词样式 - 仿iPhone播客效果
-            if currentTime >= word.startTime && currentTime < word.endTime {
-                // 当前正在播放的单词 - 黄色高亮
-                wordString.foregroundColor = .black
-                wordString.font = .system(size: 15, weight: .semibold)
-                wordString.backgroundColor = Color.yellow.opacity(0.8)
-            } else if currentTime >= word.endTime {
-                // 已播放的单词 - 主色调
-                wordString.foregroundColor = .primary
-                wordString.font = .system(size: 15, weight: .medium)
-            } else {
-                // 未播放的单词 - 较淡颜色
-                wordString.foregroundColor = .secondary
-                wordString.font = .system(size: 15, weight: .regular)
-            }
-            
-            attributedString.append(wordString)
-            
-            // 添加空格（除了最后一个单词）
-            if index < subtitle.words.count - 1 {
-                attributedString.append(AttributedString(" "))
-            }
+    private func generateSubtitlesForVideo() async {
+        // 确保在主线程执行
+        await MainActor.run {
+            print("📺 [VideoPlayer] 开始为视频生成字幕: \(video.title)")
         }
         
-        return attributedString
-    }
-    
-    private func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%d:%02d", minutes, seconds)
+        // 调用播放器服务生成字幕
+        await playerService.generateSubtitlesForCurrentEpisode()
     }
 }
-
 
 // MARK: - 预览
 #Preview {
-    PodcastPlayerView(episode: PodcastEpisode.example)
-}
+    VideoPlayerView(video: YouTubeVideo.example)
+} 

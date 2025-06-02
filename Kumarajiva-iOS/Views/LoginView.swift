@@ -27,7 +27,7 @@ struct LoginView: View {
                             .font(.system(size: 80))
                             .foregroundColor(.blue)
                         
-                        Text("Kumarajiva")
+                        Text("LEiP")
                             .font(.largeTitle)
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
@@ -41,7 +41,7 @@ struct LoginView: View {
                     
                     // 登录说明
                     VStack(spacing: 16) {
-                        Text("欢迎使用 Kumarajiva")
+                        Text("欢迎使用 LEiP")
                             .font(.title2)
                             .fontWeight(.semibold)
                             .multilineTextAlignment(.center)

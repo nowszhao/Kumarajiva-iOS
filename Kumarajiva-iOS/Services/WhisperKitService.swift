@@ -629,7 +629,7 @@ class WhisperKitService: NSObject, ObservableObject, @preconcurrency AVAudioReco
         
         // Create directory for recordings if needed
         let containerURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let recordingsDirectory = containerURL.appendingPathComponent("KumarajivaWhisperRecordings", isDirectory: true)
+        let recordingsDirectory = containerURL.appendingPathComponent("WhisperRecordings", isDirectory: true)
         
         if !FileManager.default.fileExists(atPath: recordingsDirectory.path) {
             do {

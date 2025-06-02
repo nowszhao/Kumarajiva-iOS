@@ -626,33 +626,36 @@ class SubtitleGenerationTaskManager: ObservableObject {
         
         // 监听任务状态变化
         task.$status
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
-                DispatchQueue.main.async {
-                    self?.objectWillChange.send()
-                    // 立即更新任务分类
-                    self?.updateTaskCategories()
-                    print("🎯 [TaskManager] 任务状态变化: \(task.episodeName) -> \(status)")
-                }
+                self?.objectWillChange.send()
+                // 立即更新任务分类
+                self?.updateTaskCategories()
+                print("🎯 [TaskManager] 任务状态变化: \(task.episodeName) -> \(status)")
             }
             .store(in: &cancellables)
         
         // 监听任务进度变化
         task.$progress
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] progress in
-                DispatchQueue.main.async {
-                    self?.objectWillChange.send()
-                }
+                self?.objectWillChange.send()
             }
             .store(in: &cancellables)
         
-        tasks.append(task)
-        
-        // 如果当前活动任务数量未达到上限，立即开始
-        if activeTasks.count < maxConcurrentTasks {
-            task.start()
+        // 确保在主线程更新任务列表
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            self.tasks.append(task)
+            
+            // 如果当前活动任务数量未达到上限，立即开始
+            if self.activeTasks.count < self.maxConcurrentTasks {
+                task.start()
+            }
+            
+            print("🎯 [TaskManager] 创建新任务: \(episode.title)")
         }
         
-        print("🎯 [TaskManager] 创建新任务: \(episode.title)")
         return task
     }
     

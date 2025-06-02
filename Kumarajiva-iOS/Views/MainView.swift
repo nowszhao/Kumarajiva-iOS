@@ -13,6 +13,11 @@ struct MainView: View {
                     Label("练听力", systemImage: "headphones")
                 }
             
+            VideoListeningView()
+                .tabItem {
+                    Label("听视频", systemImage: "play.rectangle.fill")
+                }
+            
             ProfileView()
                 .tabItem {
                     Label("我的", systemImage: "person.fill")
