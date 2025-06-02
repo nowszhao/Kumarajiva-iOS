@@ -45,6 +45,7 @@ struct VideoPlayerView: View {
         .onAppear {
             // 准备视频播放（需要适配YouTube视频）
             prepareVideoForPlayback()
+            
         }
         .onDisappear {
             // 离开页面时音频继续播放
