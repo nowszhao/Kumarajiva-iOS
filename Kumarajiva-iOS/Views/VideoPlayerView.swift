@@ -4,6 +4,7 @@ struct VideoPlayerView: View {
     let video: YouTubeVideo
     @StateObject private var playerService = PodcastPlayerService.shared
     @StateObject private var taskManager = SubtitleGenerationTaskManager.shared
+    @StateObject private var youtubeExtractor = YouTubeAudioExtractor.shared
     @Environment(\.dismiss) private var dismiss
     
     // 状态变量
@@ -12,10 +13,17 @@ struct VideoPlayerView: View {
     @State private var showingVocabularyAnalysis = false
     @State private var showingConfigPanel = false
     @State private var isListeningMode = false
+    @State private var showDownloadProgress = false
     
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
+                // YouTube下载进度顶部栏
+                if showDownloadProgress {
+                    downloadProgressTopBar
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                
                 // 字幕显示区域
                 subtitleDisplayView
                 
@@ -36,12 +44,36 @@ struct VideoPlayerView: View {
         .toolbar(.hidden, for: .tabBar) // 隐藏底部TabBar
         .onAppear {
             // 准备视频播放（需要适配YouTube视频）
-            
             prepareVideoForPlayback()
         }
         .onDisappear {
             // 离开页面时音频继续播放
             print("📺 [VideoPlayer] 页面消失，音频继续播放")
+        }
+        .onReceive(youtubeExtractor.$downloadStatus) { status in
+            print("📺 [VideoPlayer] 下载状态更新: '\(status)'")
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showDownloadProgress = !status.isEmpty
+            }
+        }
+        .onReceive(youtubeExtractor.$isExtracting) { isExtracting in
+            print("📺 [VideoPlayer] 提取状态更新: \(isExtracting)")
+            if isExtracting {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showDownloadProgress = true
+                }
+            } else {
+                // 下载完成后延迟3秒隐藏进度条
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        print("📺 [VideoPlayer] 隐藏下载进度条")
+                        showDownloadProgress = false
+                    }
+                }
+            }
+        }
+        .onReceive(youtubeExtractor.$extractionProgress) { progress in
+            print("📺 [VideoPlayer] 下载进度更新: \(Int(progress * 100))%")
         }
         .onReceive(playerService.$errorMessage) { errorMessage in
             if let error = errorMessage {
@@ -60,6 +92,79 @@ struct VideoPlayerView: View {
         .sheet(isPresented: $showingVocabularyAnalysis) {
             VocabularyAnalysisView(playerService: playerService)
         }
+    }
+    
+    // MARK: - YouTube下载进度顶部栏
+    
+    private var downloadProgressTopBar: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                // 下载图标
+                ZStack {
+                    if youtubeExtractor.isExtracting {
+                        Circle()
+                            .stroke(Color.blue.opacity(0.3), lineWidth: 3)
+                            .frame(width: 24, height: 24)
+                        
+                        Circle()
+                            .trim(from: 0, to: youtubeExtractor.extractionProgress)
+                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .frame(width: 24, height: 24)
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeInOut(duration: 0.3), value: youtubeExtractor.extractionProgress)
+                        
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.blue)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(.green)
+                    }
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(youtubeExtractor.downloadStatus)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        
+                        Spacer()
+                        
+                        if youtubeExtractor.isExtracting {
+                            Text("\(Int(youtubeExtractor.extractionProgress * 100))%")
+                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    
+                    // 下载进度条
+                    if youtubeExtractor.isExtracting && youtubeExtractor.extractionProgress > 0 {
+                        ProgressView(value: youtubeExtractor.extractionProgress)
+                            .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                            .frame(height: 6)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(3)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 0)
+                    .fill(youtubeExtractor.isExtracting ? 
+                          Color.blue.opacity(0.05) : Color.green.opacity(0.05))
+                    .overlay(
+                        Rectangle()
+                            .fill(youtubeExtractor.isExtracting ? 
+                                  Color.blue.opacity(0.2) : Color.green.opacity(0.2))
+                            .frame(height: 1),
+                        alignment: .bottom
+                    )
+            )
+        }
+        .animation(.easeInOut(duration: 0.3), value: youtubeExtractor.isExtracting)
     }
     
     // MARK: - 字幕显示区域
@@ -116,36 +221,6 @@ struct VideoPlayerView: View {
                     .padding(.top, 4)
                 }
                 
-                // YouTube下载状态指示器
-                if !YouTubeAudioExtractor.shared.downloadStatus.isEmpty {
-                    HStack(spacing: 6) {
-                        if YouTubeAudioExtractor.shared.isExtracting {
-                            ProgressView()
-                                .scaleEffect(0.7)
-                        } else {
-                            Image(systemName: "arrow.down.circle")
-                                .foregroundColor(.blue)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(YouTubeAudioExtractor.shared.downloadStatus)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                            
-                            if YouTubeAudioExtractor.shared.isExtracting && YouTubeAudioExtractor.shared.extractionProgress > 0 {
-                                ProgressView(value: YouTubeAudioExtractor.shared.extractionProgress)
-                                    .progressViewStyle(LinearProgressViewStyle())
-                                    .frame(height: 4)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                    .padding(.top, 4)
-                }
             }
             .padding(.horizontal)
             
@@ -696,7 +771,6 @@ struct VideoPlayerView: View {
                     // 开始播放
                     playerService.playEpisode(mockEpisode)
                     
-//                    playerService.prepareEpisode(mockEpisode)
                     print("📺 [VideoPlayer] ✅ 开始播放YouTube音频，包含 \(downloadResult.subtitles.count) 条SRT字幕")
                 }
                 

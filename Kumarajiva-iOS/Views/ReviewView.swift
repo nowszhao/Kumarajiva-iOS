@@ -173,11 +173,6 @@ struct CompletionView: View {
                 }
                 .padding(.horizontal, 24)
                 
-                // 准确率进度条
-                CompactAccuracyView(accuracy: calculateAccuracy(progress))
-                    .opacity(animateStats ? 1.0 : 0)
-                    .animation(.easeInOut(duration: 0.8).delay(0.9), value: animateStats)
-                    .padding(.horizontal, 24)
             
                 Spacer()
                 

@@ -60,8 +60,11 @@ class YouTubeAudioExtractor: ObservableObject {
         defer {
             Task { @MainActor in
                 isExtracting = false
-                extractionProgress = 0.0
-                downloadStatus = ""
+                // 不立即清空下载状态，让UI有时间显示完成状态
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                    self.extractionProgress = 0.0
+                    self.downloadStatus = ""
+                }
             }
         }
         
@@ -91,7 +94,10 @@ class YouTubeAudioExtractor: ObservableObject {
                 print("🎵 [YouTubeExtractor] ⚠️ 该视频没有可用的字幕文件")
             }
             
-            await MainActor.run { extractionProgress = 1.0 }
+            await MainActor.run { 
+                extractionProgress = 1.0 
+                downloadStatus = "下载完成"
+            }
             
             print("🎵 [YouTubeExtractor] ✅ 下载任务完成")
             
@@ -106,12 +112,14 @@ class YouTubeAudioExtractor: ObservableObject {
             print("🎵 [YouTubeExtractor] ❌ 提取错误: \(error.localizedDescription)")
             await MainActor.run {
                 errorMessage = error.localizedDescription
+                downloadStatus = "下载失败"
             }
             throw error
         } catch {
             print("🎵 [YouTubeExtractor] ❌ 未知错误: \(error)")
             await MainActor.run {
                 errorMessage = error.localizedDescription
+                downloadStatus = "下载失败"
             }
             throw YouTubeExtractionError.networkError
         }

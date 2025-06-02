@@ -424,14 +424,9 @@ class PodcastPlayerService: NSObject, ObservableObject {
         
         // 为YouTube文件服务创建优化的AVAsset配置
         let asset: AVURLAsset
-        if urlString.contains("107.148.21.15:5000/files/audio") {
-            
+        if isYouTubeAudio(urlString) {
             asset = AVURLAsset(url: url)
-
-            print("🎧 [Player] YouTube文件服务使用简化配置，减少网络协商时间")
-            
-            
-            // YouTube音频：跳过异步加载，直接创建播放器让AVPlayer自己处理
+             
             print("🎧 [Player] YouTube音频跳过异步加载，直接创建播放器")
             handleAssetLoadingDirectly(asset: asset, url: url)
             
@@ -579,15 +574,15 @@ class PodcastPlayerService: NSObject, ObservableObject {
             }
         }
         
-        // 3秒后强制播放（即使缓冲不足）
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            observer.invalidate()
-            if player.rate == 0 && self.playbackState.isPlaying == false {
-                print("🎧 [Player] ⏰ 3秒超时，强制开始播放")
-                player.play()
-                self.playbackState.isPlaying = true
-            }
-        }
+//        // 3秒后强制播放（即使缓冲不足）
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+//            observer.invalidate()
+//            if player.rate == 0 && self.playbackState.isPlaying == false {
+//                print("🎧 [Player] ⏰ 3秒超时，强制开始播放")
+//                player.play()
+//                self.playbackState.isPlaying = true
+//            }
+//        }
     }
     
     /// 检查网络连接状况

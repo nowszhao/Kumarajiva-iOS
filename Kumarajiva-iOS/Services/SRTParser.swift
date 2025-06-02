@@ -43,7 +43,7 @@ class SubtitleParser {
     
     // MARK: - VTT格式解析
     
-    /// 解析VTT格式字幕 - 优化为段落级别解析
+    /// 解析VTT格式字幕 - 优化版本，支持<c>标签和去重
     static func parseVTT(content: String) throws -> [Subtitle] {
         let lines = content.components(separatedBy: .newlines)
         var subtitles: [Subtitle] = []
@@ -54,7 +54,7 @@ class SubtitleParser {
             i += 1
         }
         
-        print("📝 [VTT Parser] 开始解析VTT字幕（段落模式）...")
+        print("📝 [VTT Parser] 开始解析VTT字幕（智能模式）...")
         
         while i < lines.count {
             let line = lines[i].trimmingCharacters(in: .whitespaces)
@@ -71,8 +71,8 @@ class SubtitleParser {
                 let endTimeStr = timeParts[1].trimmingCharacters(in: .whitespaces)
                     .components(separatedBy: " ")[0] // 去掉align等属性
                 
-                guard let startTime = parseVTTTimestamp(startTimeStr),
-                      let endTime = parseVTTTimestamp(endTimeStr) else {
+                guard let segmentStartTime = parseVTTTimestamp(startTimeStr),
+                      let segmentEndTime = parseVTTTimestamp(endTimeStr) else {
                     print("⚠️ [VTT Parser] 无法解析时间戳: \(line)")
                     i += 1
                     continue
@@ -101,26 +101,35 @@ class SubtitleParser {
                     i += 1
                 }
                 
-                // 合并文本并清理
+                // 处理收集到的文本
                 if !textLines.isEmpty {
                     let fullText = textLines.joined(separator: " ")
-                    let cleanText = cleanVTTText(fullText)
                     
-                    if !cleanText.isEmpty {
-                        // 为段落中的单词估算时间戳
-                        let words = estimateWordTimings(for: cleanText, startTime: startTime, endTime: endTime)
+                    // 检查是否包含<c>标签（单词级时间戳）
+                    if fullText.contains("<c>") && fullText.contains("</c>") {
+                        // 解析带<c>标签的精确单词时间戳（新逻辑）
+                        if let subtitle = parseVTTWithMixedTimings(fullText, segmentStartTime: segmentStartTime, segmentEndTime: segmentEndTime) {
+                            subtitles.append(subtitle)
+                        }
+                    } else {
+                        // 普通句子级别解析
+                        let cleanText = cleanVTTText(fullText)
                         
-                        let subtitle = Subtitle(
-                            startTime: startTime,
-                            endTime: endTime,
-                            text: cleanText,
-                            confidence: nil,
-                            words: words,
-                            language: "en"
-                        )
-                        
-                        subtitles.append(subtitle)
-//                        print("📝 [VTT Segment] [\(formatTime(startTime)) -> \(formatTime(endTime))] \"\(cleanText)\"")
+                        if !cleanText.isEmpty {
+                            // 为段落中的单词估算时间戳
+                            let words = estimateWordTimings(for: cleanText, startTime: segmentStartTime, endTime: segmentEndTime)
+                            
+                            let subtitle = Subtitle(
+                                startTime: segmentStartTime,
+                                endTime: segmentEndTime,
+                                text: cleanText,
+                                confidence: nil,
+                                words: words,
+                                language: "en"
+                            )
+                            
+                            subtitles.append(subtitle)
+                        }
                     }
                 }
             }
@@ -128,12 +137,427 @@ class SubtitleParser {
             i += 1
         }
         
-        print("📝 [VTT Parser] 解析完成: \(subtitles.count) 个字幕段落")
+        print("📝 [VTT Parser] 初步解析完成: \(subtitles.count) 个字幕段落")
+        
+        // 去重处理：处理相同时间戳的重复内容
+        let deduplicatedSubtitles = deduplicateSubtitles(subtitles)
+        
+        print("📝 [VTT Parser] 去重后: \(deduplicatedSubtitles.count) 个字幕段落")
         
         // 输出解析结果的详细调试信息
-        logVTTParsingResults(subtitles)
+        logVTTParsingResults(deduplicatedSubtitles)
         
-        return subtitles
+        return deduplicatedSubtitles
+    }
+    
+    /// 解析包含<c>标签的VTT文本，支持混合时间戳分配（新实现）
+    static func parseVTTWithMixedTimings(_ text: String, segmentStartTime: TimeInterval, segmentEndTime: TimeInterval) -> Subtitle? {
+        print("🎯 [VTT Mixed] 解析混合时间戳文本: \(text.prefix(100))...")
+        
+        var words: [SubtitleWord] = []
+        var cleanTextParts: [String] = []
+        
+        // 第一步：找到第一个<时间戳>的位置
+        let firstTimestampPattern = #"<\d{2}:\d{2}:\d{2}\.\d{3}>"#
+        let firstTimestampRegex = try? NSRegularExpression(pattern: firstTimestampPattern, options: [])
+        let textRange = NSRange(location: 0, length: text.count)
+        
+        var firstTimestampLocation: Int? = nil
+        if let regex = firstTimestampRegex {
+            let matches = regex.matches(in: text, options: [], range: textRange)
+            if let firstMatch = matches.first {
+                firstTimestampLocation = firstMatch.range.location
+            }
+        }
+        
+        // 第二步：处理第一个时间戳前的文本（使用VTT行头时间）
+        if let firstTimestampLoc = firstTimestampLocation, firstTimestampLoc > 0 {
+            let prefixRange = NSRange(location: 0, length: firstTimestampLoc)
+            if let range = Range(prefixRange, in: text) {
+                let prefixText = String(text[range]).trimmingCharacters(in: .whitespaces)
+                let cleanPrefixText = cleanVTTText(prefixText)
+                
+                if !cleanPrefixText.isEmpty {
+                    print("📝 [VTT Mixed] 前置文本: '\(cleanPrefixText)' → 时间: \(formatTime(segmentStartTime))")
+                    
+                    // 将前置文本分词并分配时间戳
+                    let prefixWords = cleanPrefixText.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+                    let wordDuration: TimeInterval = 0.3 // 估算每个单词0.3秒
+                    
+                    for (index, word) in prefixWords.enumerated() {
+                        let wordStartTime = segmentStartTime + Double(index) * wordDuration
+                        let wordEndTime = wordStartTime + wordDuration
+                        
+                        let subtitleWord = SubtitleWord(
+                            word: word,
+                            startTime: wordStartTime,
+                            endTime: wordEndTime,
+                            confidence: 0.9 // 高置信度，因为是VTT预设时间
+                        )
+                        
+                        words.append(subtitleWord)
+                        cleanTextParts.append(word)
+                    }
+                }
+            }
+        }
+        
+        // 第三步：解析所有<时间戳><c>单词</c>组合
+        let pattern = #"<(\d{2}:\d{2}:\d{2}\.\d{3})><c>\s*([^<]+?)\s*</c>"#
+        let regex = try? NSRegularExpression(pattern: pattern, options: [])
+        
+        if let regex = regex {
+            let matches = regex.matches(in: text, options: [], range: textRange)
+            
+            for match in matches {
+                if match.numberOfRanges >= 3 {
+                    // 提取时间戳
+                    let timestampRange = match.range(at: 1)
+                    if let timestampRange = Range(timestampRange, in: text) {
+                        let timestampStr = String(text[timestampRange])
+                        
+                        // 提取单词
+                        let wordRange = match.range(at: 2)
+                        if let wordRange = Range(wordRange, in: text) {
+                            let word = String(text[wordRange]).trimmingCharacters(in: .whitespaces)
+                            
+                            if let wordStartTime = parseVTTTimestamp(timestampStr), !word.isEmpty {
+                                let wordDuration: TimeInterval = 0.4 // <c>标签的单词稍长一些
+                                let wordEndTime = min(wordStartTime + wordDuration, segmentEndTime)
+                                
+                                let subtitleWord = SubtitleWord(
+                                    word: word,
+                                    startTime: wordStartTime,
+                                    endTime: wordEndTime,
+                                    confidence: 0.95 // 最高置信度，有精确时间戳
+                                )
+                                
+                                words.append(subtitleWord)
+                                cleanTextParts.append(word)
+                                
+                                print("📝 [VTT Mixed] <c>单词: '\(word)' → 时间: \(formatTime(wordStartTime))")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 第四步：组合最终文本和计算段落时间范围
+        let finalText = cleanTextParts.joined(separator: " ")
+        
+        guard !finalText.isEmpty, !words.isEmpty else {
+            print("⚠️ [VTT Mixed] 解析结果为空")
+            return nil
+        }
+        
+        // 验证和修复混合时间戳的正确性
+        let validatedWords = validateAndFixMixedTimings(words, segmentStartTime: segmentStartTime, segmentEndTime: segmentEndTime)
+        
+        // 重新计算段落的准确时间范围
+        let actualStartTime = validatedWords.first?.startTime ?? segmentStartTime
+        let actualEndTime = validatedWords.last?.endTime ?? segmentEndTime
+        
+        let subtitle = Subtitle(
+            startTime: actualStartTime,
+            endTime: actualEndTime,
+            text: finalText,
+            confidence: 0.95,
+            words: validatedWords,
+            language: "en"
+        )
+        
+        print("✅ [VTT Mixed] 成功解析: '\(finalText)' [\(formatTime(actualStartTime)) -> \(formatTime(actualEndTime))] (\(validatedWords.count) words)")
+        
+        return subtitle
+    }
+    
+    /// 解析带有<c>标签的VTT文本，提取精确的单词时间戳（保留旧版本作为备用）
+    static func parseVTTWithWordTimings(_ text: String, segmentStartTime: TimeInterval, segmentEndTime: TimeInterval) -> Subtitle? {
+        // 先提取基础文本（去掉时间戳标记）
+        var baseText = text
+        
+        // 移除时间戳标记 <00:00:03.120> 但保留 <c> 标签
+        baseText = baseText.replacingOccurrences(of: #"<\d{2}:\d{2}:\d{2}\.\d{3}>"#, with: "", options: .regularExpression)
+        
+        // 现在解析<c>标签内的单词和它们的时间戳
+        var words: [SubtitleWord] = []
+        var cleanText = ""
+        
+        // 分割文本，寻找<c>标签
+        let pattern = #"([^<]*)<c>([^<]*)</c>"#
+        let regex = try? NSRegularExpression(pattern: pattern, options: [])
+        let range = NSRange(location: 0, length: text.count)
+        
+        var lastRange = 0
+        var currentTime = segmentStartTime
+        
+        regex?.enumerateMatches(in: text, options: [], range: range) { match, _, _ in
+            guard let match = match else { return }
+            
+            // 获取<c>标签前的文本
+            if match.range.location > lastRange {
+                let beforeRange = NSRange(location: lastRange, length: match.range.location - lastRange)
+                if let beforeText = Range(beforeRange, in: text) {
+                    let before = String(text[beforeText]).trimmingCharacters(in: .whitespaces)
+                    if !before.isEmpty {
+                        // 处理<c>标签前的文本，可能包含时间戳
+                        let (beforeWords, newTime) = extractWordsWithTimestamps(from: before, startTime: currentTime)
+                        words.append(contentsOf: beforeWords)
+                        cleanText += beforeWords.map { $0.word }.joined(separator: " ")
+                        if !cleanText.isEmpty && !beforeWords.isEmpty {
+                            cleanText += " "
+                        }
+                        currentTime = newTime
+                    }
+                }
+            }
+            
+            // 获取<c>标签内的单词
+            if match.numberOfRanges > 2 {
+                let wordRange = match.range(at: 2)
+                if let wordRange = Range(wordRange, in: text) {
+                    let word = String(text[wordRange]).trimmingCharacters(in: .whitespaces)
+                    if !word.isEmpty {
+                        // 估算这个单词的结束时间（简单估算）
+                        let wordDuration = 0.3 // 假设每个单词0.3秒
+                        let wordEndTime = min(currentTime + wordDuration, segmentEndTime)
+                        
+                        let subtitleWord = SubtitleWord(
+                            word: word,
+                            startTime: currentTime,
+                            endTime: wordEndTime,
+                            confidence: 0.95 // 高置信度，因为有精确时间戳
+                        )
+                        
+                        words.append(subtitleWord)
+                        if !cleanText.isEmpty {
+                            cleanText += " "
+                        }
+                        cleanText += word
+                        currentTime = wordEndTime
+                    }
+                }
+            }
+            
+            lastRange = match.range.location + match.range.length
+        }
+        
+        // 处理最后剩余的文本
+        if lastRange < text.count {
+            let remainingRange = NSRange(location: lastRange, length: text.count - lastRange)
+            if let remainingRange = Range(remainingRange, in: text) {
+                let remaining = String(text[remainingRange]).trimmingCharacters(in: .whitespaces)
+                if !remaining.isEmpty {
+                    let (remainingWords, _) = extractWordsWithTimestamps(from: remaining, startTime: currentTime)
+                    words.append(contentsOf: remainingWords)
+                    if !cleanText.isEmpty && !remainingWords.isEmpty {
+                        cleanText += " "
+                    }
+                    cleanText += remainingWords.map { $0.word }.joined(separator: " ")
+                }
+            }
+        }
+        
+        // 清理最终文本
+        cleanText = cleanVTTText(cleanText)
+        
+        guard !cleanText.isEmpty else { return nil }
+        
+        return Subtitle(
+            startTime: segmentStartTime,
+            endTime: segmentEndTime,
+            text: cleanText,
+            confidence: 0.95, // 高置信度
+            words: words,
+            language: "en"
+        )
+    }
+    
+    /// 从文本中提取带时间戳的单词
+    static func extractWordsWithTimestamps(from text: String, startTime: TimeInterval) -> ([SubtitleWord], TimeInterval) {
+        var words: [SubtitleWord] = []
+        var currentTime = startTime
+        
+        // 先提取所有时间戳
+        let timestampPattern = #"<(\d{2}:\d{2}:\d{2}\.\d{3})>"#
+        let timestampRegex = try? NSRegularExpression(pattern: timestampPattern, options: [])
+        
+        var textWithoutTimestamps = text
+        var timestamps: [TimeInterval] = []
+        
+        // 收集所有时间戳
+        if let regex = timestampRegex {
+            let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: text.count))
+            for match in matches.reversed() { // 从后往前处理，避免索引偏移
+                if match.numberOfRanges > 1 {
+                    let timestampRange = match.range(at: 1)
+                    if let range = Range(timestampRange, in: text) {
+                        let timestampStr = String(text[range])
+                        if let timestamp = parseVTTTimestamp(timestampStr) {
+                            timestamps.insert(timestamp, at: 0)
+                        }
+                    }
+                    // 移除时间戳标记
+                    let fullRange = match.range
+                    if let range = Range(fullRange, in: textWithoutTimestamps) {
+                        textWithoutTimestamps.removeSubrange(range)
+                    }
+                }
+            }
+        }
+        
+        // 分割单词
+        let wordList = textWithoutTimestamps.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+        
+        for (index, word) in wordList.enumerated() {
+            let cleanWord = cleanVTTText(word)
+            if !cleanWord.isEmpty {
+                // 如果有对应的时间戳，使用它；否则估算
+                let wordStartTime = index < timestamps.count ? timestamps[index] : currentTime
+                let wordEndTime = wordStartTime + 0.3 // 假设每个单词0.3秒
+                
+                let subtitleWord = SubtitleWord(
+                    word: cleanWord,
+                    startTime: wordStartTime,
+                    endTime: wordEndTime,
+                    confidence: 0.9
+                )
+                
+                words.append(subtitleWord)
+                currentTime = wordEndTime
+            }
+        }
+        
+        return (words, currentTime)
+    }
+    
+    /// 去重字幕：处理相同时间戳的重复内容，保留最长的
+    static func deduplicateSubtitles(_ subtitles: [Subtitle]) -> [Subtitle] {
+        var deduplicatedSubtitles: [Subtitle] = []
+        
+        print("🔄 [VTT Dedup] 开始去重处理: \(subtitles.count) 个字幕")
+        
+        for subtitle in subtitles {
+            var shouldAdd = true
+            var indexToReplace: Int? = nil
+            
+            // 检查是否与现有字幕重复或重叠
+            for (index, existingSubtitle) in deduplicatedSubtitles.enumerated() {
+                let timeTolerance: TimeInterval = 2.0 // 增加时间容差到2秒
+                let timeOverlap = checkTimeOverlap(subtitle, existingSubtitle, tolerance: timeTolerance)
+                
+                if timeOverlap {
+                    let existingText = existingSubtitle.text
+                    let newText = subtitle.text
+                    
+                    // 计算文本重叠度
+                    let overlapScore = calculateTextOverlap(existingText, newText)
+                    
+                    print("🔍 [VTT Dedup] 检查重叠:")
+                    print("   现有: '\(String(existingText.prefix(40)))...' [\(formatTime(existingSubtitle.startTime))-\(formatTime(existingSubtitle.endTime))]")
+                    print("   新的: '\(String(newText.prefix(40)))...' [\(formatTime(subtitle.startTime))-\(formatTime(subtitle.endTime))]")
+                    print("   重叠度: \(String(format: "%.1f", overlapScore * 100))%")
+                    
+                    // 如果文本重叠度超过50%，认为是重复或重叠
+                    if overlapScore > 0.5 {
+                        if newText.count > existingText.count {
+                            // 新文本更长更完整，替换现有的
+                            print("🔄 [VTT Dedup] 替换为更长文本: \(existingText.count) -> \(newText.count) 字符")
+                            indexToReplace = index
+                            break
+                        } else if newText.count < Int(Double(existingText.count) * 0.8) {
+                            // 新文本明显更短，跳过
+                            print("🚫 [VTT Dedup] 跳过较短文本")
+                            shouldAdd = false
+                            break
+                        } else if subtitle.words.count > existingSubtitle.words.count {
+                            // 新字幕有更多单词级时间戳，更精确
+                            print("🔄 [VTT Dedup] 替换为更精确字幕: \(existingSubtitle.words.count) -> \(subtitle.words.count) words")
+                            indexToReplace = index
+                            break
+                        } else {
+                            // 保留现有的
+                            print("🚫 [VTT Dedup] 保留现有字幕")
+                            shouldAdd = false
+                            break
+                        }
+                    }
+                }
+            }
+            
+            if shouldAdd {
+                if let replaceIndex = indexToReplace {
+                    // 替换现有字幕
+                    deduplicatedSubtitles[replaceIndex] = subtitle
+                } else {
+                    // 添加新字幕
+                    deduplicatedSubtitles.append(subtitle)
+                }
+            }
+        }
+        
+        // 按时间排序
+        let sortedSubtitles = deduplicatedSubtitles.sorted { $0.startTime < $1.startTime }
+        
+        print("📊 [VTT Dedup] 去重完成: \(subtitles.count) -> \(sortedSubtitles.count) 个字幕段落")
+        
+        return sortedSubtitles
+    }
+    
+    /// 检查两个字幕的时间是否重叠
+    static func checkTimeOverlap(_ subtitle1: Subtitle, _ subtitle2: Subtitle, tolerance: TimeInterval) -> Bool {
+        // 检查时间范围是否重叠或接近
+        let start1 = subtitle1.startTime
+        let end1 = subtitle1.endTime
+        let start2 = subtitle2.startTime
+        let end2 = subtitle2.endTime
+        
+        // 时间重叠检测
+        let timeOverlap = max(0, min(end1, end2) - max(start1, start2))
+        let minDuration = min(end1 - start1, end2 - start2)
+        
+        // 如果重叠时间超过较短字幕持续时间的30%，或者间隙小于容差，认为是重叠
+        return timeOverlap > minDuration * 0.3 || abs(start1 - start2) < tolerance || abs(end1 - end2) < tolerance
+    }
+    
+    /// 计算两个文本的重叠度（0-1之间的值）
+    static func calculateTextOverlap(_ text1: String, _ text2: String) -> Double {
+        // 清理文本
+        let clean1 = cleanTextForComparison(text1)
+        let clean2 = cleanTextForComparison(text2)
+        
+        // 分词
+        let words1 = Set(clean1.components(separatedBy: .whitespaces).filter { !$0.isEmpty })
+        let words2 = Set(clean2.components(separatedBy: .whitespaces).filter { !$0.isEmpty })
+        
+        // 计算重叠度
+        let intersection = words1.intersection(words2)
+        let union = words1.union(words2)
+        
+        if union.isEmpty {
+            return 0.0
+        }
+        
+        // Jaccard相似度
+        let jaccardSimilarity = Double(intersection.count) / Double(union.count)
+        
+        // 同时检查是否一个文本包含另一个文本
+        let containmentSimilarity1 = clean2.contains(clean1) ? 1.0 : 0.0
+        let containmentSimilarity2 = clean1.contains(clean2) ? 1.0 : 0.0
+        let containmentSimilarity = max(containmentSimilarity1, containmentSimilarity2)
+        
+        // 返回最大相似度
+        return max(jaccardSimilarity, containmentSimilarity)
+    }
+    
+    /// 清理文本用于比较
+    static func cleanTextForComparison(_ text: String) -> String {
+        return text
+            .lowercased()
+            .replacingOccurrences(of: #"[^\w\s]"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     /// 清理VTT文本 - 处理HTML实体和格式标记
@@ -194,7 +618,41 @@ class SubtitleParser {
         // 输出前5个段落的详细信息
         print("\n🔍 [VTT Debug] 前5个字幕段落:")
         for (index, segment) in segments.prefix(5).enumerated() {
-            print("  #\(index + 1): [\(formatTime(segment.startTime)) -> \(formatTime(segment.endTime))] \"\(segment.text)\"")
+            let wordsInfo = segment.words.count
+            print("  #\(index + 1): [\(formatTime(segment.startTime)) -> \(formatTime(segment.endTime))] \"\(segment.text)\" (\(wordsInfo) words)")
+            
+            // 如果有单词级时间戳，显示前3个单词的详情
+            if !segment.words.isEmpty {
+                print("    Words: ", terminator: "")
+                for (wordIndex, word) in segment.words.prefix(3).enumerated() {
+                    print("'\(word.word)'[\(formatTime(word.startTime))]", terminator: wordIndex < min(2, segment.words.count - 1) ? ", " : "")
+                }
+                if segment.words.count > 3 {
+                    print("...")
+                } else {
+                    print("")
+                }
+            }
+        }
+        
+        // 检查混合时间戳的段落
+        let mixedTimingSegments = segments.filter { segment in
+            guard segment.words.count >= 2 else { return false }
+            // 检查是否有使用VTT行头时间的单词（通常是前几个单词）
+            let firstWordTime = segment.words[0].startTime
+            let segmentTime = segment.startTime
+            return abs(firstWordTime - segmentTime) < 0.1 // 容差100ms
+        }
+        
+        if !mixedTimingSegments.isEmpty {
+            print("\n🔀 [VTT Debug] 发现 \(mixedTimingSegments.count) 个混合时间戳段落:")
+            for (index, segment) in mixedTimingSegments.prefix(3).enumerated() {
+                print("  Mixed #\(index + 1): \"\(String(segment.text.prefix(50)))...\"")
+                let words = segment.words
+                let vttWords = words.filter { abs($0.startTime - segment.startTime) < 0.5 }
+                let cWords = words.filter { abs($0.startTime - segment.startTime) >= 0.5 }
+                print("    VTT时间单词: \(vttWords.count), <c>时间单词: \(cWords.count)")
+            }
         }
         
         // 检查特定时间点的字幕（用于验证同步性）
@@ -202,7 +660,7 @@ class SubtitleParser {
         print("\n⏱️ [VTT Debug] 特定时间点字幕:")
         for testTime in testTimes {
             if let segment = segments.first(where: { $0.startTime <= testTime && $0.endTime >= testTime }) {
-                print("  \(Int(testTime))s: \"\(segment.text)\"")
+                print("  \(Int(testTime))s: \"\(String(segment.text.prefix(60)))...\"")
             } else {
                 print("  \(Int(testTime))s: (无字幕)")
             }
@@ -222,7 +680,79 @@ class SubtitleParser {
             print("\n✅ [VTT Debug] 所有HTML实体和标签已清理完毕")
         }
         
+        // 检查时间戳连续性
+        var timeGaps: [TimeInterval] = []
+        for i in 1..<segments.count {
+            let gap = segments[i].startTime - segments[i-1].endTime
+            if gap > 1.0 { // 超过1秒的间隙
+                timeGaps.append(gap)
+            }
+        }
+        
+        if !timeGaps.isEmpty {
+            print("\n⏳ [VTT Debug] 发现 \(timeGaps.count) 个时间间隙 (>1s)，最大间隙: \(String(format: "%.1f", timeGaps.max() ?? 0))s")
+        } else {
+            print("\n✅ [VTT Debug] 时间戳连续性良好")
+        }
+        
         print("===============================\n")
+    }
+    
+    /// 验证和修复混合时间戳的正确性
+    static func validateAndFixMixedTimings(_ words: [SubtitleWord], segmentStartTime: TimeInterval, segmentEndTime: TimeInterval) -> [SubtitleWord] {
+        var fixedWords = words
+        
+        // 修复时间戳异常的单词
+        for i in 0..<fixedWords.count {
+            let word = fixedWords[i]
+            
+            // 确保单词时间在段落时间范围内
+            if word.startTime < segmentStartTime {
+                print("⚠️ [VTT Fix] 修复单词 '\(word.word)' 开始时间: \(formatTime(word.startTime)) -> \(formatTime(segmentStartTime))")
+                fixedWords[i] = SubtitleWord(
+                    word: word.word,
+                    startTime: segmentStartTime,
+                    endTime: word.endTime,
+                    confidence: word.confidence
+                )
+            }
+            
+            if word.endTime > segmentEndTime {
+                print("⚠️ [VTT Fix] 修复单词 '\(word.word)' 结束时间: \(formatTime(word.endTime)) -> \(formatTime(segmentEndTime))")
+                fixedWords[i] = SubtitleWord(
+                    word: word.word,
+                    startTime: word.startTime,
+                    endTime: segmentEndTime,
+                    confidence: word.confidence
+                )
+            }
+            
+            // 确保单词时间戳的合理性（开始时间 < 结束时间）
+            if fixedWords[i].startTime >= fixedWords[i].endTime {
+                let duration = min(0.3, segmentEndTime - fixedWords[i].startTime)
+                fixedWords[i] = SubtitleWord(
+                    word: word.word,
+                    startTime: fixedWords[i].startTime,
+                    endTime: fixedWords[i].startTime + duration,
+                    confidence: word.confidence
+                )
+            }
+        }
+        
+        // 确保单词之间时间戳的顺序
+        for i in 1..<fixedWords.count {
+            if fixedWords[i].startTime < fixedWords[i-1].endTime {
+                // 调整当前单词的开始时间
+                fixedWords[i] = SubtitleWord(
+                    word: fixedWords[i].word,
+                    startTime: fixedWords[i-1].endTime,
+                    endTime: max(fixedWords[i-1].endTime + 0.1, fixedWords[i].endTime),
+                    confidence: fixedWords[i].confidence
+                )
+            }
+        }
+        
+        return fixedWords
     }
     
     /// 格式化时间显示（调试用）
@@ -379,6 +909,67 @@ class SubtitleParser {
                 confidence: nil
             )
         }
+    }
+    
+    // MARK: - 测试方法（调试用）
+    
+    /// 测试VTT混合时间戳解析功能
+    static func testVTTMixedTimingsParsing() {
+        print("🧪 [VTT Test] 开始测试VTT混合时间戳解析...")
+        
+        let testVTTContent = """
+        WEBVTT
+        Kind: captions
+        Language: en
+
+        00:00:05.839 --> 00:00:07.590 align:start position:0%
+        1939, what was the state of the
+        militaries?<00:00:06.400><c> What</c><00:00:06.560><c> were</c><00:00:06.799><c> the</c><00:00:06.960><c> most</c><00:00:07.200><c> powerful</c>
+
+        00:00:07.600 --> 00:00:09.350 align:start position:0%
+        militaries<00:00:08.080><c> on</c><00:00:08.240><c> the</c><00:00:08.400><c> world</c><00:00:08.639><c> stage</c><00:00:08.880><c> at</c><00:00:09.120><c> that</c>
+
+        00:00:09.360 --> 00:00:12.070 align:start position:0%
+        time?<00:00:10.559><c> Well,</c><00:00:11.040><c> um,</c><00:00:11.200><c> in</c><00:00:11.360><c> terms</c><00:00:11.519><c> of</c><00:00:11.599><c> naval</c><00:00:11.920><c> power,</c>
+        """
+        
+        do {
+            let subtitles = try parseSubtitleContent(testVTTContent)
+            
+            print("✅ [VTT Test] 解析成功！共生成 \(subtitles.count) 个字幕段落")
+            
+            for (index, subtitle) in subtitles.enumerated() {
+                print("🎯 [VTT Test] 段落 #\(index + 1):")
+                print("   时间: \(formatTime(subtitle.startTime)) -> \(formatTime(subtitle.endTime))")
+                print("   文本: \"\(subtitle.text)\"")
+                print("   单词数: \(subtitle.words.count)")
+                
+                if !subtitle.words.isEmpty {
+                    print("   单词详情:")
+                    for (wordIndex, word) in subtitle.words.enumerated() {
+                        let timing = "[\(formatTime(word.startTime))-\(formatTime(word.endTime))]"
+                        print("     \(wordIndex + 1). '\(word.word)' \(timing)")
+                    }
+                }
+                print("")
+            }
+            
+            // 验证特定时间点的字幕
+            let testTimes: [TimeInterval] = [6.0, 7.0, 8.5, 11.5]
+            print("🔍 [VTT Test] 特定时间点验证:")
+            for testTime in testTimes {
+                if let matchedSubtitle = subtitles.first(where: { $0.startTime <= testTime && $0.endTime >= testTime }) {
+                    print("   \(formatTime(testTime)): \"\(matchedSubtitle.text)\"")
+                } else {
+                    print("   \(formatTime(testTime)): (无匹配字幕)")
+                }
+            }
+            
+        } catch {
+            print("❌ [VTT Test] 解析失败: \(error)")
+        }
+        
+        print("🧪 [VTT Test] 测试完成\n")
     }
 }
 

@@ -55,9 +55,6 @@ struct AddYouTuberView: View {
                         
                         VStack(alignment: .leading, spacing: 4) {
                             ExampleChannelView(channelId: "@LexClips", description: "@ 用户名格式（推荐）")
-                            ExampleChannelView(channelId: "@TED", description: "TED 演讲官方频道")
-                            ExampleChannelView(channelId: "UCuAXFkgsw1L7xaCfnd5JJOw", description: "频道ID格式")
-                            ExampleChannelView(channelId: "lexfridman", description: "用户名格式")
                         }
                     }
                     .padding()
