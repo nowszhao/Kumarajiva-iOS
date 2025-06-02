@@ -63,6 +63,50 @@ class PodcastPlayerService: NSObject, ObservableObject {
         setupRemoteCommandCenter()
         observeTaskManagerUpdates()
         loadPlaybackRecords()
+        setupAppLifecycleObservers()
+    }
+    
+    // MARK: - 应用生命周期监听
+    private func setupAppLifecycleObservers() {
+        // 监听应用进入后台
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+        
+        // 监听应用即将终止
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillTerminate),
+            name: UIApplication.willTerminateNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func appDidEnterBackground() {
+        // 保存当前播放位置
+        if let episode = playbackState.currentEpisode {
+            updatePlaybackRecord(
+                for: episode.id,
+                currentTime: playbackState.currentTime,
+                duration: playbackState.duration
+            )
+            print("🎧 [Player] 应用进入后台，保存播放位置: \(formatTime(playbackState.currentTime))")
+        }
+    }
+    
+    @objc private func appWillTerminate() {
+        // 应用即将终止时保存播放位置
+        if let episode = playbackState.currentEpisode {
+            updatePlaybackRecord(
+                for: episode.id,
+                currentTime: playbackState.currentTime,
+                duration: playbackState.duration
+            )
+            print("🎧 [Player] 应用即将终止，保存播放位置: \(formatTime(playbackState.currentTime))")
+        }
     }
     
     // MARK: - 任务管理器状态监听
@@ -236,6 +280,15 @@ class PodcastPlayerService: NSObject, ObservableObject {
             return
         }
         
+        // 保存当前播放时间（如果是同一个节目）
+        var savedCurrentTime: TimeInterval = 0
+        var savedPlayingState = false
+        if isSameEpisode {
+            savedCurrentTime = playbackState.currentTime
+            savedPlayingState = playbackState.isPlaying
+            print("🎧 [Player] 保存当前播放状态: 时间=\(formatTime(savedCurrentTime)), 播放中=\(savedPlayingState)")
+        }
+        
         // 如果是不同的节目，先完全清空状态
         if !isSameEpisode {
             print("🎧 [Player] 切换到新节目，清空所有状态: \(episode.title)")
@@ -256,6 +309,12 @@ class PodcastPlayerService: NSObject, ObservableObject {
             isGeneratingSubtitles = false
             subtitleGenerationProgress = 0.0
             errorMessage = nil
+        } else {
+            // 同一个节目，只需要停止播放但保持状态
+            pausePlayback()
+            cleanupAudioPlayer()
+            audioPreparationState = .idle
+            audioPreparationProgress = 0.0
         }
         
         // 设置新节目
@@ -263,6 +322,21 @@ class PodcastPlayerService: NSObject, ObservableObject {
         
         // 加载已有字幕
         loadExistingSubtitles(for: episode)
+        
+        // 恢复播放时间（同一个节目）或从播放记录恢复（新节目）
+        if isSameEpisode && savedCurrentTime > 0 {
+            // 恢复之前的播放时间
+            playbackState.currentTime = savedCurrentTime
+            playbackState.isPlaying = savedPlayingState
+            print("🎧 [Player] 恢复播放状态: 时间=\(formatTime(savedCurrentTime)), 播放中=\(savedPlayingState)")
+        } else if !isSameEpisode {
+            // 检查是否有播放记录
+            if let record = playbackRecords[episode.id],
+               record.currentTime > 0 && record.currentTime < record.duration {
+                playbackState.currentTime = record.currentTime
+                print("🎧 [Player] 从播放记录恢复位置: \(formatTime(record.currentTime))")
+            }
+        }
         
         // 准备音频但不播放
         prepareAudio(from: episode.audioURL)
@@ -621,6 +695,22 @@ class PodcastPlayerService: NSObject, ObservableObject {
             
             // 清除加载超时定时器
             clearLoadingTimeout()
+            
+            // 跳转到保存的播放位置（如果有）
+            if playbackState.currentTime > 0 {
+                print("🎧 [Player] 恢复播放位置: \(formatTime(playbackState.currentTime))")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    guard let self = self else { return }
+                    self.seek(to: self.playbackState.currentTime)
+                    
+                    // 如果之前是播放状态，则恢复播放
+                    if self.playbackState.isPlaying {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            self.resumePlayback()
+                        }
+                    }
+                }
+            }
             
             // 检查播放器状态
             if let player = audioPlayer {
@@ -1466,6 +1556,9 @@ class PodcastPlayerService: NSObject, ObservableObject {
         stopPlaybackTimer()
         cleanupAudioPlayer()
         cancellables.removeAll()
+        
+        // 清理NotificationCenter observers
+        NotificationCenter.default.removeObserver(self)
     }
     
     // MARK: - 锁屏显示信息更新

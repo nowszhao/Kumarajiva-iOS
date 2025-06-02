@@ -306,13 +306,13 @@ struct PlaylistItemView: View {
         
         // 如果不是当前播放的节目，关闭播放列表
         if playerService.playbackState.currentEpisode?.id != record.episodeId {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 onDismiss()
             }
         }
         
         // 延迟重置加载状态
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
             withAnimation {
                 isLoading = false
             }
@@ -325,38 +325,7 @@ struct PlaylistItemView: View {
         var body: some View {
             PlaylistView()
                 .onAppear {
-                    // 添加一些示例播放记录用于预览
-                    let playerService = PodcastPlayerService.shared
-                    
-                    // 创建示例记录1
-                    var record1 = EpisodePlaybackRecord(
-                        episodeId: "episode-001", 
-                        currentTime: 450, 
-                        duration: 1800
-                    )
-                    record1.lastPlayedDate = Date().addingTimeInterval(-3600)
-                    
-                    // 创建示例记录2
-                    var record2 = EpisodePlaybackRecord(
-                        episodeId: "episode-002", 
-                        currentTime: 1200, 
-                        duration: 2400
-                    )
-                    record2.lastPlayedDate = Date().addingTimeInterval(-7200)
-                    record2.isCompleted = true
-                    
-                    // 创建示例记录3
-                    var record3 = EpisodePlaybackRecord(
-                        episodeId: "episode-003", 
-                        currentTime: 0, 
-                        duration: 1500
-                    )
-                    record3.lastPlayedDate = Date().addingTimeInterval(-86400)
-                    
-                    // 添加到播放记录中（仅用于预览）
-                    playerService.playbackRecords["episode-001"] = record1
-                    playerService.playbackRecords["episode-002"] = record2
-                    playerService.playbackRecords["episode-003"] = record3
+                    print("PlaylistPreview appear")
                 }
         }
     }

@@ -37,10 +37,18 @@ struct PodcastPlayerView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar) // 隐藏底部TabBar
         .onAppear {
-            // 立即清空播放器状态，防止显示上一个节目的字幕
-            playerService.clearCurrentPlaybackState()
+            // 检查是否是同一个episode，如果是则不清空状态
+            let isSameEpisode = playerService.playbackState.currentEpisode?.id == episode.id
             
-            // 只准备节目，不自动播放
+            if !isSameEpisode {
+                // 只有切换到不同节目时才清空播放器状态
+                playerService.clearCurrentPlaybackState()
+                print("🎧 [PlayerView] 切换到新节目，清空播放状态: \(episode.title)")
+            } else {
+                print("🎧 [PlayerView] 打开当前播放节目，保持播放状态: \(episode.title)")
+            }
+            
+            // 准备节目，但不自动播放
             playerService.prepareEpisode(episode)
         }
         .onDisappear {

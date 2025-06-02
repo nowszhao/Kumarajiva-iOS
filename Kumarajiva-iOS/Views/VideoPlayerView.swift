@@ -742,8 +742,21 @@ struct VideoPlayerView: View {
     private func prepareVideoForPlayback() {
         print("📺 [VideoPlayer] 准备视频播放: \(video.title)")
         
-        // 立即清空播放器状态，防止显示上一个视频的字幕
-        playerService.clearCurrentPlaybackState()
+        // 检查是否是同一个视频，如果是则不清空状态
+        let isSameVideo = playerService.playbackState.currentEpisode?.id == video.videoId
+        
+        if !isSameVideo {
+            // 只有切换到不同视频时才清空播放器状态
+            playerService.clearCurrentPlaybackState()
+            print("📺 [VideoPlayer] 切换到新视频，清空播放状态: \(video.title)")
+        } else {
+            print("📺 [VideoPlayer] 打开当前播放视频，保持播放状态: \(video.title)")
+            // 如果是同一个视频且已经准备好，直接返回
+            if playerService.audioPreparationState == .audioReady {
+                print("📺 [VideoPlayer] 视频已准备完成，无需重新处理")
+                return
+            }
+        }
         
         // 使用YouTube音频提取器v2.0获取音频和字幕
         Task {
@@ -791,15 +804,36 @@ struct VideoPlayerView: View {
                         case .videoNotFound:
                             errorMessage = "视频不存在或无法访问"
                         case .serverError(let message):
-                            errorMessage = "服务器错误: \(message)"
+                            if message.contains("无法连接到服务器") {
+                                errorMessage = "无法连接到下载服务器，请稍后重试"
+                            } else {
+                                errorMessage = "服务器错误: \(message)"
+                            }
                         case .downloadFailed(let message):
                             errorMessage = "下载失败: \(message)"
                         case .timeout:
-                            errorMessage = "下载超时，请稍后重试"
+                            errorMessage = "下载超时，请检查网络连接或稍后重试"
                         case .taskCancelled:
                             errorMessage = "下载已取消"
+                        case .invalidURL, .invalidVideoId:
+                            errorMessage = "视频链接无效"
+                        case .parseError:
+                            errorMessage = "数据解析失败，请稍后重试"
+                        case .audioNotAvailable:
+                            errorMessage = "该视频没有可用的音频流"
+                        }
+                    } else if let urlError = error as? URLError {
+                        switch urlError.code {
+                        case .timedOut:
+                            errorMessage = "网络请求超时，请检查网络连接后重试"
+                        case .notConnectedToInternet:
+                            errorMessage = "设备未连接到互联网"
+                        case .networkConnectionLost:
+                            errorMessage = "网络连接中断，请重新连接后重试"
+                        case .cannotFindHost, .cannotConnectToHost:
+                            errorMessage = "无法连接到下载服务器"
                         default:
-                            errorMessage = "播放失败：\(youtubeError.localizedDescription)"
+                            errorMessage = "网络错误: \(urlError.localizedDescription)"
                         }
                     } else {
                         errorMessage = "播放失败，请稍后重试或检查网络连接"

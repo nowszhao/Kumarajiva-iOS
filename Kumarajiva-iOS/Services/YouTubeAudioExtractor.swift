@@ -135,38 +135,66 @@ class YouTubeAudioExtractor: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Kumarajiva-iOS/2.0", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 30
+        request.timeoutInterval = 600  
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("🎵 [YouTubeExtractor] ❌ 无效的HTTP响应")
+                throw YouTubeExtractionError.networkError
+            }
+            
+            print("🎵 [YouTubeExtractor] HTTP状态码: \(httpResponse.statusCode)")
+            
+            guard httpResponse.statusCode == 200 else {
+                if let errorData = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                    print("🎵 [YouTubeExtractor] ❌ 服务器错误: \(errorData.error)")
+                    throw YouTubeExtractionError.serverError(errorData.error)
+                }
+                print("🎵 [YouTubeExtractor] ❌ HTTP错误: \(httpResponse.statusCode)")
+                throw YouTubeExtractionError.serverError("HTTP \(httpResponse.statusCode)")
+            }
+            
+            let startResponse = try JSONDecoder().decode(DownloadStartResponse.self, from: data)
+            
+            await MainActor.run {
+                downloadStatus = startResponse.message
+                if startResponse.filesReady == true {
+                    extractionProgress = 1.0
+                } else {
+                    extractionProgress = 0.1
+                }
+            }
+            
+            return startResponse.taskId
+            
+        } catch let error as URLError {
+            // 详细的网络错误处理
+            print("🎵 [YouTubeExtractor] ❌ 网络错误: \(error.localizedDescription)")
+            print("🎵 [YouTubeExtractor] 错误代码: \(error.code.rawValue)")
+            
+            switch error.code {
+            case .timedOut:
+                throw YouTubeExtractionError.timeout
+            case .notConnectedToInternet, .networkConnectionLost:
+                throw YouTubeExtractionError.networkError
+            case .cannotFindHost, .cannotConnectToHost:
+                throw YouTubeExtractionError.serverError("无法连接到服务器")
+            default:
+                throw YouTubeExtractionError.networkError
+            }
+        } catch let error as YouTubeExtractionError {
+            throw error
+        } catch {
+            print("🎵 [YouTubeExtractor] ❌ 未知错误: \(error)")
             throw YouTubeExtractionError.networkError
         }
-        
-        guard httpResponse.statusCode == 200 else {
-            if let errorData = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
-                throw YouTubeExtractionError.serverError(errorData.error)
-            }
-            throw YouTubeExtractionError.serverError("HTTP \(httpResponse.statusCode)")
-        }
-        
-        let startResponse = try JSONDecoder().decode(DownloadStartResponse.self, from: data)
-        
-        await MainActor.run {
-            downloadStatus = startResponse.message
-            if startResponse.filesReady == true {
-                extractionProgress = 1.0
-            } else {
-                extractionProgress = 0.1
-            }
-        }
-        
-        return startResponse.taskId
     }
     
     /// 轮询下载状态
     private func pollDownloadStatus(videoId: String, taskId: String) async throws -> DownloadStatusResponse {
-        let maxPollingTime: TimeInterval = 600 // 10分钟超时
+        let maxPollingTime: TimeInterval = 900 // 增加到15分钟超时
         let pollingInterval: TimeInterval = 2.0 // 2秒轮询一次
         let startTime = Date()
         
@@ -220,16 +248,37 @@ class YouTubeAudioExtractor: ObservableObject {
         
         var request = URLRequest(url: url)
         request.setValue("Kumarajiva-iOS/2.0", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 10
+        request.timeoutInterval = 30  // 增加到30秒
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw YouTubeExtractionError.networkError
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                print("🎵 [YouTubeExtractor] ❌ 状态查询失败: HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                throw YouTubeExtractionError.networkError
+            }
+            
+            return try JSONDecoder().decode(DownloadStatusResponse.self, from: data)
+            
+        } catch let error as URLError {
+            print("🎵 [YouTubeExtractor] ❌ 状态查询网络错误: \(error.localizedDescription)")
+            switch error.code {
+            case .timedOut:
+                throw YouTubeExtractionError.timeout
+            case .notConnectedToInternet, .networkConnectionLost:
+                throw YouTubeExtractionError.networkError
+            case .cannotFindHost, .cannotConnectToHost:
+                throw YouTubeExtractionError.serverError("无法连接到服务器")
+            default:
+                throw YouTubeExtractionError.networkError
+            }
+        } catch let error as YouTubeExtractionError {
+            throw error
+        } catch {
+            print("🎵 [YouTubeExtractor] ❌ 状态查询解析错误: \(error)")
+            throw YouTubeExtractionError.parseError
         }
-        
-        return try JSONDecoder().decode(DownloadStatusResponse.self, from: data)
     }
     
     /// 取消下载任务
@@ -247,7 +296,7 @@ class YouTubeAudioExtractor: ObservableObject {
             var request = URLRequest(url: url)
             request.httpMethod = "DELETE"
             request.setValue("Kumarajiva-iOS/2.0", forHTTPHeaderField: "User-Agent")
-            request.timeoutInterval = 10
+            request.timeoutInterval = 30  // 增加到30秒
             
             let (_, _) = try await URLSession.shared.data(for: request)
             print("🎵 [YouTubeExtractor] 后端取消请求已发送")
@@ -270,7 +319,7 @@ class YouTubeAudioExtractor: ObservableObject {
         
         var request = URLRequest(url: url)
         request.setValue("Kumarajiva-iOS/2.0", forHTTPHeaderField: "User-Agent")
-        request.timeoutInterval = 15
+        request.timeoutInterval = 60  // 增加到60秒
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
