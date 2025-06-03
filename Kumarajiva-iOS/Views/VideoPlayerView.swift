@@ -505,10 +505,28 @@ struct VideoPlayerView: View {
                 }
             } label: {
                 VStack(spacing: 2) {
-                    Image(systemName: "text.magnifyingglass")
-                        .font(.system(size: 22, weight: .medium))
+                    ZStack {
+                        Image(systemName: "text.magnifyingglass")
+                            .font(.system(size: 22, weight: .medium))
+                        
+                        // 如果有标注单词，显示小红点
+                        if playerService.markedWordCount > 0 {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 8, height: 8)
+                                .offset(x: 8, y: -8)
+                        }
+                    }
+                    
                     Text("生词解析")
                         .font(.system(size: 10, weight: .medium))
+                    
+                    // 显示标注数量
+                    if playerService.markedWordCount > 0 {
+                        Text("(\(playerService.markedWordCount))")
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundColor(.red)
+                    }
                 }
                 .foregroundColor(!playerService.currentSubtitles.isEmpty ? .primary : .secondary)
                 .frame(maxWidth: .infinity)

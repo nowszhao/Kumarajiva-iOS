@@ -715,21 +715,29 @@ struct SubtitleRowView: View {
                 
                 // 字幕文本区域
                 VStack(alignment: .leading, spacing: 0) {
+                    // 始终显示高亮版本，不管是否有标注单词
                     if isActive && !subtitle.words.isEmpty, let time = currentTime {
-                        // 当前活动字幕 - 显示单词高亮
+                        // 当前活动字幕 - 显示播放进度和单词高亮
                         wordHighlightText(for: time)
                             .padding(.vertical, 12)
                             .padding(.horizontal, 16)
                     } else {
-                        // 普通字幕文本
-                        Text(subtitle.text)
-                            .font(.system(size: 15, weight: isActive ? .medium : .regular))
-                            .foregroundColor(isActive ? .primary : .secondary)
-                            .lineSpacing(3)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, isActive ? 12 : 10)
-                            .padding(.horizontal, isActive ? 16 : 12)
+                        // 非活动字幕 - 显示标注单词高亮（如果有的话）
+                        if hasMarkedWords() {
+                            markedWordsHighlightText()
+                                .padding(.vertical, isActive ? 12 : 10)
+                                .padding(.horizontal, isActive ? 16 : 12)
+                        } else {
+                            // 没有标注单词时的普通文本
+                            Text(subtitle.text)
+                                .font(.system(size: 15, weight: isActive ? .medium : .regular))
+                                .foregroundColor(isActive ? .primary : .secondary)
+                                .lineSpacing(3)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, isActive ? 12 : 10)
+                                .padding(.horizontal, isActive ? 16 : 12)
+                        }
                     }
                 }
                 .padding(.bottom, 8)
@@ -765,6 +773,9 @@ struct SubtitleRowView: View {
         for (index, word) in subtitle.words.enumerated() {
             var wordString = AttributedString(word.word)
             
+            // 检查是否为标注单词
+            let isMarkedWord = PodcastPlayerService.shared.isWordMarked(word.word)
+            
             // 根据播放时间设置单词样式 - 仿iPhone播客效果
             if currentTime >= word.startTime && currentTime < word.endTime {
                 // 当前正在播放的单词 - 黄色高亮
@@ -772,13 +783,27 @@ struct SubtitleRowView: View {
                 wordString.font = .system(size: 15, weight: .semibold)
                 wordString.backgroundColor = Color.yellow.opacity(0.8)
             } else if currentTime >= word.endTime {
-                // 已播放的单词 - 主色调
-                wordString.foregroundColor = .primary
-                wordString.font = .system(size: 15, weight: .medium)
+                // 已播放的单词
+                if isMarkedWord {
+                    // 标注的已播放单词 - 橙色
+                    wordString.foregroundColor = .orange
+                    wordString.font = .system(size: 15, weight: .bold)
+                } else {
+                    // 普通已播放单词 - 主色调
+                    wordString.foregroundColor = .primary
+                    wordString.font = .system(size: 15, weight: .medium)
+                }
             } else {
-                // 未播放的单词 - 较淡颜色
-                wordString.foregroundColor = .secondary
-                wordString.font = .system(size: 15, weight: .regular)
+                // 未播放的单词
+                if isMarkedWord {
+                    // 标注的未播放单词 - 蓝色
+                    wordString.foregroundColor = .blue
+                    wordString.font = .system(size: 15, weight: .bold)
+                } else {
+                    // 普通未播放单词 - 较淡颜色
+                    wordString.foregroundColor = .secondary
+                    wordString.font = .system(size: 15, weight: .regular)
+                }
             }
             
             attributedString.append(wordString)
@@ -796,6 +821,55 @@ struct SubtitleRowView: View {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+    
+    private func hasMarkedWords() -> Bool {
+        return !PodcastPlayerService.shared.markedWords.isEmpty
+    }
+    
+    /// 标注单词高亮文本（用于非活动字幕）
+    private func markedWordsHighlightText() -> some View {
+        Text(buildMarkedWordsAttributedString())
+            .font(.system(size: 15, weight: isActive ? .medium : .regular))
+            .lineSpacing(3)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    /// 构建标注单词的属性字符串（用于非活动字幕）
+    private func buildMarkedWordsAttributedString() -> AttributedString {
+        var attributedString = AttributedString()
+        
+        // 使用正则表达式分割单词，保留空格和标点
+        let pattern = #"(\w+|[^\w\s]+|\s+)"#
+        let regex = try! NSRegularExpression(pattern: pattern, options: [])
+        let range = NSRange(location: 0, length: subtitle.text.utf16.count)
+        let matches = regex.matches(in: subtitle.text, options: [], range: range)
+        
+        for match in matches {
+            guard let range = Range(match.range, in: subtitle.text) else { continue }
+            let text = String(subtitle.text[range])
+            
+            var textString = AttributedString(text)
+            
+            // 检查是否为标注单词
+            let cleanText = text.trimmingCharacters(in: .punctuationCharacters)
+            let isMarkedWord = PodcastPlayerService.shared.isWordMarked(cleanText)
+            
+            if isMarkedWord && !cleanText.isEmpty && cleanText.rangeOfCharacter(from: .letters) != nil {
+                // 标注单词：特殊颜色和粗体
+                textString.foregroundColor = .orange
+                textString.font = .system(size: 15, weight: .bold)
+            } else {
+                // 普通文本：使用默认样式
+                textString.foregroundColor = isActive ? .primary : .secondary
+                textString.font = .system(size: 15, weight: isActive ? .medium : .regular)
+            }
+            
+            attributedString.append(textString)
+        }
+        
+        return attributedString
     }
 }
 

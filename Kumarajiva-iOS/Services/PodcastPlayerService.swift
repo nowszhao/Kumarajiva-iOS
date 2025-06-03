@@ -45,6 +45,10 @@ class PodcastPlayerService: NSObject, ObservableObject {
     @Published var vocabularyAnalysisState: VocabularyAnalysisState = .idle
     private let llmService = LLMService.shared
     
+    // MARK: - 生词标注功能
+    @Published var markedWords: Set<String> = []
+    @Published var currentEpisodeId: String? = nil
+    
     // 设置加载超时
     private var loadingTimeoutTimer: Timer?
     
@@ -53,6 +57,10 @@ class PodcastPlayerService: NSObject, ObservableObject {
     
     // 异步加载任务跟踪
     private var currentAssetLoadingTask: DispatchWorkItem?
+    
+    // MARK: - 性能优化
+    private var lastSubtitleUpdateTime: TimeInterval = 0
+    private let subtitleUpdateInterval: TimeInterval = 0.2 // 最小更新间隔200ms
     
     private override init() {
         super.init()
@@ -274,6 +282,9 @@ class PodcastPlayerService: NSObject, ObservableObject {
         
         // 检查是否是同一个节目
         let isSameEpisode = playbackState.currentEpisode?.id == episode.id
+        
+        // 清除标注单词（如果切换到不同音频）
+        clearMarkedWordsIfNeeded(for: episode.id)
         
         if isSameEpisode && audioPreparationState == .audioReady {
             print("🎧 [Player] 节目已准备且音频就绪: \(episode.title)")
@@ -1180,6 +1191,13 @@ class PodcastPlayerService: NSObject, ObservableObject {
     private func updateCurrentSubtitleIndex() {
         let currentTime = playbackState.currentTime
         
+        // 节流机制：限制更新频率，减少性能开销
+        let now = CACurrentMediaTime()
+        if now - lastSubtitleUpdateTime < subtitleUpdateInterval {
+            return
+        }
+        lastSubtitleUpdateTime = now
+        
         // 检查是否需要字幕循环播放
         if playbackState.isLooping, let currentIndex = playbackState.currentSubtitleIndex {
             let currentSubtitle = currentSubtitles[currentIndex]
@@ -1708,6 +1726,32 @@ class PodcastPlayerService: NSObject, ObservableObject {
         await performVocabularyAnalysis(with: selectedText, isSelectiveMode: true)
     }
     
+    /// 分析已标注的单词（新增方法）
+    func analyzeMarkedWords() async {
+        print("🔍 [Vocabulary] 开始解析已标注单词，数量: \(markedWords.count)")
+        
+        guard !markedWords.isEmpty else {
+            print("🔍 [Vocabulary] 失败：未标注任何单词")
+            await MainActor.run {
+                vocabularyAnalysisState = .failed("请先在听力模式中标注单词")
+            }
+            return
+        }
+        
+        print("🔍 [Vocabulary] 标注的单词: \(Array(markedWords).joined(separator: ", "))")
+        
+        await MainActor.run {
+            vocabularyAnalysisState = .analyzing
+        }
+        
+        // 使用标注的单词进行分析
+        let markedText = Array(markedWords).joined(separator: ",")
+        print("🔍 [Vocabulary] 分析文本: \(markedText)")
+        
+        // 使用选择解析模式
+        await performVocabularyAnalysis(with: markedText, isSelectiveMode: true)
+    }
+    
     /// 通用的生词解析逻辑（供全文解析和选择解析共用）
     private func performVocabularyAnalysis(with text: String, isSelectiveMode: Bool = false) async {
         let analysisType = isSelectiveMode ? "选择解析" : "全文解析"
@@ -2044,6 +2088,69 @@ class PodcastPlayerService: NSObject, ObservableObject {
     /// 检查是否为YouTube视频ID格式
     private func isYouTubeVideoId(_ id: String) -> Bool {
         return id.count == 11 && id.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" })
+    }
+    
+    // MARK: - 生词标注功能
+    
+    /// 切换音频时清除标注单词
+    func clearMarkedWordsIfNeeded(for episodeId: String) {
+        if currentEpisodeId != episodeId {
+            print("🎧 [Player] 切换音频，清除标注单词: \(markedWords.count) 个")
+            markedWords.removeAll()
+            currentEpisodeId = episodeId
+        } else if currentEpisodeId == nil {
+            currentEpisodeId = episodeId
+        }
+    }
+    
+    /// 添加或移除标注单词
+    func toggleMarkedWord(_ word: String) {
+        let cleanWord = cleanWordForMarking(word)
+        
+        if markedWords.contains(cleanWord) {
+            markedWords.remove(cleanWord)
+            print("🔖 [Player] 移除标注单词: \(cleanWord)")
+        } else {
+            markedWords.insert(cleanWord)
+            print("🔖 [Player] 添加标注单词: \(cleanWord)")
+        }
+        
+        // 限制标注单词数量，避免性能问题
+        if markedWords.count > 100 {
+            print("🔖 [Player] ⚠️ 标注单词过多，自动清理最旧的标注")
+            let wordsArray = Array(markedWords)
+            markedWords = Set(wordsArray.suffix(80)) // 保留最新的80个
+        }
+    }
+    
+    /// 检查单词是否已标注
+    func isWordMarked(_ word: String) -> Bool {
+        let cleanWord = cleanWordForMarking(word)
+        return markedWords.contains(cleanWord)
+    }
+    
+    /// 清理单词以用于标注（移除标点符号，转换为小写）
+    private func cleanWordForMarking(_ word: String) -> String {
+        return word.lowercased()
+            .trimmingCharacters(in: .punctuationCharacters)
+            .trimmingCharacters(in: .whitespaces)
+    }
+    
+    /// 获取所有标注的单词
+    func getMarkedWords() -> [String] {
+        return Array(markedWords).sorted()
+    }
+    
+    /// 清除所有标注单词
+    func clearAllMarkedWords() {
+        let count = markedWords.count
+        markedWords.removeAll()
+        print("🔖 [Player] 清除所有标注单词: \(count) 个")
+    }
+    
+    /// 获取标注单词数量
+    var markedWordCount: Int {
+        return markedWords.count
     }
 }
 

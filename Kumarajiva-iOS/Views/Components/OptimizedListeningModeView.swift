@@ -11,6 +11,13 @@ struct OptimizedListeningModeView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var isInteracting = false
     
+    // MARK: - 生词标注相关状态
+    @State private var showWordSelectionHint = false
+    
+    // MARK: - 性能优化缓存
+    static let wordRegex = try! NSRegularExpression(pattern: #"[\w']+|[.!?;,]"#, options: [])
+    static let textParsingRegex = try! NSRegularExpression(pattern: #"(\w+|[^\w\s]+|\s+)"#, options: [])
+    
     // MARK: - 计算属性
     private var canSeekBackward: Bool {
         guard playerService.playbackState.currentEpisode != nil else { return false }
@@ -98,7 +105,7 @@ struct OptimizedListeningModeView: View {
 //                topFeedbackView
 //            }
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: playerService.playbackState.isPlaying)
+        .animation(.spring(response: 0.8, dampingFraction: 0.9), value: playerService.playbackState.isPlaying)
         .onReceive(playerService.$playbackState) { state in
             handlePlaybackStateChange(state)
         }
@@ -108,36 +115,27 @@ struct OptimizedListeningModeView: View {
     @ViewBuilder
     private var backgroundView: some View {
         ZStack {
-            // 主背景
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.black.opacity(0.95),
-                    Color.black.opacity(0.90),
-                    Color.black.opacity(0.95)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            // 主背景 - 移除复杂渐变
+            Color.black.opacity(0.95)
+                .ignoresSafeArea()
             
-            // 动态背景效果
+            // 简化的背景效果 - 减少动画频率
             if playerService.playbackState.isPlaying {
                 Circle()
                     .fill(
                         RadialGradient(
                             gradient: Gradient(colors: [
-                                Color.accentColor.opacity(0.15),
-                                Color.accentColor.opacity(0.05),
+                                Color.accentColor.opacity(0.08),
                                 Color.clear
                             ]),
                             center: .center,
                             startRadius: 0,
-                            endRadius: 300
+                            endRadius: 200
                         )
                     )
-                    .scaleEffect(1.5)
-                    .opacity(0.6)
-                    .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: playerService.playbackState.isPlaying)
+                    .scaleEffect(1.2)
+                    .opacity(0.4)
+                    .animation(.easeInOut(duration: 4.0).repeatForever(autoreverses: true), value: playerService.playbackState.isPlaying)
             }
         }
     }
@@ -146,14 +144,18 @@ struct OptimizedListeningModeView: View {
     @ViewBuilder
     private func mainContentView(geometry: GeometryProxy) -> some View {
         VStack(spacing: 0) {
-            // 上区域 - 上一句 (25% 高度)
-            previousSentenceSection(height: geometry.size.height * 0.25)
+            // 顶部间距，为状态栏留出空间
+            Color.clear
+                .frame(height: 80)
             
-            // 中区域 - 字幕显示 (25% 高度)
-            subtitleSection(height: geometry.size.height * 0.25)
+            // 上区域 - 上一句 (15% 高度，缩小)
+            previousSentenceSection(height: (geometry.size.height - 80) * 0.15)
             
-            // 下区域 - 下一句 (50% 高度)
-            nextSentenceSection(height: geometry.size.height * 0.50)
+            // 中区域 - 字幕显示 (35% 高度，增加)
+            subtitleSection(height: (geometry.size.height - 80) * 0.35)
+            
+            // 下区域 - 下一句 (50% 高度，保持)
+            nextSentenceSection(height: (geometry.size.height - 80) * 0.50)
         }
     }
     
@@ -164,28 +166,28 @@ struct OptimizedListeningModeView: View {
         Button {
             handleSeekForward()
         } label: {
-            VStack(spacing: 16) {
+            VStack(spacing: 12) {
                 Spacer()
                 
                 ZStack {
-                    // 背景圆形
+                    // 背景圆形 - 缩小
                     Circle()
                         .fill(.ultraThinMaterial.opacity(0.3))
-                        .frame(width: 80, height: 80)
-                        .shadow(color: .black.opacity(0.3), radius: 15, x: 0, y: 8)
+                        .frame(width: 60, height: 60)
+                        .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
                     
-                    // 图标
+                    // 图标 - 缩小
                     Image(systemName: "goforward.5")
-                        .font(.system(size: 28, weight: .medium))
+                        .font(.system(size: 22, weight: .medium))
                         .foregroundStyle(.white)
                         .scaleEffect(canSeekForward ? 1.0 : 0.8)
                         .opacity(canSeekForward ? 1.0 : 0.4)
                 }
                 
                 Text("+5词")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.9))
-                    .tracking(0.8)
+                    .tracking(0.6)
                 
                 Spacer()
             }
@@ -212,13 +214,7 @@ struct OptimizedListeningModeView: View {
                     Spacer()
                     
                     // 根据播放状态决定显示内容
-                    if !playerService.playbackState.isPlaying {
-                        // 暂停时始终显示字幕
-                        subtitleDisplayView
-                    } else {
-                        // 播放时显示简单的字幕内容
-                        simpleSubtitleView
-                    }
+                    subtitleDisplayView
                     
                     Spacer()
                 }
@@ -301,15 +297,15 @@ struct OptimizedListeningModeView: View {
         VStack(spacing: 10) {
             // 字幕文本
             if let currentSubtitle = getCurrentSubtitle() {
-                VStack(spacing: 4) {
-                    // 主要文本
-                    Text(currentSubtitle.text)
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(3)
-                        .padding(.horizontal, 14)
-                        .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 1)
+                VStack(spacing: 8) {
+                    // 根据播放状态决定显示交互式或只读字幕
+                    if playerService.playbackState.isPlaying {
+                        // 播放时：只读显示，但保持高亮
+                        readOnlySubtitleView(currentSubtitle)
+                    } else {
+                        // 暂停时：可交互字幕
+                        interactiveSubtitleView(currentSubtitle)
+                    }
                 }
             } else {
                 VStack(spacing: 8) {
@@ -323,32 +319,65 @@ struct OptimizedListeningModeView: View {
                 }
             }
             
-            // 播放/暂停提示
-            if !playerService.playbackState.isPlaying {
-                HStack(spacing: 1) {
-                    Image(systemName: "play.circle")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.5))
+            // 标注提示和状态
+            subtitleInteractionHint
+        }
+    }
+    
+    // MARK: - 只读字幕视图（播放时）
+    @ViewBuilder
+    private func readOnlySubtitleView(_ subtitle: Subtitle) -> some View {
+        VStack(spacing: 4) {
+            // 始终显示带实时高亮的文本 - 使用AttributedString
+            Text(buildMarkedWordsAttributedString(subtitle.text))
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .padding(.horizontal, 14)
+                .shadow(color: .black.opacity(0.4), radius: 3, x: 0, y: 1)
+        }
+    }
+    
+    // MARK: - 可交互字幕视图（暂停时）
+    @ViewBuilder
+    private func interactiveSubtitleView(_ subtitle: Subtitle) -> some View {
+        VStack(spacing: 8) {
+            // 可交互的字幕文本 - 使用AttributedString点击
+            InteractiveTextView(
+                subtitle: subtitle,
+                playerService: playerService,
+                onWordTap: { word in
+                    handleWordTap(word)
+                }
+            )
+            .padding(.horizontal, 14)
+            
+            // 标注统计
+            if playerService.markedWordCount > 0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "bookmark.fill")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.yellow.opacity(0.8))
                     
-                    Text("点击继续播放")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.5))
+                    Text("已标注 \(playerService.markedWordCount) 个单词")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.6))
                 }
             }
         }
     }
     
-    // MARK: - 简单字幕视图（播放时）
+    // MARK: - 标注提示和状态
     @ViewBuilder
-    private var simpleSubtitleView: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "text.bubble")
-                .font(.system(size: 28, weight: .light))
+    private var subtitleInteractionHint: some View {
+        if playerService.playbackState.isPlaying {
+            Text("播放中，可点击暂停")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.5))
-            
-            Text("播放中，可点击暂停查看字幕")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.6))
+        } else {
+            Text("暂停中，可点击继续播放")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.5))
         }
     }
     
@@ -452,6 +481,87 @@ struct OptimizedListeningModeView: View {
         }
         return playerService.currentSubtitles[currentIndex]
     }
+    
+    // MARK: - 生词标注辅助方法
+    
+    /// 解析文本为单词数组
+    private func parseWordsFromText(_ text: String) -> [String] {
+        // 使用缓存的正则表达式，避免重复编译
+        let range = NSRange(location: 0, length: text.utf16.count)
+        let matches = OptimizedListeningModeView.wordRegex.matches(in: text, options: [], range: range)
+        
+        return matches.compactMap { match -> String? in
+            guard let range = Range(match.range, in: text) else { return nil }
+            let word = String(text[range])
+            
+            // 过滤掉单独的标点符号
+            if word.count == 1 && CharacterSet.punctuationCharacters.contains(word.unicodeScalars.first!) {
+                return nil
+            }
+            
+            return word
+        }
+    }
+    
+    /// 处理单词点击
+    private func handleWordTap(_ word: String) {
+        // 添加触觉反馈
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+        
+        // 切换标注状态
+        playerService.toggleMarkedWord(word)
+        
+        // 显示短暂的视觉反馈
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showWordSelectionHint = true
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showWordSelectionHint = false
+            }
+        }
+    }
+    
+    // MARK: - 构建标注单词的属性字符串
+    /// 构建带标注高亮的属性字符串（用于只读模式）
+    private func buildMarkedWordsAttributedString(_ text: String) -> AttributedString {
+        var attributedString = AttributedString()
+        
+        // 使用缓存的正则表达式，避免重复编译
+        let range = NSRange(location: 0, length: text.utf16.count)
+        let matches = OptimizedListeningModeView.textParsingRegex.matches(in: text, options: [], range: range)
+        
+        for match in matches {
+            guard let range = Range(match.range, in: text) else { continue }
+            let textPart = String(text[range])
+            
+            var textString = AttributedString(textPart)
+            
+            // 检查是否为标注单词
+            let cleanText = textPart.trimmingCharacters(in: .punctuationCharacters)
+            let isMarkedWord = playerService.isWordMarked(cleanText)
+            
+            // 统一使用相同的字体重量，只改变颜色和背景
+            let baseFont = Font.system(size: 16, weight: .medium, design: .rounded)
+            
+            if isMarkedWord && !cleanText.isEmpty && cleanText.rangeOfCharacter(from: .letters) != nil {
+                // 标注单词：黄色背景高亮
+                textString.foregroundColor = .black
+                textString.font = baseFont
+                textString.backgroundColor = .yellow.opacity(0.8)
+            } else {
+                // 普通文本：白色，无背景
+                textString.foregroundColor = .white.opacity(0.9)
+                textString.font = baseFont
+            }
+            
+            attributedString.append(textString)
+        }
+        
+        return attributedString
+    }
 }
 
 // MARK: - 听力模式交互样式
@@ -461,6 +571,57 @@ struct ListeningInteractionStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
             .opacity(configuration.isPressed ? 0.85 : 1.0)
             .animation(.easeInOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+// MARK: - 交互式文本视图
+struct InteractiveTextView: View {
+    let subtitle: Subtitle
+    let playerService: PodcastPlayerService
+    let onWordTap: (String) -> Void
+    
+    var body: some View {
+        // 使用已有的FlowLayout，只需要spacing参数
+        FlowLayout(spacing: 6) {
+            ForEach(Array(parseWordsFromText(subtitle.text).enumerated()), id: \.offset) { index, word in
+                Button(action: {
+                    onWordTap(word)
+                }) {
+                    Text(word)
+                        .font(.system(size: 16, weight: .medium, design: .rounded)) // 统一字体重量
+                        .foregroundStyle(playerService.isWordMarked(word) ? .black : .white.opacity(0.9))
+                        .background(
+                            // 使用背景色区分标注状态，避免字体变化
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(playerService.isWordMarked(word) ? .yellow.opacity(0.8) : .gray.opacity(0.3))
+                        )
+                        .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1) // 统一阴影
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .padding(.horizontal, 8)
+    }
+    
+    /// 解析文本为单词数组
+    private func parseWordsFromText(_ text: String) -> [String] {
+        // 使用缓存的正则表达式，避免重复编译
+        let range = NSRange(location: 0, length: text.utf16.count)
+        let matches = OptimizedListeningModeView.wordRegex.matches(in: text, options: [], range: range)
+        
+        return matches.compactMap { match -> String? in
+            guard let range = Range(match.range, in: text) else { return nil }
+            let word = String(text[range])
+            
+            // 过滤掉单独的标点符号
+            if word.count == 1 && CharacterSet.punctuationCharacters.contains(word.unicodeScalars.first!) {
+                return nil
+            }
+            
+            return word
+        }
     }
 }
 

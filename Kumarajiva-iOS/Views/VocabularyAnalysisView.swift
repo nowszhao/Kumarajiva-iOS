@@ -172,6 +172,7 @@ struct VocabularyAnalysisView: View {
                 // 选择解析
                 Button {
                     selectedMode = .selective
+                    selectAllMarkedWords()
                     currentStep = .wordSelection
                 } label: {
                     HStack(spacing: 16) {
@@ -551,6 +552,21 @@ struct VocabularyAnalysisView: View {
             }
         }
     }
+    
+    private func selectAllMarkedWords() {
+        var marked: Set<String> = []
+        for subtitle in playerService.currentSubtitles {
+            let words = subtitle.text.components(separatedBy: .whitespacesAndNewlines)
+                .map { $0.trimmingCharacters(in: .punctuationCharacters) }
+                .filter { !$0.isEmpty && $0.rangeOfCharacter(from: .letters) != nil }
+            for word in words {
+                if PodcastPlayerService.shared.isWordMarked(word) {
+                    marked.insert(word.lowercased())
+                }
+            }
+        }
+        selectedWords = marked
+    }
 }
 
 // MARK: - 生词卡片视图
@@ -852,26 +868,29 @@ struct SubtitleWordSelectionView: View {
     }
     
     private func wordButton(_ word: String) -> some View {
-        Button {
+        let isSelected = isWordSelected(word)
+        let isMarked = PodcastPlayerService.shared.isWordMarked(word)
+        
+        return Button {
             toggleWordSelection(word)
         } label: {
             Text(word)
-                .font(.system(size: 16))
-                .foregroundColor(isWordSelected(word) ? .white : .primary)
+                .font(.system(size: 16, weight: isMarked ? .bold : .regular))
+                .foregroundColor(buttonTextColor(isSelected: isSelected, isMarked: isMarked))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(isWordSelected(word) ? Color.accentColor : Color(.systemGray6))
+                        .fill(buttonBackgroundColor(isSelected: isSelected, isMarked: isMarked))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isWordSelected(word) ? Color.accentColor : Color.clear, lineWidth: 1)
+                        .stroke(buttonBorderColor(isSelected: isSelected, isMarked: isMarked), lineWidth: isMarked ? 2 : 1)
                 )
         }
         .buttonStyle(PlainButtonStyle())
-        .scaleEffect(isWordSelected(word) ? 1.05 : 1.0)
-        .animation(.easeInOut(duration: 0.2), value: isWordSelected(word))
+        .scaleEffect(isSelected ? 1.05 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
     
     // 处理的单词列表（过滤标点符号等）
@@ -896,6 +915,39 @@ struct SubtitleWordSelectionView: View {
         // 添加触觉反馈
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
         impactFeedback.impactOccurred()
+    }
+    
+    /// 按钮文字颜色
+    private func buttonTextColor(isSelected: Bool, isMarked: Bool) -> Color {
+        if isSelected {
+            return .white
+        } else if isMarked {
+            return .orange
+        } else {
+            return .primary
+        }
+    }
+    
+    /// 按钮背景颜色
+    private func buttonBackgroundColor(isSelected: Bool, isMarked: Bool) -> Color {
+        if isSelected {
+            return isMarked ? Color.orange : Color.accentColor
+        } else if isMarked {
+            return Color.orange.opacity(0.1)
+        } else {
+            return Color(.systemGray6)
+        }
+    }
+    
+    /// 按钮边框颜色
+    private func buttonBorderColor(isSelected: Bool, isMarked: Bool) -> Color {
+        if isSelected {
+            return isMarked ? Color.orange : Color.accentColor
+        } else if isMarked {
+            return Color.orange
+        } else {
+            return Color.clear
+        }
     }
     
     private func formatTime(_ time: TimeInterval) -> String {
