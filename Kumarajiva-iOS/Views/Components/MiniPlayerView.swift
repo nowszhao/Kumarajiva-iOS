@@ -69,7 +69,9 @@ struct MiniPlayerView: View {
             .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: -2)
             .sheet(isPresented: $showingPlayer) {
                 if let episode = playerService.playbackState.currentEpisode {
-                    PodcastPlayerView(episode: episode)
+                    NavigationView {
+                        PodcastPlayerView(episode: episode)
+                    }
                 }
             }
             .sheet(isPresented: $showingPlaylist) {

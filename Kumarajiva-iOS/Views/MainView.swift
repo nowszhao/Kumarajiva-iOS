@@ -5,17 +5,12 @@ struct MainView: View {
         TabView {
             WordLearningView()
                 .tabItem {
-                    Label("记单词", systemImage: "book.fill")
+                    Label("单词", systemImage: "book.fill")
                 }
             
-            ListeningPracticeView()
+            SubscriptionView()
                 .tabItem {
-                    Label("练听力", systemImage: "headphones")
-                }
-            
-            VideoListeningView()
-                .tabItem {
-                    Label("听视频", systemImage: "play.rectangle.fill")
+                    Label("订阅", systemImage: "star.fill")
                 }
             
             ProfileView()

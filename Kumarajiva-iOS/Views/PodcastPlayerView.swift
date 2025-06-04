@@ -5,6 +5,7 @@ struct PodcastPlayerView: View {
     @StateObject private var playerService = PodcastPlayerService.shared
     @StateObject private var taskManager = SubtitleGenerationTaskManager.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) var presentationMode
     
     // 添加状态变量来防止意外回退
     @State private var showingErrorAlert = false
@@ -12,29 +13,32 @@ struct PodcastPlayerView: View {
     @State private var showingVocabularyAnalysis = false
     // 新增：控制配置面板的显示状态
     @State private var showingConfigPanel = false
-    // 新增：控制听力模式的状态
-    @State private var isListeningMode = false
+    
+    // 检测是否在sheet中展示
+    private var isInSheet: Bool {
+        return presentationMode.wrappedValue.isPresented
+    }
     
     var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                // 字幕显示区域
-                subtitleDisplayView
-                
-                // 播放控制面板
-                playbackControlView
-            }
+        VStack(spacing: 0) {
+            // 字幕显示区域
+            subtitleDisplayView
             
-            // 听力模式浮层
-            if isListeningMode {
-                OptimizedListeningModeView(
-                    isPresented: $isListeningMode,
-                    playerService: playerService
-                )
-                .transition(.opacity)
-            }
+            // 播放控制面板
+            playbackControlView
         }
         .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(episode.title)
+        .navigationBarBackButtonHidden(isInSheet)
+        .toolbar {
+            if isInSheet {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("完成") {
+                        dismiss()
+                    }
+                }
+            }
+        }
         .toolbar(.hidden, for: .tabBar) // 隐藏底部TabBar
         .onAppear {
             // 检查是否是同一个episode，如果是则不清空状态
@@ -462,12 +466,7 @@ struct PodcastPlayerView: View {
             .disabled(playerService.isGeneratingSubtitles)
             
             // 听力模式
-            Button {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isListeningMode = true
-                    showingConfigPanel = false
-                }
-            } label: {
+            NavigationLink(destination: ListeningModeView(playerService: playerService)) {
                 VStack(spacing: 2) {
                     Image(systemName: "headphones.circle")
                         .font(.system(size: 22, weight: .medium))
@@ -478,6 +477,7 @@ struct PodcastPlayerView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
             }
+            .disabled(playerService.isGeneratingSubtitles || playerService.currentSubtitles.isEmpty)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 8)

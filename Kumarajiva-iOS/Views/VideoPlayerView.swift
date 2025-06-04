@@ -12,33 +12,21 @@ struct VideoPlayerView: View {
     @State private var errorMessage = ""
     @State private var showingVocabularyAnalysis = false
     @State private var showingConfigPanel = false
-    @State private var isListeningMode = false
     @State private var showDownloadProgress = false
     
     var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                // YouTube下载进度顶部栏
-                if showDownloadProgress {
-                    downloadProgressTopBar
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-                
-                // 字幕显示区域
-                subtitleDisplayView
-                
-                // 播放控制面板
-                playbackControlView
+        VStack(spacing: 0) {
+            // YouTube下载进度顶部栏
+            if showDownloadProgress {
+                downloadProgressTopBar
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
             
-            // 听力模式浮层
-            if isListeningMode {
-                OptimizedListeningModeView(
-                    isPresented: $isListeningMode,
-                    playerService: playerService
-                )
-                .transition(.opacity)
-            }
+            // 字幕显示区域
+            subtitleDisplayView
+            
+            // 播放控制面板
+            playbackControlView
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar) // 隐藏底部TabBar
@@ -554,12 +542,7 @@ struct VideoPlayerView: View {
             .disabled(playerService.isGeneratingSubtitles)
             
             // 听力模式
-            Button {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isListeningMode = true
-                    showingConfigPanel = false
-                }
-            } label: {
+            NavigationLink(destination: ListeningModeView(playerService: playerService)) {
                 VStack(spacing: 2) {
                     Image(systemName: "headphones.circle")
                         .font(.system(size: 22, weight: .medium))
@@ -570,6 +553,7 @@ struct VideoPlayerView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
             }
+            .disabled(playerService.isGeneratingSubtitles || playerService.currentSubtitles.isEmpty)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 8)

@@ -1,0 +1,13 @@
+
+# 基本配置
+excluded_paths:
+  - ./Pods         # 排除第三方库
+  - ./Tests        # 排除测试代码
+included_paths:
+  - ./Kumarajiva-iOS      # 指定扫描目录
+
+# 检测规则（默认包含所有规则）
+rules:
+  - unused_class
+  - unused_function
+  - unused_enum_case

@@ -8,7 +8,6 @@ struct HistoryView: View {
     @State private var currentPlayingWord: String? = nil
     @State private var showingFilterSheet = false
     @State private var selectedHistory: ReviewHistoryItem? = nil
-    @State private var showingSpeechPractice = false
     @AppStorage("lastPlaybackIndex") private var lastPlaybackIndex: Int = 0
     
     private var filterTypeText: String {
@@ -38,13 +37,11 @@ struct HistoryView: View {
         .task {
             await viewModel.loadHistory(filter: selectedFilter)
         }
-        .sheet(isPresented: $showingSpeechPractice) {
-            if let history = selectedHistory {
-                SpeechPracticeView(reviewHistory: history)
-                    .onAppear {
-                        print("🔥 [HistoryView] Sheet 已显示，selectedHistory: \(history.word)")
-                    }
-            }
+        .sheet(item: $selectedHistory) { history in
+            SpeechPracticeView(reviewHistory: history)
+                .onAppear {
+                    print("🔥 [HistoryView] Sheet 已显示，selectedHistory: \(history.word)")
+                }
         }
     }
     
@@ -173,9 +170,9 @@ struct HistoryView: View {
     private func historyItemButton(for history: ReviewHistoryItem) -> some View {
         Button(action: {
             print("🔥 [HistoryView] 点击了单词: \(history.word)")
+            print("🔥 [HistoryView] 设置前 selectedHistory: \(selectedHistory?.word ?? "nil")")
             selectedHistory = history
-            showingSpeechPractice = true
-            print("🔥 [HistoryView] showingSpeechPractice 设置为: \(showingSpeechPractice)")
+            print("🔥 [HistoryView] 设置后 selectedHistory: \(selectedHistory?.word ?? "nil")")
         }) {
             HStack(spacing: 12) {
             historyItemContent(for: history)

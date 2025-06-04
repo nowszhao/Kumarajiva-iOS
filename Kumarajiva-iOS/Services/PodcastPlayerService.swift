@@ -62,6 +62,12 @@ class PodcastPlayerService: NSObject, ObservableObject {
     private var lastSubtitleUpdateTime: TimeInterval = 0
     private let subtitleUpdateInterval: TimeInterval = 0.2 // 最小更新间隔200ms
     
+    // MARK: - 锁屏显示信息更新优化
+    private var lastNowPlayingUpdateTime: Date = Date.distantPast
+    private let nowPlayingUpdateInterval: TimeInterval = 2.0 // 最小更新间隔2秒
+    
+    private var lastLoggedTime: TimeInterval = 0 // 用于时间更新日志节流
+    
     private override init() {
         super.init()
         Task { @MainActor in
@@ -650,9 +656,9 @@ class PodcastPlayerService: NSObject, ObservableObject {
             }
         }
         
-        // 添加时间观察者
+        // 添加时间观察者 - 优化更新频率
         let timeScale = CMTimeScale(NSEC_PER_SEC)
-        let time = CMTime(seconds: 0.1, preferredTimescale: timeScale)
+        let time = CMTime(seconds: 0.5, preferredTimescale: timeScale) // 从0.1秒改为0.5秒
         
         timeObserver = player.addPeriodicTimeObserver(forInterval: time, queue: .main) { [weak self] time in
             self?.handleTimeUpdate(time)
@@ -844,11 +850,20 @@ class PodcastPlayerService: NSObject, ObservableObject {
             let oldTime = playbackState.currentTime
             playbackState.currentTime = currentTime
             
-            // 每5秒打印一次时间更新，避免日志过多
-            if Int(currentTime) % 5 == 0 && Int(oldTime) != Int(currentTime) {
+            // 节流字幕更新检查
+            let now = CACurrentMediaTime()
+            if now - lastSubtitleUpdateTime >= subtitleUpdateInterval {
+                updateCurrentSubtitleIndex()
+                lastSubtitleUpdateTime = now
+            }
+            
+            
+            // 减少日志输出频率 - 只在时间有显著变化时输出（每10秒）
+            if abs(currentTime - lastLoggedTime) >= 10.0 {
                 print("🎧 [Player] 时间更新: \(formatTime(currentTime)) / \(formatTime(playbackState.duration))")
+                lastLoggedTime = currentTime
                 
-                // 检查播放器实际状态
+                // 在日志输出时检查播放器状态，避免过度频繁检查
                 if let player = audioPlayer {
                     print("🎧 [Player] 播放器状态检查: rate=\(player.rate), isPlaying=\(playbackState.isPlaying)")
                     
@@ -858,34 +873,6 @@ class PodcastPlayerService: NSObject, ObservableObject {
                         player.play()
                     }
                 }
-            }
-            
-            // 检查播放是否真正开始（前10秒更频繁检查）
-            if currentTime < 10 && Int(currentTime) != Int(oldTime) {
-                print("🎧 [Player] 播放开始阶段: \(formatTime(currentTime)), rate=\(audioPlayer?.rate ?? 0)")
-            }
-            
-            // 更新播放历史记录
-            if let episode = playbackState.currentEpisode {
-                updatePlaybackRecord(
-                    for: episode.id,
-                    currentTime: currentTime,
-                    duration: playbackState.duration
-                )
-                
-                // 注释掉频繁的episode打印，避免日志噪音
-                // print("zch====currentEpisode:",episode)
-            }
-            
-            
-            // 更新字幕索引
-            updateCurrentSubtitleIndex()
-        } else {
-            print("🎧 [Player] ⚠️ 时间无效: \(time.seconds)")
-            
-            // 时间无效时检查播放器状态
-            if let player = audioPlayer {
-                print("🎧 [Player] 时间无效时播放器状态: rate=\(player.rate), status=\(player.status.rawValue)")
             }
         }
     }
@@ -1150,9 +1137,6 @@ class PodcastPlayerService: NSObject, ObservableObject {
             seek(to: currentSubtitles[0].startTime)
         }
         
-        // 更新锁屏显示信息
-        updateNowPlayingInfo()
-        
         print("🎧 [Player] 手动切换到上一条字幕")
     }
     
@@ -1167,9 +1151,6 @@ class PodcastPlayerService: NSObject, ObservableObject {
             playbackState.currentSubtitleIndex = currentIndex + 1
             seek(to: nextSubtitle.startTime)
         }
-        
-        // 更新锁屏显示信息
-        updateNowPlayingInfo()
         
         print("🎧 [Player] 手动切换到下一条字幕")
     }
@@ -1242,9 +1223,6 @@ class PodcastPlayerService: NSObject, ObservableObject {
                     
                     playbackState.currentSubtitleIndex = index
                     print("🎧 [Player] ✅ 字幕切换到索引: \(index)")
-                    
-                    // 字幕切换时更新锁屏显示信息
-                    updateNowPlayingInfo()
                 }
                 return
             }
@@ -1581,6 +1559,17 @@ class PodcastPlayerService: NSObject, ObservableObject {
     
     // MARK: - 锁屏显示信息更新
     private func updateNowPlayingInfo() {
+        if(1==1){
+            return
+        }
+        
+        // 节流机制：避免过于频繁的更新
+        let now = Date()
+        if now.timeIntervalSince(lastNowPlayingUpdateTime) < nowPlayingUpdateInterval {
+            return
+        }
+        lastNowPlayingUpdateTime = now
+        
         guard let episode = playbackState.currentEpisode else {
             clearNowPlayingInfo()
             return
