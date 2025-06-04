@@ -4,8 +4,6 @@ struct PodcastPlayerView: View {
     let episode: PodcastEpisode
     @StateObject private var playerService = PodcastPlayerService.shared
     @StateObject private var taskManager = SubtitleGenerationTaskManager.shared
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.presentationMode) var presentationMode
     
     // 添加状态变量来防止意外回退
     @State private var showingErrorAlert = false
@@ -13,11 +11,8 @@ struct PodcastPlayerView: View {
     @State private var showingVocabularyAnalysis = false
     // 新增：控制配置面板的显示状态
     @State private var showingConfigPanel = false
-    
-    // 检测是否在sheet中展示
-    private var isInSheet: Bool {
-        return presentationMode.wrappedValue.isPresented
-    }
+    @State private var isSeeking = false
+    @State private var seekDebounceTimer: Timer?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -28,17 +23,6 @@ struct PodcastPlayerView: View {
             playbackControlView
         }
         .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle(episode.title)
-        .navigationBarBackButtonHidden(isInSheet)
-        .toolbar {
-            if isInSheet {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
-                        dismiss()
-                    }
-                }
-            }
-        }
         .toolbar(.hidden, for: .tabBar) // 隐藏底部TabBar
         .onAppear {
             // 检查是否是同一个episode，如果是则不清空状态
@@ -59,6 +43,10 @@ struct PodcastPlayerView: View {
             // 离开页面时不停止播放，让音频继续在后台播放
             // 用户可以通过底部的MiniPlayerView控制播放
             print("🎧 [PlayerView] 页面消失，音频继续播放")
+            
+            // 清理计时器
+            seekDebounceTimer?.invalidate()
+            seekDebounceTimer = nil
         }
         // 添加错误处理，但不自动回退页面
         .onReceive(playerService.$errorMessage) { errorMessage in
@@ -87,11 +75,6 @@ struct PodcastPlayerView: View {
         VStack(spacing: 16) {
             // 节目信息
             VStack(spacing: 8) {
-                Text(episode.title)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                
                 Text(formatDate(episode.publishDate))
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -366,11 +349,36 @@ struct PodcastPlayerView: View {
                     },
                     set: { newValue in
                         guard playerService.audioPreparationState == .audioReady else { return }
+                        
+                        // 取消之前的防抖动计时器
+                        seekDebounceTimer?.invalidate()
+                        
+                        // 设置 seeking 状态
+                        isSeeking = true
+                        
                         let newTime = newValue * playerService.playbackState.duration
-                        playerService.seek(to: newTime)
+                        
+                        // 立即更新时间显示（无需等待真实 seek）
+                        playerService.playbackState.currentTime = newTime
+                        
+                        // 设置新的防抖动计时器
+                        seekDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
+                            playerService.seek(to: newTime)
+                            
+                            // 延迟清除 seeking 状态
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                isSeeking = false
+                            }
+                        }
                     }
                 ),
-                in: 0...1
+                in: 0...1,
+                onEditingChanged: { editing in
+                    if !editing {
+                        // 用户结束拖动时，确保执行最后一次 seek
+                        seekDebounceTimer?.fire()
+                    }
+                }
             )
             .accentColor(.accentColor)
             .frame(height: 10) // 减少触摸区域高度
@@ -386,19 +394,29 @@ struct PodcastPlayerView: View {
                 
                 // 显示总时长或准备状态
                 Group {
-                    switch playerService.audioPreparationState {
-                    case .preparing:
-                        Text("准备中...")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.accentColor)
-                    case .failed:
-                        Text("加载失败")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.red)
-                    default:
-                        Text(playerService.formatTime(playerService.playbackState.duration))
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(.secondary)
+                    if isSeeking {
+                        HStack(spacing: 4) {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                            Text("跳转中...")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.accentColor)
+                        }
+                    } else {
+                        switch playerService.audioPreparationState {
+                        case .preparing:
+                            Text("准备中...")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.accentColor)
+                        case .failed:
+                            Text("加载失败")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.red)
+                        default:
+                            Text(playerService.formatTime(playerService.playbackState.duration))
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
             }

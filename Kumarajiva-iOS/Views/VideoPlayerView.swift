@@ -13,6 +13,8 @@ struct VideoPlayerView: View {
     @State private var showingVocabularyAnalysis = false
     @State private var showingConfigPanel = false
     @State private var showDownloadProgress = false
+    @State private var isSeeking = false
+    @State private var seekDebounceTimer: Timer?
     
     var body: some View {
         VStack(spacing: 0) {
@@ -39,6 +41,10 @@ struct VideoPlayerView: View {
         .onDisappear {
             // 离开页面时音频继续播放
             print("📺 [VideoPlayer] 页面消失，音频继续播放")
+            
+            // 清理计时器
+            seekDebounceTimer?.invalidate()
+            seekDebounceTimer = nil
         }
         .onReceive(youtubeExtractor.$downloadStatus) { status in
             print("📺 [VideoPlayer] 下载状态更新: '\(status)'")
@@ -163,11 +169,6 @@ struct VideoPlayerView: View {
         VStack(spacing: 16) {
             // 视频信息
             VStack(spacing: 8) {
-                Text(video.title)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                
                 Text(formatDate(video.publishDate))
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -422,15 +423,40 @@ struct VideoPlayerView: View {
                     },
                     set: { newValue in
                         guard playerService.audioPreparationState == .audioReady else { return }
+                        
+                        // 取消之前的防抖动计时器
+                        seekDebounceTimer?.invalidate()
+                        
+                        // 设置 seeking 状态
+                        isSeeking = true
+                        
                         let newTime = newValue * playerService.playbackState.duration
-                        playerService.seek(to: newTime)
+                        
+                        // 立即更新时间显示（无需等待真实 seek）
+                        playerService.playbackState.currentTime = newTime
+                        
+                        // 设置新的防抖动计时器
+                        seekDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
+                            playerService.seek(to: newTime)
+                            
+                            // 延迟清除 seeking 状态
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                isSeeking = false
+                            }
+                        }
                     }
                 ),
-                in: 0...1
+                in: 0...1,
+                onEditingChanged: { editing in
+                    if !editing {
+                        // 用户结束拖动时，确保执行最后一次 seek
+                        seekDebounceTimer?.fire()
+                    }
+                }
             )
             .accentColor(.accentColor)
             .frame(height: 10)
-            .disabled(playerService.audioPreparationState != .audioReady)
+            .disabled(playerService.audioPreparationState != .audioReady || isSeeking)
             
             // 时间显示
             HStack {
@@ -441,19 +467,29 @@ struct VideoPlayerView: View {
                 Spacer()
                 
                 Group {
-                    switch playerService.audioPreparationState {
-                    case .preparing:
-                        Text("准备中...")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.accentColor)
-                    case .failed:
-                        Text("加载失败")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.red)
-                    default:
-                        Text(playerService.formatTime(playerService.playbackState.duration))
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(.secondary)
+                    if isSeeking {
+                        HStack(spacing: 4) {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                            Text("跳转中...")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.accentColor)
+                        }
+                    } else {
+                        switch playerService.audioPreparationState {
+                        case .preparing:
+                            Text("准备中...")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.accentColor)
+                        case .failed:
+                            Text("加载失败")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.red)
+                        default:
+                            Text(playerService.formatTime(playerService.playbackState.duration))
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
             }
