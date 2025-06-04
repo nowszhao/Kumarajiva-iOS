@@ -398,9 +398,10 @@ struct ListeningModeView: View {
                 }
                 
                 Spacer()
-                // 中间的听力模式状态信息
+            }
+            .overlay {
+                // 中间的听力模式状态信息 - 使用overlay确保真正居中
                 statusInfoView
-                Spacer()
             }
             .padding(.horizontal, 20)
             .padding(.top, 10)

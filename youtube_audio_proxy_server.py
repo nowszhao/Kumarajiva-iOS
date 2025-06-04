@@ -557,15 +557,60 @@ def get_file_path(video_id: str, file_type: str) -> Path:
     else:
         raise ValueError(f"Unknown file type: {file_type}")
 
+def find_actual_audio_file(video_id: str) -> Optional[Path]:
+    """查找实际存在的音频文件路径，统一逻辑避免重复代码"""
+    # 首先检查任务中记录的实际文件路径
+    if video_id in tasks:
+        task = tasks[video_id]
+        if task.audio_file and Path(task.audio_file).exists():
+            actual_file = Path(task.audio_file)
+            if actual_file.stat().st_size > 0:
+                return actual_file
+    
+    # 检查默认路径
+    default_audio_file = get_file_path(video_id, "audio")
+    if default_audio_file.exists() and default_audio_file.stat().st_size > 0:
+        return default_audio_file
+    
+    # 尝试查找实际存在的音频文件
+    base_path = default_audio_file.with_suffix('')
+    possible_files = [
+        base_path,  # 无扩展名文件
+        Path(str(base_path) + '.m4a'),
+        Path(str(base_path) + '.mp4'),
+        Path(str(base_path) + '.aac'),
+        Path(str(base_path) + '.webm'),
+        Path(str(base_path) + '.mp3')
+    ]
+    
+    for candidate in possible_files:
+        if candidate.exists() and candidate.stat().st_size > 0:
+            return candidate
+    
+    return None
+
 def cleanup_old_files():
-    """清理过期文件（12小时）"""
+    """清理过期文件（12小时），增强保护机制避免删除仍在使用的文件"""
     try:
         cutoff_time = datetime.now() - timedelta(hours=CACHE_EXPIRE_HOURS)
         cleaned_count = 0
         
+        # 收集当前所有任务中记录的文件路径（正在使用的文件）
+        protected_files = set()
+        for video_id, task in tasks.items():
+            if task.audio_file:
+                protected_files.add(Path(task.audio_file).resolve())
+            if task.subtitle_file:
+                protected_files.add(Path(task.subtitle_file).resolve())
+        
         # 清理下载文件
         for file_path in DOWNLOAD_DIR.glob("*"):
             if file_path.is_file():
+                # 额外保护：跳过正在使用的文件
+                if file_path.resolve() in protected_files:
+                    logger.info(f"🛡️ 跳过正在使用的文件: {file_path.name}")
+                    continue
+                    
                 file_time = datetime.fromtimestamp(file_path.stat().st_mtime)
                 if file_time < cutoff_time:
                     try:
@@ -575,7 +620,7 @@ def cleanup_old_files():
                     except Exception as e:
                         logger.error(f"❌ 删除文件失败 {file_path}: {e}")
         
-        # 清理缓存文件
+        # 清理缓存文件（保持原有逻辑）
         for file_path in CACHE_DIR.glob("*"):
             if file_path.is_file():
                 file_time = datetime.fromtimestamp(file_path.stat().st_mtime)
@@ -592,6 +637,7 @@ def cleanup_old_files():
         
         if cleaned_count > 0 or cleaned_tasks > 0:
             logger.info(f"🧹 清理完成: 删除了 {cleaned_count} 个过期文件，{cleaned_tasks} 个旧任务记录")
+            logger.info(f"🛡️ 保护了 {len(protected_files)} 个正在使用的文件")
         
     except Exception as e:
         logger.error(f"❌ 文件清理失败: {e}")
@@ -635,8 +681,14 @@ def check_existing_files(video_id: str) -> Dict[str, bool]:
     for file_type in result.keys():
         file_path = get_file_path(video_id, file_type)
         
-        if file_path.exists() and file_path.stat().st_size > 0:
-            result[file_type] = True
+        if file_type == "audio":
+            actual_audio_file = find_actual_audio_file(video_id)
+            if actual_audio_file:
+                result[file_type] = True
+        else:
+            # 非音频文件使用原有逻辑
+            if file_path.exists() and file_path.stat().st_size > 0:
+                result[file_type] = True
     
     logger.info(f"🎯 文件检查结果 {video_id}: audio={result['audio']}, subtitle={result['subtitle']}")
     return result
@@ -849,6 +901,18 @@ def start_download():
     existing_files = check_existing_files(video_id)
     if existing_files["audio"]:
         logger.info(f"✅ 音频文件已存在，直接返回: {video_id}")
+        
+        # 🔧 修复: 使用统一的查找逻辑获取实际文件路径
+        actual_audio_file = find_actual_audio_file(video_id)
+        actual_audio_file_path = str(actual_audio_file) if actual_audio_file else None
+        
+        # 查找字幕文件
+        actual_subtitle_file_path = None
+        if existing_files["subtitle"]:
+            subtitle_file = get_file_path(video_id, "subtitle")
+            if subtitle_file.exists():
+                actual_subtitle_file_path = str(subtitle_file)
+        
         # 创建或更新已完成的任务记录
         task = DownloadTask(
             task_id=str(uuid.uuid4()),
@@ -856,8 +920,8 @@ def start_download():
             status=TaskStatus.COMPLETED,
             progress=1.0,
             message="文件已存在",
-            audio_file=str(get_file_path(video_id, "audio")),
-            subtitle_file=str(get_file_path(video_id, "subtitle")) if existing_files["subtitle"] else None,
+            audio_file=actual_audio_file_path,  # 使用实际找到的文件路径
+            subtitle_file=actual_subtitle_file_path,  # 使用实际找到的字幕路径
             video_info=get_video_info(video_id)
         )
         tasks[video_id] = task
@@ -977,38 +1041,12 @@ def serve_audio():
     if not video_id:
         abort(400, "Missing video id")
     
-    # 首先检查任务中记录的实际文件路径
-    if video_id in tasks:
-        task = tasks[video_id]
-        if task.audio_file and Path(task.audio_file).exists():
-            audio_file = Path(task.audio_file)
-            logger.info(f"🎵 使用任务记录的音频文件: {audio_file.name}")
-        else:
-            # 回退到默认路径
-            audio_file = get_file_path(video_id, "audio")
-    else:
-        audio_file = get_file_path(video_id, "audio")
+    # 🔧 使用统一的音频文件查找逻辑
+    audio_file = find_actual_audio_file(video_id)
     
-    if not audio_file.exists():
-        # 尝试查找实际存在的音频文件
-        base_path = audio_file.with_suffix('')
-        possible_files = [
-            base_path,  # 无扩展名文件
-            Path(str(base_path) + '.m4a'),
-            Path(str(base_path) + '.mp4'),
-            Path(str(base_path) + '.aac'),
-            Path(str(base_path) + '.webm'),
-            Path(str(base_path) + '.mp3')
-        ]
-        
-        for candidate in possible_files:
-            if candidate.exists() and candidate.stat().st_size > 0:
-                audio_file = candidate
-                logger.info(f"🎵 找到实际音频文件: {audio_file.name}")
-                break
-        else:
-            logger.error(f"❌ 音频文件不存在: {video_id}")
-            abort(404, "Audio file not found")
+    if not audio_file:
+        logger.error(f"❌ 音频文件不存在: {video_id}")
+        abort(404, "Audio file not found")
     
     # 获取正确的MIME类型
     mime_type = get_file_mime_type(audio_file)
