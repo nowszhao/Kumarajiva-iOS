@@ -78,14 +78,25 @@ struct SpeechPracticeView: View {
                     viewModel.stopPlayback()
                     selectedTab = 1
                 }
+                
+                TabButton(title: "学习记录", isSelected: selectedTab == 2) {
+                    // Stop any audio when switching tabs
+                    AudioService.shared.stopPlayback()
+                    viewModel.stopPlayback()
+                    selectedTab = 2
+                    // 获取学习记录
+                    viewModel.fetchStudyRecords(for: history.word)
+                }
             }
             .padding(.top, 8)
             
             // Content based on selected tab
             if selectedTab == 0 {
                 PracticeTabView(history: history, viewModel: viewModel)
-            } else {
+            } else if selectedTab == 1 {
                 RecordsTabView(viewModel: viewModel, history: history)
+            } else {
+                StudyRecordsTabView(viewModel: viewModel, history: history)
             }
         }
         .navigationBarHidden(true)
@@ -552,5 +563,219 @@ struct WordWrappedExampleText: View {
             result.type == .matched && 
             result.word.lowercased().trimmingCharacters(in: .punctuationCharacters) == normalizedWord
         }
+    }
+}
+
+// MARK: - Study Records Tab
+// 学习记录标签页内容
+struct StudyRecordsTabView: View {
+    @ObservedObject var viewModel: SpeechPracticeViewModel
+    let history: History
+    
+    // 计算带间隔时间的记录列表
+    private var recordsWithInterval: [StudyRecordWithInterval] {
+        let sortedRecords = viewModel.studyRecords.sorted { $0.reviewDate > $1.reviewDate }
+        
+        return sortedRecords.enumerated().map { index, record in
+            let previousRecord = index < sortedRecords.count - 1 ? sortedRecords[index + 1] : nil
+            let intervalText = record.intervalSince(previousRecord)
+            return StudyRecordWithInterval(record: record, intervalText: intervalText)
+        }
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            if viewModel.isLoadingStudyRecords {
+                // 加载状态
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("正在加载学习记录...")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxHeight: .infinity)
+            } else if let error = viewModel.studyRecordsError {
+                // 错误状态
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 48))
+                        .foregroundColor(.red)
+                    Text("加载失败")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    
+                    Button("重试") {
+                        viewModel.fetchStudyRecords(for: history.word)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding()
+                .frame(maxHeight: .infinity)
+            } else if viewModel.studyRecords.isEmpty {
+                // 空状态
+                VStack(spacing: 16) {
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    Text("暂无该单词的学习记录")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("开始学习单词后，这里会显示历史记录")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxHeight: .infinity)
+            } else {
+                // 有数据状态
+                VStack(spacing: 0) {
+                    // 统计信息头部
+                    StudyRecordsHeaderView(studyRecords: viewModel.studyRecords)
+                    
+                    // 记录列表
+                    List {
+                        ForEach(recordsWithInterval, id: \.id) { recordWithInterval in
+                            StudyRecordItemView(recordWithInterval: recordWithInterval)
+                        }
+                    }
+                    .listStyle(InsetGroupedListStyle())
+                }
+            }
+        }
+        .onDisappear {
+            // 当视图消失时清理数据
+            viewModel.clearStudyRecords()
+        }
+    }
+}
+
+// 学习记录头部统计信息
+struct StudyRecordsHeaderView: View {
+    let studyRecords: [StudyRecord]
+    
+    private var correctCount: Int {
+        studyRecords.filter { $0.isCorrect }.count
+    }
+    
+    private var totalCount: Int {
+        studyRecords.count
+    }
+    
+    private var accuracy: Double {
+        guard totalCount > 0 else { return 0 }
+        return Double(correctCount) / Double(totalCount) * 100
+    }
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // 准确率显示
+            HStack(spacing: 20) {
+                VStack(spacing: 4) {
+                    Text("\(correctCount)")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.green)
+                    Text("正确")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                VStack(spacing: 4) {
+                    Text("\(totalCount - correctCount)")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.red)
+                    Text("错误")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                VStack(spacing: 4) {
+                    Text(String(format: "%.1f%%", accuracy))
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.blue)
+                    Text("准确率")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.vertical, 12)
+            
+            // 图例
+            HStack(spacing: 16) {
+                LegendItem(color: .green, text: "正确")
+                LegendItem(color: .red, text: "错误")
+                Spacer()
+                Text("共 \(totalCount) 次学习")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+        }
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+}
+
+// 学习记录条目
+struct StudyRecordItemView: View {
+    let recordWithInterval: StudyRecordWithInterval
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // 结果图标
+            Image(systemName: recordWithInterval.record.isCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .font(.system(size: 20))
+                .foregroundColor(recordWithInterval.record.isCorrect ? .green : .red)
+            
+            // 日期和间隔信息
+            VStack(alignment: .leading, spacing: 2) {
+                Text(recordWithInterval.record.formattedDate)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                
+                HStack(spacing: 8) {
+                    // 结果文本
+                    Text(recordWithInterval.record.isCorrect ? "回答正确" : "回答错误")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    
+                    // 间隔时间（如果有）
+                    if let intervalText = recordWithInterval.intervalText {
+                        Text("•")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        
+                        Text("间隔 \(intervalText)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(4)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // 结果标签
+            Text(recordWithInterval.record.isCorrect ? "✓" : "✗")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.white)
+                .frame(width: 28, height: 28)
+                .background(recordWithInterval.record.isCorrect ? .green : .red)
+                .cornerRadius(14)
+        }
+        .padding(.vertical, 4)
     }
 }

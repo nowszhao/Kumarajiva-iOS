@@ -2,12 +2,14 @@ import SwiftUI
 
 struct HistoryView: View {
     @StateObject private var viewModel = HistoryViewModel()
+    @StateObject private var bookmarkedService = BookmarkedWordsService.shared
     @State private var selectedFilter: HistoryFilter = .today
     @State private var isPlayingBatch = false
     @State private var selectedWordTypes: Set<WordTypeFilter> = [.all]
     @State private var currentPlayingWord: String? = nil
     @State private var showingFilterSheet = false
     @State private var selectedHistory: ReviewHistoryItem? = nil
+    @State private var showBookmarkedOnly = false
     @AppStorage("lastPlaybackIndex") private var lastPlaybackIndex: Int = 0
     
     private var filterTypeText: String {
@@ -19,12 +21,26 @@ struct HistoryView: View {
     
     private var filteredHistories: [ReviewHistoryItem] {
         viewModel.histories.filter { history in
-            if selectedWordTypes.contains(.all) {
-                return true
+            // 首先按照词汇类型筛选
+            let typeMatch = if selectedWordTypes.contains(.all) {
+                true
+            } else {
+                selectedWordTypes.contains { filter in
+                    filter.matches(history)
+                }
             }
-            return selectedWordTypes.contains { filter in
-                filter.matches(history)
+            
+            // 如果类型不匹配，直接返回 false
+            if !typeMatch {
+                return false
             }
+            
+            // 如果开启了标注筛选，只显示标注的单词
+            if showBookmarkedOnly {
+                return bookmarkedService.isBookmarked(history.word)
+            }
+            
+            return true
         }
     }
     
@@ -84,6 +100,35 @@ struct HistoryView: View {
                 FilterLabel(text: selectedFilter.title)
             }
             
+            // 标注筛选开关
+            Button(action: {
+                showBookmarkedOnly.toggle()
+                // 重置播放状态
+                isPlayingBatch = false
+                currentPlayingWord = nil
+                lastPlaybackIndex = 0
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: showBookmarkedOnly ? "bookmark.fill" : "bookmark")
+                        .font(.system(size: 14, weight: .medium))
+                    if showBookmarkedOnly {
+                        Text("\(bookmarkedService.bookmarkedCount)")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                }
+                .foregroundColor(showBookmarkedOnly ? .orange : .gray)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(showBookmarkedOnly ? Color.orange.opacity(0.1) : Color.gray.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(showBookmarkedOnly ? Color.orange.opacity(0.3) : Color.clear, lineWidth: 1)
+                        )
+                )
+            }
+            
             // 添加刷新按钮
             Button(action: {
                 // 刷新数据，保持现有筛选条件
@@ -115,6 +160,8 @@ struct HistoryView: View {
                 loadingView
             } else if viewModel.histories.isEmpty {
                 EmptyStateView()
+            } else if filteredHistories.isEmpty && showBookmarkedOnly {
+                BookmarkedEmptyStateView()
             } else {
                 historyListView
             }
@@ -224,7 +271,7 @@ struct HistoryView: View {
     
     private var playbackControlPanel: some View {
         Group {
-            if !viewModel.histories.isEmpty {
+            if !filteredHistories.isEmpty {
                 EnhancedPlaybackControlPanel(
                     isPlaying: $isPlayingBatch,
                     currentWord: $currentPlayingWord,
@@ -305,6 +352,7 @@ struct HistoryItemView: View {
     let history: ReviewHistoryItem
     let isPlaying: Bool
     @State private var isPlayingMemory = false
+    @StateObject private var bookmarkedService = BookmarkedWordsService.shared
     
     private func getPronunciation() -> String? {
         guard let pronunciation = history.pronunciation else { return nil }
@@ -336,10 +384,33 @@ struct HistoryItemView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // 单词行
-            Text(history.word)
-                .font(.system(size: 18, weight: .semibold))
-                .lineLimit(1)
+            // 单词行 - 添加标注按钮
+            HStack {
+                Text(history.word)
+                    .font(.system(size: 18, weight: .semibold))
+                    .lineLimit(1)
+                
+                Spacer()
+                
+                // 标注按钮
+                Button(action: {
+                    bookmarkedService.toggleBookmark(for: history.word)
+                    // 添加触觉反馈
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                    impactFeedback.impactOccurred()
+                }) {
+                    Image(systemName: bookmarkedService.isBookmarked(history.word) ? "bookmark.fill" : "bookmark")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(bookmarkedService.isBookmarked(history.word) ? .orange : .gray)
+                        .padding(8)
+                        .background(
+                            Circle()
+                                .fill(bookmarkedService.isBookmarked(history.word) ? Color.orange.opacity(0.1) : Color.gray.opacity(0.1))
+                        )
+                }
+                .buttonStyle(.plain)
+                .contentShape(Circle())
+            }
             
             // 音标独立行
             if let pronunciation = getPronunciation() {
@@ -504,6 +575,30 @@ struct EmptyStateView: View {
             Text("暂无学习记录")
                 .font(.headline)
                 .foregroundColor(.secondary)
+        }
+        .frame(maxHeight: .infinity)
+    }
+}
+
+// 标注空状态视图
+struct BookmarkedEmptyStateView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "bookmark.slash")
+                .font(.system(size: 48))
+                .foregroundColor(.orange.opacity(0.7))
+            
+            VStack(spacing: 8) {
+                Text("暂无标注单词")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Text("点击单词右侧的书签图标来标注需要重点复习的单词")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
         }
         .frame(maxHeight: .infinity)
     }

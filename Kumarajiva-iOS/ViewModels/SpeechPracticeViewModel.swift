@@ -16,6 +16,11 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
     @Published var interimResult = ""
     @Published var transcriptionProgress: Float = 0.0
     
+    // 添加学习记录相关属性
+    @Published var studyRecords: [StudyRecord] = []
+    @Published var isLoadingStudyRecords = false
+    @Published var studyRecordsError: String?
+    
     private let speechService = SpeechRecognitionService.shared
     private var audioPlayer: AVAudioPlayer?
     private var playbackCompletionHandler: (() -> Void)?
@@ -271,6 +276,37 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
         }
         
         return wordResults
+    }
+    
+    // MARK: - Study Records Methods
+    
+    // 获取单词学习记录
+    func fetchStudyRecords(for word: String) {
+        isLoadingStudyRecords = true
+        studyRecordsError = nil
+        
+        Task {
+            do {
+                let records = try await APIService.shared.getWordStudyHistory(word: word)
+                DispatchQueue.main.async {
+                    self.studyRecords = records
+                    self.isLoadingStudyRecords = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.studyRecordsError = error.localizedDescription
+                    self.isLoadingStudyRecords = false
+                    self.studyRecords = []
+                }
+                print("获取学习记录失败: \(error)")
+            }
+        }
+    }
+    
+    // 清除学习记录
+    func clearStudyRecords() {
+        studyRecords = []
+        studyRecordsError = nil
     }
 }
 

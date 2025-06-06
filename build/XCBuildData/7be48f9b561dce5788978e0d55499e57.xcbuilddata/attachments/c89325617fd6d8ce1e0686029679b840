@@ -1,0 +1,4 @@
+module Jinja {
+header "Jinja-Swift.h"
+export *
+}

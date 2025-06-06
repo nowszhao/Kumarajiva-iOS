@@ -20,6 +20,9 @@ struct ProfileView: View {
                             .frame(height: 200)
                     }
                     
+                    // 学习贡献图卡片
+                    ContributionCardView(viewModel: viewModel)
+                    
                     // 设置入口
                     SettingsEntryView()
                 }
@@ -28,6 +31,7 @@ struct ProfileView: View {
             // .navigationTitle("我的")
             .task {
                 await viewModel.loadStats()
+                await viewModel.loadContributionData()
             }
         }
     }
@@ -161,7 +165,7 @@ struct StatsCardView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("学习进度")
+            Text("学习概览")
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
@@ -601,5 +605,22 @@ struct ModelStatusView: View {
         case .failed:
             return .red
         }
+    }
+}
+
+// MARK: - 学习贡献图卡片
+struct ContributionCardView: View {
+    @ObservedObject var viewModel: ProfileViewModel
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            ContributionGraphView(viewModel: viewModel)
+                .frame(height: 160)
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 5, y: 2)
+        .padding(.horizontal)
     }
 }

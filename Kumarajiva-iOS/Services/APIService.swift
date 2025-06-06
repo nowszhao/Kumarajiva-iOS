@@ -74,6 +74,43 @@ class APIService {
         return try await get(url)
     }
     
+    // MARK: - Contribution API
+    
+    func getContributionData() async throws -> [ContributionData] {
+        let url = "\(baseURL)/review/contribution"
+        print("📊 [Contribution] 开始获取贡献图数据...")
+        print("📊 [Contribution] 请求URL: \(url)")
+        
+        do {
+            let records: [ContributionData] = try await get(url)
+            print("📊 [Contribution] 成功获取贡献图数据: \(records)")
+            print("📊 [Contribution] 成功获取贡献图数据，记录数量: \(records.count)")
+            return records.sorted { $0.date < $1.date }
+        } catch {
+            print("📊 [Contribution] 获取贡献图数据失败: \(error)")
+            throw error
+        }
+    }
+    
+    // MARK: - Study Records API
+    
+    func getWordStudyHistory(word: String) async throws -> [StudyRecord] {
+        let encodedWord = word.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? word
+        let url = "\(baseURL)/review/word-history/\(encodedWord)"
+        print("📚 [StudyHistory] 开始获取单词学习记录...")
+        print("📚 [StudyHistory] 请求URL: \(url)")
+        
+        do {
+            // 直接使用 request 方法，它会自动处理 APIResponse 包装
+            let records: [StudyRecord] = try await get(url)
+            print("📚 [StudyHistory] 成功获取学习记录，记录数量: \(records.count)")
+            return records.sorted { $0.reviewDate > $1.reviewDate }
+        } catch {
+            print("📚 [StudyHistory] 获取学习记录失败: \(error)")
+            throw error
+        }
+    }
+    
     // MARK: - Vocabulary API
     
     func getVocabularyList() async throws -> [VocabularyItem] {
@@ -239,13 +276,7 @@ class APIService {
             do {
                 let decoder = JSONDecoder()
                 decoder.keyDecodingStrategy = .convertFromSnakeCase
-                
-                // 先尝试打印原始数据以便调试
-//                if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []),
-//                   let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted),
-//                   let prettyString = String(data: prettyData, encoding: .utf8) {
-//                    print("📦 Pretty JSON:\n\(prettyString)")
-//                }
+            
                 
                 let response = try decoder.decode(T.self, from: data)
                 print("✅ Successfully decoded response")

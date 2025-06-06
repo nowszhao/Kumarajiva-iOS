@@ -10,6 +10,10 @@ struct ListeningModeView: View {
     @State private var feedbackIcon = ""
     @State private var isInteracting = false
     
+    // MARK: - 精听模式相关状态
+    @State private var isIntensiveMode = false
+    @State private var previousLoopState = false // 保存进入精听前的循环状态
+    
     // MARK: - 生词标注相关状态
     @State private var showWordSelectionHint = false
     
@@ -20,12 +24,12 @@ struct ListeningModeView: View {
     // MARK: - 计算属性
     private var canSeekBackward: Bool {
         guard playerService.playbackState.currentEpisode != nil else { return false }
-        return hasWordsToSeekBackward()
+        return isIntensiveMode ? playerService.hasNextSubtitle : hasWordsToSeekBackward()
     }
     
     private var canSeekForward: Bool {
         guard playerService.playbackState.currentEpisode != nil else { return false }
-        return hasWordsToSeekForward()
+        return isIntensiveMode ? playerService.hasPreviousSubtitle : hasWordsToSeekForward()
     }
     
     // 检查是否有足够的单词可以向后跳转
@@ -94,6 +98,11 @@ struct ListeningModeView: View {
             
             // 顶部状态栏
             topStatusBar
+            
+            // 模式切换反馈提示
+            if showingFeedback {
+                modeChangeHintView
+            }
         }
         .navigationBarHidden(true)
         .animation(.spring(response: 0.8, dampingFraction: 0.9), value: playerService.playbackState.isPlaying)
@@ -139,23 +148,27 @@ struct ListeningModeView: View {
             Color.clear
                 .frame(height: 80)
             
-            // 上区域 - 前进5词 (15% 高度，缩小)
-            forwardWordsSection(height: (geometry.size.height - 80) * 0.15)
+            // 上区域 - 动态标题和功能 (15% 高度，缩小)
+            topActionSection(height: (geometry.size.height - 80) * 0.15)
             
             // 中区域 - 字幕显示 (35% 高度，增加)
             subtitleSection(height: (geometry.size.height - 80) * 0.35)
             
-            // 下区域 - 后退5词 (50% 高度，保持)
-            backwardWordsSection(height: (geometry.size.height - 80) * 0.50)
+            // 下区域 - 动态标题和功能 (50% 高度，保持)
+            bottomActionSection(height: (geometry.size.height - 80) * 0.50)
         }
     }
     
-    // MARK: - 前进5词区域
+    // MARK: - 上区域（动态功能）
     @ViewBuilder
-    private func forwardWordsSection(height: CGFloat) -> some View {
+    private func topActionSection(height: CGFloat) -> some View {
         Spacer()
         Button {
-            handleSeekForward()
+            if isIntensiveMode {
+                handlePreviousSubtitle()
+            } else {
+                handleSeekForward()
+            }
         } label: {
             VStack(spacing: 12) {
                 Spacer()
@@ -167,15 +180,15 @@ struct ListeningModeView: View {
                         .frame(width: 60, height: 60)
                         .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 6)
                     
-                    // 图标 - 缩小
-                    Image(systemName: "goforward.5")
+                    // 动态图标
+                    Image(systemName: isIntensiveMode ? "backward.end.fill" : "goforward.5")
                         .font(.system(size: 22, weight: .medium))
                         .foregroundStyle(.white)
                         .scaleEffect(canSeekForward ? 1.0 : 0.8)
                         .opacity(canSeekForward ? 1.0 : 0.4)
                 }
                 
-                Text("+5词")
+                Text(isIntensiveMode ? "上一句" : "+5词")
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.9))
                     .tracking(0.6)
@@ -220,11 +233,15 @@ struct ListeningModeView: View {
         .frame(height: height)
     }
     
-    // MARK: - 后退5词区域
+    // MARK: - 下区域（动态功能）
     @ViewBuilder
-    private func backwardWordsSection(height: CGFloat) -> some View {
+    private func bottomActionSection(height: CGFloat) -> some View {
         Button {
-            handleSeekBackward()
+            if isIntensiveMode {
+                handleNextSubtitle()
+            } else {
+                handleSeekBackward()
+            }
         } label: {
             VStack(spacing: 24) {
                 Spacer()
@@ -236,15 +253,15 @@ struct ListeningModeView: View {
                         .frame(width: 120, height: 120)
                         .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
                     
-                    // 图标
-                    Image(systemName: "gobackward.5")
+                    // 动态图标
+                    Image(systemName: isIntensiveMode ? "forward.end.fill" : "gobackward.5")
                         .font(.system(size: 42, weight: .medium))
                         .foregroundStyle(.white)
                         .scaleEffect(canSeekBackward ? 1.0 : 0.8)
                         .opacity(canSeekBackward ? 1.0 : 0.4)
                 }
                 
-                Text("-5词")
+                Text(isIntensiveMode ? "下一句" : "-5词")
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.9))
                     .tracking(1.2)
@@ -362,13 +379,19 @@ struct ListeningModeView: View {
     @ViewBuilder
     private var subtitleInteractionHint: some View {
         if playerService.playbackState.isPlaying {
-            Text("播放中，可点击暂停")
+            Text(isIntensiveMode ? "精听模式：播放中，可点击暂停" : "播放中，可点击暂停")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.5))
         } else {
-            Text("暂停中，可点击继续播放")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.5))
+            if isIntensiveMode {
+                Text("精听模式：暂停中，可标注单词后继续播放")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.5))
+            } else {
+                Text("暂停中，可标注单词，点击空白处继续播放")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
         }
     }
     
@@ -398,6 +421,9 @@ struct ListeningModeView: View {
                 }
                 
                 Spacer()
+                
+                // 精听模式开关
+                intensiveModeToggle
             }
             .overlay {
                 // 中间的听力模式状态信息 - 使用overlay确保真正居中
@@ -408,6 +434,41 @@ struct ListeningModeView: View {
             
             Spacer()
         }
+    }
+    
+    // MARK: - 精听模式开关
+    @ViewBuilder
+    private var intensiveModeToggle: some View {
+        Button {
+            toggleIntensiveMode()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: isIntensiveMode ? "repeat.circle.fill" : "repeat.circle")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(isIntensiveMode ? .yellow : .white)
+                
+                Text("精听")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(isIntensiveMode ? .yellow : .white)
+                
+                // 小圆点指示器
+                Circle()
+                    .fill(isIntensiveMode ? .yellow : .white.opacity(0.5))
+                    .frame(width: 6, height: 6)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(.ultraThinMaterial.opacity(0.6))
+                    .overlay(
+                        Capsule()
+                            .stroke(isIntensiveMode ? .yellow.opacity(0.6) : .clear, lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+            )
+        }
+        .animation(.easeInOut(duration: 0.3), value: isIntensiveMode)
     }
     
     // MARK: - 状态信息视图
@@ -421,9 +482,16 @@ struct ListeningModeView: View {
                     .foregroundStyle(.white)
                     .symbolEffect(.variableColor.iterative, isActive: playerService.playbackState.isPlaying)
                 
-                Text("听力模式")
+                Text(isIntensiveMode ? "精听模式" : "听力模式")
                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
+                
+                // 循环指示器（精听模式下显示）
+                if isIntensiveMode && playerService.playbackState.isLooping {
+                    Image(systemName: "repeat")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(.yellow)
+                }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
@@ -435,7 +503,81 @@ struct ListeningModeView: View {
         }
     }
     
+    // MARK: - 模式切换反馈提示
+    @ViewBuilder
+    private var modeChangeHintView: some View {
+        VStack {
+            Spacer()
+            
+            HStack(spacing: 12) {
+                Image(systemName: feedbackIcon)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(.white)
+                
+                Text(feedbackText)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(
+                Capsule()
+                    .fill(.ultraThinMaterial.opacity(0.8))
+                    .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)
+            )
+            .transition(.asymmetric(
+                insertion: .scale.combined(with: .opacity),
+                removal: .scale.combined(with: .opacity)
+            ))
+            
+            Spacer()
+        }
+    }
+    
     // MARK: - 方法
+    
+    private func toggleIntensiveMode() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            if isIntensiveMode {
+                // 退出精听模式
+                isIntensiveMode = false
+                // 恢复之前的循环状态
+                if !previousLoopState {
+                    playerService.toggleLoop()
+                }
+            } else {
+                // 进入精听模式
+                isIntensiveMode = true
+                // 保存当前循环状态
+                previousLoopState = playerService.playbackState.isLooping
+                // 如果当前没有开启循环，则开启
+                if !playerService.playbackState.isLooping {
+                    playerService.toggleLoop()
+                }
+            }
+        }
+        
+        // 添加触觉反馈
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        // 显示模式切换提示
+        showModeChangeHint()
+    }
+    
+    private func showModeChangeHint() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            feedbackText = isIntensiveMode ? "已开启精听模式" : "已关闭精听模式"
+            feedbackIcon = isIntensiveMode ? "repeat.circle.fill" : "waveform"
+            showingFeedback = true
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showingFeedback = false
+            }
+        }
+    }
     
     private func handleSeekBackward() {
         guard canSeekBackward else { return }
@@ -451,6 +593,26 @@ struct ListeningModeView: View {
         guard canSeekForward else { return }
         
         playerService.seekForwardWords(wordCount: 5)
+        
+        // 添加触觉反馈
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+    }
+    
+    private func handlePreviousSubtitle() {
+        guard playerService.hasPreviousSubtitle else { return }
+        
+        playerService.previousSubtitle()
+        
+        // 添加触觉反馈
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+    }
+    
+    private func handleNextSubtitle() {
+        guard playerService.hasNextSubtitle else { return }
+        
+        playerService.nextSubtitle()
         
         // 添加触觉反馈
         let impactFeedback = UIImpactFeedbackGenerator(style: .light)
@@ -558,5 +720,31 @@ struct ListeningModeView: View {
         }
         
         return attributedString
+    }
+}
+
+// MARK: - 精听模式功能测试
+extension ListeningModeView {
+    /// 测试精听模式的基本功能
+    private func testIntensiveModeLogic() {
+        print("🎯 [精听模式测试] 开始测试精听模式功能")
+        
+        // 测试模式切换
+        print("🎯 [精听模式测试] 当前精听状态: \(isIntensiveMode)")
+        print("🎯 [精听模式测试] 前进按钮启用: \(canSeekForward)")
+        print("🎯 [精听模式测试] 后退按钮启用: \(canSeekBackward)")
+        
+        if isIntensiveMode {
+            print("🎯 [精听模式测试] ✅ 精听模式已激活")
+            print("🎯 [精听模式测试] - 前进5词 → 上一句 功能")
+            print("🎯 [精听模式测试] - 后退5词 → 下一句 功能")
+            print("🎯 [精听模式测试] - 循环播放状态: \(playerService.playbackState.isLooping)")
+        } else {
+            print("🎯 [精听模式测试] ⚪ 普通听力模式")
+            print("🎯 [精听模式测试] - 前进5词 → +5词 功能")
+            print("🎯 [精听模式测试] - 后退5词 → -5词 功能")
+        }
+        
+        print("🎯 [精听模式测试] 测试完成")
     }
 } 

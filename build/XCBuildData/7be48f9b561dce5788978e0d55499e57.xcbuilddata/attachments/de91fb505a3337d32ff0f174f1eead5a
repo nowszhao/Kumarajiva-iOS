@@ -1,0 +1,4 @@
+module YouTubeKit {
+header "YouTubeKit-Swift.h"
+export *
+}
