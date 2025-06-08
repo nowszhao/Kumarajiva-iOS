@@ -1504,16 +1504,41 @@ class PodcastPlayerService: NSObject, ObservableObject {
     // MARK: - 播放历史记录
     
     private func loadPlaybackRecords() {
+        do {
+            // 首先尝试从持久化存储加载
+            if let records: [String: EpisodePlaybackRecord] = try PersistentStorageManager.shared.loadPlaybackRecords([String: EpisodePlaybackRecord].self) {
+                playbackRecords = records
+                print("🎧 [Player] 从持久化存储加载播放历史记录: \(records.count) 条")
+                return
+            }
+        } catch {
+            print("🎧 [Player] 从持久化存储加载失败，尝试UserDefaults迁移: \(error)")
+        }
+        
+        // 如果持久化存储失败，尝试从UserDefaults迁移
         if let data = UserDefaults.standard.data(forKey: playbackRecordsKey),
            let records = try? JSONDecoder().decode([String: EpisodePlaybackRecord].self, from: data) {
             playbackRecords = records
-            print("🎧 [Player] 加载播放历史记录: \(records.count) 条")
+            
+            // 迁移到持久化存储
+            do {
+                try PersistentStorageManager.shared.savePlaybackRecords(records)
+                print("🎧 [Player] 成功迁移播放历史记录到持久化存储: \(records.count) 条")
+                // 可选择性清除UserDefaults
+                // UserDefaults.standard.removeObject(forKey: playbackRecordsKey)
+            } catch {
+                print("🎧 [Player] 迁移播放历史记录到持久化存储失败: \(error)")
+            }
+            
+            print("🎧 [Player] 从UserDefaults加载播放历史记录: \(records.count) 条")
         }
     }
     
     private func savePlaybackRecords() {
-        if let data = try? JSONEncoder().encode(playbackRecords) {
-            UserDefaults.standard.set(data, forKey: playbackRecordsKey)
+        do {
+            try PersistentStorageManager.shared.savePlaybackRecords(playbackRecords)
+        } catch {
+            print("🎧 [Player] 保存播放历史记录失败: \(error)")
         }
     }
     
@@ -1748,29 +1773,39 @@ class PodcastPlayerService: NSObject, ObservableObject {
         
         // 构建提示词（与原有逻辑保持一致）
         var prompt = """
-        你现在是一位专业的英语教学专家，我是一个英语四级的中国人，你现在正帮我从英语对话或文章中提炼英语中常用的Top25的难词，要求如下：
-        1、您的任务是分析给定文本中的所有语言难点，这些难点可能包括对非母语学习者具有挑战性的词汇、短语、俚语、缩写、简写以及网络用语等。
-        2、输出请遵循以下要求：
-        - 词汇：识别出句子中所有难词，包括短语/词块、俚语、缩写，不常见且不影响理解内容的词汇不用解析。
-        - 类型：包括短语/词块、俚语、缩写（Phrases, Slang, Abbreviations）
-        - 词性：使用n., v., adj., adv., phrase等标准缩写
-        - 音标：提供美式音标
-        - 中英混合句子：使用词汇造一个句子，除了该词汇外，其他均为中文，需要保证语法正确，通过在完整中文语境中嵌入单一核心英语术语，帮助学习者直观理解专业概念的实际用法，括号里面是英文句子。
-        3、输出示例如下,严格按照json格式输出，需要注意双引号问题：
-        {
-            "difficult_vocabulary": [
-                {
-                    "vocabulary": "go for it",
-                    "type": "Phrases",
-                    "part_of_speech": "phrase",
-                    "phonetic": "/ɡoʊ fɔːr ɪt/",
-                    "chinese_meaning": "努力争取；放手一搏",
-                    "chinese_english_sentence": "这个机会很难得，你应该go for it。（This opportunity is rare, you should go for it.）"
-                }
-            ]
-        }
-        处理内容如下：
-        \(text)
+            英语教学专家指令：文本词汇难点分析与Top25提炼（针对英语四级学习者）
+            - 我是谁： 你是一位专业的英语教学专家。
+            - 你在做什么： 你正在帮助一位英语四级水平的中国学习者分析一段具体的英语对话或文章，从中提炼出对该学习者而言最具挑战性的词汇和语言点（Top25）。
+            - 你将获得什么输入： 用户会提供一段英文文本（对话、文章片段等）。
+            - 你的核心任务： 分析提供的文本，识别其中的语言难点，包括：
+            1.  对四级水平学习者可能构成挑战的词汇、短语/词块、俚语、缩写、网络用语等。
+            2.  注意：不常见且不影响理解内容核心思想的词汇可以忽略。
+            - 输出要求（严格JSON格式）：
+            {
+                "difficult_vocabulary": [
+                    {
+                        "vocabulary": "目标词汇/短语",       // 如 "go for it", "ASAP", "lit"
+                        "type": "Phrases/Slang/Abbreviations", // 选择最恰当的类型
+                        "part_of_speech": "n./v./adj./adv./phrase/etc.", // 使用标准缩写
+                        "phonetic": "/美式音标/",             // 如 "/ɡoʊ fɔːr ɪt/"
+                        "chinese_meaning": "准确的中文释义",     // 如 "努力争取；放手一搏"
+                        "chinese_english_sentence": "在这个完整的中文句子中自然地嵌入'目标词汇'"
+                        // 示例： "这个机会很难得，你应该go for it。（This opportunity is rare, you should go for it.）"
+                    },
+                    // ... 最多提炼25个项目
+                ]
+            }
+
+            - 处理流程：
+            1.  等待用户提供具体的英文文本内容（放在下方）。
+            2.  分析该文本。
+            3.  识别出符合要求的难点词汇（最多Top25，按挑战性或必要性排序）。
+            4.  严格按以上JSON格式输出结果。
+
+            文本输入区：
+            ###
+            \(text)
+            ###
         """
         
         if(isSelectiveMode){

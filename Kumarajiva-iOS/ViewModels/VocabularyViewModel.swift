@@ -341,8 +341,9 @@ class VocabularyViewModel: ObservableObject {
     private func loadCachedVocabularies() {
         print("📱 [LoadCache] 开始加载缓存...")
         
-        if let data = UserDefaults.standard.data(forKey: cacheKey),
-           let cached = try? JSONDecoder().decode([VocabularyItem].self, from: data) {
+        do {
+            // 首先尝试从持久化存储加载
+            if let cached = try PersistentStorageManager.shared.loadVocabulariesCache([VocabularyItem].self) {
             
             print("📱 [LoadCache] 缓存数据解码成功，原始数据：")
             print("  - 缓存中总词汇数: \(cached.count)")
@@ -377,14 +378,53 @@ class VocabularyViewModel: ObservableObject {
             newlyAddedWords.forEach { vocab in
                 print("  - '\(vocab.word)': isNewlyAdded=\(vocab.isNewlyAdded ?? false), isLocallyModified=\(vocab.isLocallyModified)")
             }
+            
+            return // 成功加载持久化存储，返回
+        }
+        } catch {
+            print("📱 [LoadCache] 从持久化存储加载失败，尝试UserDefaults迁移: \(error)")
+        }
+        
+        // 如果持久化存储失败，尝试从UserDefaults迁移
+        if let data = UserDefaults.standard.data(forKey: cacheKey),
+           let cached = try? JSONDecoder().decode([VocabularyItem].self, from: data) {
+            
+            print("📱 [LoadCache] 从UserDefaults加载缓存数据成功：")
+            print("  - 缓存中总词汇数: \(cached.count)")
+            print("  - 缓存中新添加词汇数: \(cached.filter { $0.isNewlyAdded == true }.count)")
+            print("  - 缓存中本地修改词汇数: \(cached.filter { $0.isLocallyModified }.count)")
+            
+            // 恢复本地状态：新添加的词汇应该标记为本地修改
+            vocabularies = cached.map { vocab in
+                var mutableVocab = vocab
+                // 如果是新添加的词汇，恢复本地修改状态
+                if vocab.isNewlyAdded == true {
+                    mutableVocab.isLocallyModified = true
+                }
+                return mutableVocab
+            }
+            
+            // 迁移到持久化存储
+            do {
+                try PersistentStorageManager.shared.saveVocabulariesCache(vocabularies)
+                print("📱 [LoadCache] 成功迁移生词缓存到持久化存储")
+                // 可选择性清除UserDefaults
+                // UserDefaults.standard.removeObject(forKey: cacheKey)
+            } catch {
+                print("📱 [LoadCache] 迁移生词缓存失败: \(error)")
+            }
+            
+            print("📱 已从UserDefaults缓存加载 \(cached.count) 个生词")
         } else {
             print("📱 [LoadCache] 没有找到缓存数据或解码失败")
         }
     }
     
     private func cacheVocabularies() {
-        if let data = try? JSONEncoder().encode(vocabularies) {
-            UserDefaults.standard.set(data, forKey: cacheKey)
+        do {
+            try PersistentStorageManager.shared.saveVocabulariesCache(vocabularies)
+        } catch {
+            print("📚 [Cache] 保存生词缓存失败: \(error)")
         }
     }
     

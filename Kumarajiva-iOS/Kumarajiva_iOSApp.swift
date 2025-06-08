@@ -32,6 +32,17 @@ struct Kumarajiva_iOSApp: App {
             .onAppear {
                 print("📱 [App] 应用启动")
                 print("🔐 [App] 当前认证状态: \(authService.isAuthenticated)")
+                
+                // 检查并清理UserDefaults中的大数据，解决4MB限制警告
+                Task {
+                    await MainActor.run {
+                        let storage = PersistentStorageManager.shared
+                        storage.checkUserDefaultsLargeData()
+                        
+                        // 自动清理大数据（可选择性启用）
+                        storage.cleanupUserDefaultsLargeData()
+                    }
+                }
             }
             .onChange(of: scenePhase) { newPhase in
                 switch newPhase {

@@ -15,13 +15,37 @@ class SpeechPracticeRecordService {
     private(set) var countByWord: [String: Int] = [:]
     private(set) var highestScoreByWord: [String: Int] = [:]
     
+    private let persistentStorage = PersistentStorageManager.shared
+    
     private init() {
         loadRecords()
     }
     
     func loadRecords() {
+        do {
+            // 首先尝试从持久化存储加载
+            let savedRecords = try persistentStorage.loadSpeechPracticeRecords()
+            
+            // 过滤掉无效的记录
+            records = savedRecords.filter { record in
+                FileManager.default.fileExists(atPath: record.audioURL.path)
+            }
+            
+            updateCaches()
+            print("🎤 [Speech] 成功加载语音练习记录: \(records.count) 条")
+            
+        } catch {
+            print("🎤 [Speech] 从持久化存储加载失败，尝试从UserDefaults迁移: \(error)")
+            
+            // 如果持久化存储失败，尝试从UserDefaults迁移
+            migrateFromUserDefaults()
+        }
+    }
+    
+    private func migrateFromUserDefaults() {
         let userDefaults = UserDefaults.standard
         guard let data = userDefaults.data(forKey: "speechPracticeRecords") else {
+            print("🎤 [Speech] UserDefaults中没有找到语音练习记录")
             records = []
             updateCaches()
             return
@@ -36,9 +60,17 @@ class SpeechPracticeRecordService {
                 FileManager.default.fileExists(atPath: record.audioURL.path)
             }
             
+            // 迁移到持久化存储
+            try persistentStorage.saveSpeechPracticeRecords(records)
+            
+            // 清除UserDefaults中的旧数据
+            // userDefaults.removeObject(forKey: "speechPracticeRecords")
+            
             updateCaches()
+            print("🎤 [Speech] 成功从UserDefaults迁移语音练习记录: \(records.count) 条")
+            
         } catch {
-            print("加载语音练习记录失败: \(error)")
+            print("🎤 [Speech] 迁移语音练习记录失败: \(error)")
             records = []
             updateCaches()
         }
@@ -110,14 +142,12 @@ class SpeechPracticeRecordService {
     
     private func saveRecords() {
         do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(records)
-            UserDefaults.standard.set(data, forKey: "speechPracticeRecords")
+            try persistentStorage.saveSpeechPracticeRecords(records)
             
             // 更新缓存
             updateCaches()
         } catch {
-            print("保存语音练习记录失败: \(error)")
+            print("🎤 [Speech] 保存语音练习记录失败: \(error)")
         }
     }
 }

@@ -31,6 +31,14 @@ class YouTubeDataService: ObservableObject {
     // 后端服务配置
     private let backendBaseURL: String
     
+    // 配置更长的超时时间的URLSession
+    private lazy var urlSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0  // 请求超时30秒
+        config.timeoutIntervalForResource = 60.0 // 资源超时60秒
+        return URLSession(configuration: config)
+    }()
+    
     private init() {
         // 从配置文件读取后端服务地址
         if let path = Bundle.main.path(forResource: "Config", ofType: "plist"),
@@ -163,7 +171,7 @@ class YouTubeDataService: ObservableObject {
         print("📺 [YouTubeService] 请求URL: \(url.absoluteString)")
         
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await urlSession.data(from: url)
             
             // 检查HTTP响应状态
             if let httpResponse = response as? HTTPURLResponse {
@@ -243,43 +251,66 @@ class YouTubeDataService: ObservableObject {
             print("📺 [YouTubeService] 🔄 超过1小时，正常刷新: \(youtuber.title)")
         }
         
-        do {
-            let videos = try await fetchYouTuberVideos(channelId: youtuber.channelId)
-            
-            // 在主线程更新YouTuber的视频列表
-            await MainActor.run {
-                if let index = youtubers.firstIndex(where: { $0.channelId == youtuber.channelId }) {
-                    print("📺 [YouTubeService] 找到YouTuber索引: \(index)")
-                    print("📺 [YouTubeService] 更新前视频数量: \(youtubers[index].videos.count)")
-                    
-                    youtubers[index].videos = videos
-                    youtubers[index].videoCount = videos.count
-                    youtubers[index].updatedAt = Date()
-                    
-                    print("📺 [YouTubeService] 更新后视频数量: \(youtubers[index].videos.count)")
-                    print("📺 [YouTubeService] 成功获取 \(videos.count) 个视频")
-                    
-                    // 保存数据
-                    saveYouTubers()
-                } else {
-                    print("📺 [YouTubeService] 警告：找不到要更新的YouTuber: \(youtuber.channelId)")
+        // 添加重试机制，最多重试2次
+        var lastError: Error?
+        for attempt in 1...3 {
+            do {
+                print("📺 [YouTubeService] 尝试获取视频列表 (第\(attempt)次): \(youtuber.title)")
+                let videos = try await fetchYouTuberVideos(channelId: youtuber.channelId)
+                
+                // 成功获取，更新数据并退出重试循环
+                await MainActor.run {
+                    if let index = youtubers.firstIndex(where: { $0.channelId == youtuber.channelId }) {
+                        print("📺 [YouTubeService] 找到YouTuber索引: \(index)")
+                        print("📺 [YouTubeService] 更新前视频数量: \(youtubers[index].videos.count)")
+                        
+                        youtubers[index].videos = videos
+                        youtubers[index].videoCount = videos.count
+                        youtubers[index].updatedAt = Date()
+                        
+                        print("📺 [YouTubeService] 更新后视频数量: \(youtubers[index].videos.count)")
+                        print("📺 [YouTubeService] ✅ 第\(attempt)次尝试成功，获取 \(videos.count) 个视频")
+                        
+                        // 保存数据
+                        saveYouTubers()
+                    } else {
+                        print("📺 [YouTubeService] 警告：找不到要更新的YouTuber: \(youtuber.channelId)")
+                    }
+                }
+                return // 成功后退出函数
+                
+            } catch {
+                lastError = error
+                print("📺 [YouTubeService] 第\(attempt)次尝试失败: \(error)")
+                
+                // 如果不是最后一次尝试，等待一下再重试
+                if attempt < 3 {
+                    let delay = attempt == 1 ? 2.0 : 5.0 // 第一次重试等2秒，第二次重试等5秒
+                    print("📺 [YouTubeService] ⏳ \(delay)秒后进行第\(attempt + 1)次尝试...")
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
             }
-            
-        } catch {
-            print("📺 [YouTubeService] 获取视频失败: \(error)")
+        }
+        
+        // 所有重试都失败了，显示错误信息
+        if let lastError = lastError {
+            print("📺 [YouTubeService] ❌ 所有重试都失败了: \(lastError)")
             await MainActor.run {
-                if let youtubeError = error as? YouTubeError {
+                if let youtubeError = lastError as? YouTubeError {
                     switch youtubeError {
                     case .networkError:
-                        errorMessage = "网络连接错误，无法获取最新视频"
+                        errorMessage = "网络连接错误，已重试3次仍无法获取最新视频"
                     case .apiError(let message):
-                        errorMessage = "获取视频失败: \(message)"
+                        if message.contains("请求超时") {
+                            errorMessage = "请求超时，已重试3次，请稍后再试"
+                        } else {
+                            errorMessage = "获取视频失败: \(message)"
+                        }
                     default:
-                        errorMessage = "获取视频失败: \(error.localizedDescription)"
+                        errorMessage = "获取视频失败: \(lastError.localizedDescription)"
                     }
                 } else {
-                    errorMessage = "获取视频失败: \(error.localizedDescription)"
+                    errorMessage = "获取视频失败: \(lastError.localizedDescription)"
                 }
                 print("📺 [YouTubeService] 💡 建议：当前可以正常播放已缓存的视频")
             }
@@ -304,7 +335,7 @@ class YouTubeDataService: ObservableObject {
         }
         
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await urlSession.data(from: url)
             
             // 检查HTTP响应状态
             if let httpResponse = response as? HTTPURLResponse {
@@ -348,6 +379,8 @@ class YouTubeDataService: ObservableObject {
                 switch urlError.code {
                 case .notConnectedToInternet, .networkConnectionLost:
                     throw YouTubeError.networkError
+                case .timedOut:
+                    throw YouTubeError.apiError("请求超时，请稍后重试")
                 default:
                     throw YouTubeError.apiError("网络错误: \(urlError.localizedDescription)")
                 }

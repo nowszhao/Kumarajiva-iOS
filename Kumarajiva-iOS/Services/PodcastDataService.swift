@@ -444,16 +444,10 @@ class PodcastDataService: ObservableObject {
         }
     }
     
-    /// 兼容性方法：保存到UserDefaults（用于向后兼容）
+    /// 兼容性方法：保存到UserDefaults（已弃用 - 避免4MB限制警告）
     private func savePodcastsToUserDefaults() {
-        do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(podcasts)
-            UserDefaults.standard.set(data, forKey: "SavedPodcasts")
-            print("🎧 [Data] 播客数据已保存到UserDefaults（兼容性）")
-        } catch {
-            print("🎧 [Data] 保存播客到UserDefaults失败: \(error)")
-        }
+        // 不再向UserDefaults写入大量数据，避免CFPreferences限制警告
+        print("🎧 [Data] ⚠️  UserDefaults保存已禁用，避免4MB限制警告")
     }
     
     private func loadSubtitleCache() {

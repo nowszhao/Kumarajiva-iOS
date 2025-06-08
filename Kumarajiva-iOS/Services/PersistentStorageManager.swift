@@ -15,6 +15,27 @@ class PersistentStorageManager {
     private let subtitleCacheFileName = "subtitle_cache.json"
     private let youtubersFileName = "youtubers.json"
     
+    // MARK: - 语音练习记录存储
+    
+    private let speechRecordsFileName = "speech_practice_records.json"
+    private var speechRecordsURL: URL {
+        return applicationSupportURL.appendingPathComponent(speechRecordsFileName)
+    }
+    
+    // MARK: - 生词本存储
+    
+    private let vocabulariesFileName = "vocabularies_cache.json"
+    private var vocabulariesURL: URL {
+        return applicationSupportURL.appendingPathComponent(vocabulariesFileName)
+    }
+    
+    // MARK: - 播放记录存储
+    
+    private let playbackRecordsFileName = "playback_records.json"
+    private var playbackRecordsURL: URL {
+        return applicationSupportURL.appendingPathComponent(playbackRecordsFileName)
+    }
+    
     private init() {
         // 获取应用程序支持目录 - 这个目录在APP重装后会保留
         let fileManager = FileManager.default
@@ -500,14 +521,190 @@ class PersistentStorageManager {
     func forceSave(_ podcasts: [Podcast]) {
         do {
             try savePodcasts(podcasts)
-            // 同时保存到UserDefaults作为最后的保障
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(podcasts)
-            UserDefaults.standard.set(data, forKey: "SavedPodcasts")
-            UserDefaults.standard.synchronize()
-            print("🎧 [Storage] 强制保存完成，数据已保存到文件和UserDefaults")
+            // 不再保存到UserDefaults，避免4MB限制警告
+            print("🎧 [Storage] 强制保存完成，数据已保存到持久化文件")
         } catch {
             print("🎧 [Storage] 强制保存失败: \(error)")
+        }
+    }
+    
+    /// 保存语音练习记录
+    func saveSpeechPracticeRecords(_ records: [SpeechPracticeRecord]) throws {
+        print("🎤 [Storage] 开始保存语音练习记录，共 \(records.count) 条记录")
+        
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        
+        let data = try encoder.encode(records)
+        try data.write(to: speechRecordsURL)
+        
+        // 确保文件不被排除在iCloud备份之外
+        var resourceValues = URLResourceValues()
+        resourceValues.isExcludedFromBackup = false
+        var mutableURL = speechRecordsURL
+        try mutableURL.setResourceValues(resourceValues)
+        
+        print("🎤 [Storage] 语音练习记录已保存")
+    }
+    
+    /// 加载语音练习记录
+    func loadSpeechPracticeRecords() throws -> [SpeechPracticeRecord] {
+        print("🎤 [Storage] 开始加载语音练习记录...")
+        
+        if FileManager.default.fileExists(atPath: speechRecordsURL.path) {
+            let data = try Data(contentsOf: speechRecordsURL)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            
+            let records = try decoder.decode([SpeechPracticeRecord].self, from: data)
+            print("🎤 [Storage] 从持久化存储加载了 \(records.count) 条语音练习记录")
+            return records
+        } else {
+            print("🎤 [Storage] 语音练习记录文件不存在")
+            return []
+        }
+    }
+    
+    /// 保存生词本缓存
+    func saveVocabulariesCache<T: Codable>(_ vocabularies: T) throws {
+        print("📚 [Storage] 开始保存生词本缓存")
+        
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        
+        let data = try encoder.encode(vocabularies)
+        try data.write(to: vocabulariesURL)
+        
+        // 确保文件不被排除在iCloud备份之外
+        var resourceValues = URLResourceValues()
+        resourceValues.isExcludedFromBackup = false
+        var mutableURL = vocabulariesURL
+        try mutableURL.setResourceValues(resourceValues)
+        
+        print("📚 [Storage] 生词本缓存已保存，大小: \(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file))")
+    }
+    
+    /// 加载生词本缓存
+    func loadVocabulariesCache<T: Codable>(_ type: T.Type) throws -> T? {
+        print("📚 [Storage] 开始加载生词本缓存...")
+        
+        if FileManager.default.fileExists(atPath: vocabulariesURL.path) {
+            let data = try Data(contentsOf: vocabulariesURL)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            
+            let vocabularies = try decoder.decode(type, from: data)
+            print("📚 [Storage] 从持久化存储加载生词本缓存成功")
+            return vocabularies
+        } else {
+            print("📚 [Storage] 生词本缓存文件不存在")
+            return nil
+        }
+    }
+    
+    /// 保存播放记录
+    func savePlaybackRecords<T: Codable>(_ records: T) throws {
+        print("🎵 [Storage] 开始保存播放记录")
+        
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        
+        let data = try encoder.encode(records)
+        try data.write(to: playbackRecordsURL)
+        
+        // 确保文件不被排除在iCloud备份之外
+        var resourceValues = URLResourceValues()
+        resourceValues.isExcludedFromBackup = false
+        var mutableURL = playbackRecordsURL
+        try mutableURL.setResourceValues(resourceValues)
+        
+        print("🎵 [Storage] 播放记录已保存")
+    }
+    
+    /// 加载播放记录
+    func loadPlaybackRecords<T: Codable>(_ type: T.Type) throws -> T? {
+        print("🎵 [Storage] 开始加载播放记录...")
+        
+        if FileManager.default.fileExists(atPath: playbackRecordsURL.path) {
+            let data = try Data(contentsOf: playbackRecordsURL)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            
+            let records = try decoder.decode(type, from: data)
+            print("🎵 [Storage] 从持久化存储加载播放记录成功")
+            return records
+        } else {
+            print("🎵 [Storage] 播放记录文件不存在")
+            return nil
+        }
+    }
+    
+    // MARK: - UserDefaults清理工具
+    
+    /// 清理UserDefaults中的大数据，避免4MB限制警告
+    func cleanupUserDefaultsLargeData() {
+        let keysToClean = [
+            "SavedPodcasts",
+            "speechPracticeRecords", 
+            "podcast_playback_records",
+            "vocabularies_cache_v2"  // VocabularyViewModel中的cacheKey
+        ]
+        
+        var totalSizeFreed: Int64 = 0
+        
+        for key in keysToClean {
+            if let data = UserDefaults.standard.data(forKey: key) {
+                let size = Int64(data.count)
+                totalSizeFreed += size
+                
+                print("🧹 [Cleanup] 清理UserDefaults键: \(key), 大小: \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))")
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+        
+        if totalSizeFreed > 0 {
+            UserDefaults.standard.synchronize()
+            print("🧹 [Cleanup] UserDefaults清理完成，释放空间: \(ByteCountFormatter.string(fromByteCount: totalSizeFreed, countStyle: .file))")
+            print("🧹 [Cleanup] 这将解决CFPreferences 4MB限制警告问题")
+        } else {
+            print("🧹 [Cleanup] UserDefaults中没有发现大数据需要清理")
+        }
+    }
+    
+    /// 检查UserDefaults中的大数据
+    func checkUserDefaultsLargeData() {
+        let keysToCheck = [
+            "SavedPodcasts",
+            "speechPracticeRecords", 
+            "podcast_playback_records",
+            "vocabularies_cache_v2"
+        ]
+        
+        var totalSize: Int64 = 0
+        var hasLargeData = false
+        
+        print("🔍 [Check] 检查UserDefaults中的大数据...")
+        
+        for key in keysToCheck {
+            if let data = UserDefaults.standard.data(forKey: key) {
+                let size = Int64(data.count)
+                totalSize += size
+                
+                if size > 1024 * 1024 { // 大于1MB
+                    hasLargeData = true
+                    print("⚠️  [Check] 发现大数据: \(key) - \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))")
+                } else {
+                    print("✅ [Check] 正常数据: \(key) - \(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))")
+                }
+            }
+        }
+        
+        print("🔍 [Check] UserDefaults总数据大小: \(ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file))")
+        
+        if hasLargeData {
+            print("⚠️  [Check] 发现大数据，建议调用cleanupUserDefaultsLargeData()清理")
+        } else {
+            print("✅ [Check] UserDefaults数据大小正常")
         }
     }
 } 
