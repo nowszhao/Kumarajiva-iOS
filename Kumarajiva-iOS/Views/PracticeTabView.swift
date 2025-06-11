@@ -13,6 +13,7 @@ struct PracticeTabView: View {
     @State private var isCompleting = false
     @State private var showCancelAlert = false
     @State private var playbackRate: Float = 0.75
+    @State private var hasAutoPlayed = false // 添加标记避免重复自动播放
     
     private var exampleToShow: String {
         var exampleToShow = "No example available."
@@ -425,12 +426,52 @@ struct PracticeTabView: View {
             // 确保在视图出现时重置播放状态
             isExamplePlaying = false
             AudioService.shared.stopPlayback()
+            
+            // 自动播放例句（仅第一次）
+            if !hasAutoPlayed {
+                startAutoPlay()
+                hasAutoPlayed = true
+            }
         }
     }
     
     private func getPronunciation(_ pronunciation: History.Pronunciation?) -> String? {
         guard let pronunciation = pronunciation else { return nil }
         return pronunciation.American.isEmpty ? pronunciation.British : pronunciation.American
+    }
+    
+    // 自动播放例句函数
+    private func startAutoPlay() {
+        isExamplePlaying = true
+        
+        // 创建一个循环播放函数
+        func playExampleInLoop() {
+            // 如果不再处于播放状态，则停止循环
+            if !isExamplePlaying {
+                return
+            }
+            
+            // 播放例句
+            AudioService.shared.playPronunciation(
+                word: exampleToShow,
+                le: "en",
+                rate: playbackRate,
+                onCompletion: {
+                    // 播放完成后，等待200ms再次播放
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        // 再次检查是否仍处于播放状态
+                        if self.isExamplePlaying {
+                            playExampleInLoop()
+                        }
+                    }
+                }
+            )
+        }
+        
+        // 开始循环播放，稍微延迟以确保UI已加载
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            playExampleInLoop()
+        }
     }
     
     private func handleCompletedRecording() {
