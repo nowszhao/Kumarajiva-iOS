@@ -11,8 +11,10 @@ struct ListeningModeView: View {
     @State private var isInteracting = false
     
     // MARK: - 精听模式相关状态
-    @State private var isIntensiveMode = false
-    @State private var previousLoopState = false // 保存进入精听前的循环状态
+    // 注意：精听模式状态现在由 PodcastPlayerService 管理，确保在视图间保持状态
+    private var isIntensiveMode: Bool {
+        return playerService.isIntensiveMode
+    }
     
     // MARK: - 生词标注相关状态
     @State private var showWordSelectionHint = false
@@ -538,23 +540,8 @@ struct ListeningModeView: View {
     
     private func toggleIntensiveMode() {
         withAnimation(.easeInOut(duration: 0.3)) {
-            if isIntensiveMode {
-                // 退出精听模式
-                isIntensiveMode = false
-                // 恢复之前的循环状态
-                if !previousLoopState {
-                    playerService.toggleLoop()
-                }
-            } else {
-                // 进入精听模式
-                isIntensiveMode = true
-                // 保存当前循环状态
-                previousLoopState = playerService.playbackState.isLooping
-                // 如果当前没有开启循环，则开启
-                if !playerService.playbackState.isLooping {
-                    playerService.toggleLoop()
-                }
-            }
+            // 使用 PodcastPlayerService 的方法来切换精听模式
+            playerService.toggleIntensiveMode()
         }
         
         // 添加触觉反馈

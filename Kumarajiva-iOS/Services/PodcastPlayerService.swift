@@ -45,9 +45,63 @@ class PodcastPlayerService: NSObject, ObservableObject {
     @Published var vocabularyAnalysisState: VocabularyAnalysisState = .idle
     private let llmService = LLMService.shared
     
+    // 缓存相关属性
+    private var cachedVocabularyResult: [DifficultVocabulary] = []
+    private var cachedSubtitleHash: String = ""
+    private var isAnalyzing: Bool = false
+    
+    // 获取当前字幕的哈希值（用于判断内容是否变化）
+    private func getCurrentSubtitleHash() -> String {
+        let allText = currentSubtitles.map { $0.text }.joined(separator: " ")
+        return String(allText.hashValue)
+    }
+    
+    // 检查是否有有效的缓存结果
+    func hasCachedVocabularyResult() -> Bool {
+        let currentHash = getCurrentSubtitleHash()
+        return !cachedVocabularyResult.isEmpty && 
+               cachedSubtitleHash == currentHash &&
+               !currentSubtitles.isEmpty
+    }
+    
+    // 获取缓存的解析结果
+    func getCachedVocabularyResult() -> [DifficultVocabulary] {
+        return cachedVocabularyResult
+    }
+    
+    // 清除缓存（用于重新解析）
+    func clearVocabularyCache() {
+        cachedVocabularyResult.removeAll()
+        cachedSubtitleHash = ""
+        vocabularyAnalysisState = .idle
+        print("🔍 [Vocabulary] 缓存已清除")
+    }
+    
+    // 更新缓存
+    private func updateVocabularyCache(_ vocabulary: [DifficultVocabulary]) {
+        cachedVocabularyResult = vocabulary
+        cachedSubtitleHash = getCurrentSubtitleHash()
+        print("🔍 [Vocabulary] 缓存已更新，生词数量: \(vocabulary.count)")
+    }
+    
+    // 设置字幕并清除词汇缓存（私有辅助方法）
+    private func setSubtitlesAndClearCache(_ subtitles: [Subtitle]) {
+        // 检查字幕是否真的发生了变化
+        let newHash = String(subtitles.map { $0.text }.joined(separator: " ").hashValue)
+        if newHash != cachedSubtitleHash || currentSubtitles.count != subtitles.count {
+            print("🔍 [Vocabulary] 字幕内容发生变化，清除词汇缓存")
+            clearVocabularyCache()
+        }
+        currentSubtitles = subtitles
+    }
+    
     // MARK: - 生词标注功能
     @Published var markedWords: Set<String> = []
     @Published var currentEpisodeId: String? = nil
+    
+    // MARK: - 精听模式状态
+    @Published var isIntensiveMode: Bool = false
+    @Published var previousLoopState: Bool = false  // 保存进入精听前的循环状态
     
     // 设置加载超时
     private var loadingTimeoutTimer: Timer?
@@ -385,11 +439,14 @@ class PodcastPlayerService: NSObject, ObservableObject {
         
         // 清除错误信息
         errorMessage = nil
+        
+        // 重置精听模式状态（切换不同音频时）
+        resetIntensiveModeState()
     }
     
     
     private func loadExistingSubtitles(for episode: PodcastEpisode) {
-        currentSubtitles = episode.subtitles
+        setSubtitlesAndClearCache(episode.subtitles)
         print("🎧 [Player] 加载已有字幕: \(episode.subtitles.count) 条")
         
         // 验证字幕数据质量
@@ -1306,7 +1363,7 @@ class PodcastPlayerService: NSObject, ObservableObject {
                task.episodeId == currentEpisode.id {
                 
                 print("🎧 [Player] 任务完成，更新当前字幕: \(task.episodeName)")
-                currentSubtitles = task.generatedSubtitles
+                setSubtitlesAndClearCache(task.generatedSubtitles)
                 
                 // 移除手动触发UI更新的调用，@Published属性会自动处理
                 // 避免过度的UI刷新导致导航问题
@@ -1368,7 +1425,7 @@ class PodcastPlayerService: NSObject, ObservableObject {
             
             // 如果Episode对象本身包含SRT字幕，直接使用
             if !episode.subtitles.isEmpty {
-                currentSubtitles = episode.subtitles
+                setSubtitlesAndClearCache(episode.subtitles)
                 print("🎧 [Player] ✅ 使用Episode中的SRT字幕: \(episode.subtitles.count) 条")
                 return
             }
@@ -1396,7 +1453,7 @@ class PodcastPlayerService: NSObject, ObservableObject {
                 let downloadResult = try await YouTubeAudioExtractor.shared.extractAudioAndSubtitles(from: videoId)
                 
                 await MainActor.run {
-                    currentSubtitles = downloadResult.subtitles
+                    setSubtitlesAndClearCache(downloadResult.subtitles)
                     subtitleGenerationProgress = 1.0
                 }
                 
@@ -1658,8 +1715,25 @@ class PodcastPlayerService: NSObject, ObservableObject {
             return
         }
         
+        // 检查是否有有效的缓存结果
+        if hasCachedVocabularyResult() {
+            print("🔍 [Vocabulary] 发现有效缓存，直接返回结果，生词数量: \(cachedVocabularyResult.count)")
+            await MainActor.run {
+                vocabularyAnalysisState = .completed(cachedVocabularyResult)
+            }
+            return
+        }
+        
+        // 检查是否正在解析中
+        if isAnalyzing {
+            print("🔍 [Vocabulary] 正在解析中，忽略重复请求")
+            return
+        }
+        
         print("🔍 [Vocabulary] 字幕数量: \(currentSubtitles.count)")
         
+        // 开始解析
+        isAnalyzing = true
         await MainActor.run {
             vocabularyAnalysisState = .analyzing
         }
@@ -1673,6 +1747,9 @@ class PodcastPlayerService: NSObject, ObservableObject {
         
         // 使用通用的解析逻辑
         await performVocabularyAnalysis(with: fullText, isSelectiveMode: false)
+        
+        // 解析完成，重置标志
+        isAnalyzing = false
     }
     
     /// 清理JSON响应，移除markdown格式等
@@ -1771,8 +1848,80 @@ class PodcastPlayerService: NSObject, ObservableObject {
         let analysisType = isSelectiveMode ? "选择解析" : "全文解析"
         print("🔍 [Vocabulary] 开始\(analysisType)，文本长度: \(text.count) 字符")
         
-        // 构建提示词（与原有逻辑保持一致）
-        var prompt = """
+        // 选择解析模式直接使用原有逻辑
+        if isSelectiveMode {
+            await performSingleSegmentAnalysis(with: text, isSelectiveMode: true)
+            return
+        }
+        
+        // 全文解析模式：检查是否需要分段处理
+        let words = text.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.trimmingCharacters(in: .punctuationCharacters).isEmpty }
+        
+        print("🔍 [Vocabulary] 文本总词数: \(words.count)")
+        
+        // 如果词数少于等于1000，直接使用单段处理
+        if words.count <= 1000 {
+            print("🔍 [Vocabulary] 词数较少，使用单段处理")
+            await performSingleSegmentAnalysis(with: text, isSelectiveMode: false)
+            return
+        }
+        
+        // 分段处理逻辑
+        await performSegmentedAnalysis(words: words)
+    }
+    
+    /// 分段解析逻辑
+    private func performSegmentedAnalysis(words: [String]) async {
+        let segmentSize = 1000
+        let totalSegments = (words.count + segmentSize - 1) / segmentSize // 向上取整
+        var allVocabulary: [DifficultVocabulary] = []
+        
+        print("🔍 [Vocabulary] 开始分段解析：总计 \(totalSegments) 段，每段 \(segmentSize) 个词")
+        
+        for segmentIndex in 0..<totalSegments {
+            let startIndex = segmentIndex * segmentSize
+            let endIndex = min(startIndex + segmentSize, words.count)
+            let segmentWords = Array(words[startIndex..<endIndex])
+            let segmentText = segmentWords.joined(separator: " ")
+            
+            print("🔍 [Vocabulary] 处理第 \(segmentIndex + 1)/\(totalSegments) 段，词数: \(segmentWords.count)")
+            
+            do {
+                let segmentVocabulary = try await analyzeSingleSegment(segmentText, segmentIndex: segmentIndex + 1, totalSegments: totalSegments)
+                allVocabulary.append(contentsOf: segmentVocabulary)
+                
+                // 更新部分完成状态
+                await MainActor.run {
+                    vocabularyAnalysisState = .partialCompleted(allVocabulary, currentSegment: segmentIndex + 1, totalSegments: totalSegments)
+                }
+                
+                print("🔍 [Vocabulary] 第 \(segmentIndex + 1) 段完成，当前总生词数: \(allVocabulary.count)")
+                
+                // 添加段间延迟，避免API调用过于频繁
+                if segmentIndex < totalSegments - 1 {
+                    try await Task.sleep(nanoseconds: 1_000_000_000) // 1秒延迟
+                }
+                
+            } catch {
+                print("🔍 [Vocabulary] 第 \(segmentIndex + 1) 段解析失败: \(error)")
+                // 继续处理下一段，不中断整个流程
+                continue
+            }
+        }
+        
+        // 所有段处理完成，更新缓存
+        updateVocabularyCache(allVocabulary)
+        await MainActor.run {
+            vocabularyAnalysisState = .completed(allVocabulary)
+        }
+        
+        print("🔍 [Vocabulary] 分段解析完成，总生词数: \(allVocabulary.count)")
+    }
+    
+    /// 解析单个文本段
+    private func analyzeSingleSegment(_ text: String, segmentIndex: Int, totalSegments: Int) async throws -> [DifficultVocabulary] {
+        let prompt = """
             英语教学专家指令：文本词汇难点分析与Top25提炼（针对英语四级学习者）
             - 我是谁： 你是一位专业的英语教学专家。
             - 你在做什么： 你正在帮助一位英语四级水平的中国学习者分析一段具体的英语对话或文章，从中提炼出对该学习者而言最具挑战性的词汇和语言点（Top25）。
@@ -1780,6 +1929,8 @@ class PodcastPlayerService: NSObject, ObservableObject {
             - 你的核心任务： 分析提供的文本，识别其中的语言难点，包括：
             1.  对四级水平学习者可能构成挑战的词汇、短语/词块、俚语、缩写、网络用语等。
             2.  注意：不常见且不影响理解内容核心思想的词汇可以忽略。
+            3.  chinese_english_sentence为中英混合句子，使用词汇造一个句子，除了该词汇外，其他均为中文，需要保证语法正确，通过在完整中文语境中嵌入单一核心英语术语，帮助学习者直观理解专业概念的实际用法，括号里面是英文句子。
+
             - 输出要求（严格JSON格式）：
             {
                 "difficult_vocabulary": [
@@ -1789,8 +1940,62 @@ class PodcastPlayerService: NSObject, ObservableObject {
                         "part_of_speech": "n./v./adj./adv./phrase/etc.", // 使用标准缩写
                         "phonetic": "/美式音标/",             // 如 "/ɡoʊ fɔːr ɪt/"
                         "chinese_meaning": "准确的中文释义",     // 如 "努力争取；放手一搏"
-                        "chinese_english_sentence": "在这个完整的中文句子中自然地嵌入'目标词汇'"
-                        // 示例： "这个机会很难得，你应该go for it。（This opportunity is rare, you should go for it.）"
+                        "chinese_english_sentence": "这个机会很难得，你应该go for it。（This opportunity is rare, you should go for it.）"
+                        // 示例： 在这个完整的中文句子中自然地嵌入'目标词汇'
+                    },
+                    // ... 最多提炼25个项目
+                ]
+            }
+
+            - 处理流程：
+            1.  等待用户提供具体的英文文本内容（放在下方）。
+            2.  分析该文本。
+            3.  识别出符合要求的难点词汇（最多Top25，按挑战性或必要性排序）。
+            4.  严格按以上JSON格式输出结果。
+
+            文本输入区（第\(segmentIndex)/\(totalSegments)段）：
+            ###
+            \(text)
+            ###
+        """
+        
+        let response = try await llmService.sendChatMessage(prompt: prompt)
+        let cleanedResponse = cleanJSONResponse(response)
+        
+        guard let jsonData = cleanedResponse.data(using: .utf8) else {
+            throw NSError(domain: "VocabularyAnalysis", code: 1, userInfo: [NSLocalizedDescriptionKey: "无法转换响应为数据"])
+        }
+        
+        let analysisResponse = try JSONDecoder().decode(VocabularyAnalysisResponse.self, from: jsonData)
+        print("🔍 [Vocabulary] 第 \(segmentIndex) 段解析成功，生词数量: \(analysisResponse.difficultVocabulary.count)")
+        
+        return analysisResponse.difficultVocabulary
+    }
+    
+    /// 单段分析（用于选择解析模式和小文本）
+    private func performSingleSegmentAnalysis(with text: String, isSelectiveMode: Bool) async {
+        // 构建提示词
+        var prompt = """
+            英语教学专家指令：文本词汇难点分析与Top25提炼（针对英语四级学习者）
+            - 我是谁： 你是一位专业的英语教学专家。
+            - 你在做什么： 你正在帮助一位英语四级水平的中国学习者分析一段具体的英语对话或文章，从中提炼出对该学习者而言最具挑战性的词汇和语言点（Top25）。
+            - 你将获得什么输入： 用户会提供一段英文文本（对话、文章片段等）。
+            - 你的核心任务： 分析提供的文本，识别其中的语言难点，包括：
+            1.  对四级水平学习者可能构成挑战的词汇、短语/词块、俚语、缩写、网络用语等。
+            2.  注意：不常见且不影响理解内容核心思想的词汇可以忽略。
+            3.  chinese_english_sentence为中英混合句子，使用词汇造一个句子，除了该词汇外，其他均为中文，需要保证语法正确，通过在完整中文语境中嵌入单一核心英语术语，帮助学习者直观理解专业概念的实际用法，括号里面是英文句子。
+
+            - 输出要求（严格JSON格式）：
+            {
+                "difficult_vocabulary": [
+                    {
+                        "vocabulary": "目标词汇/短语",       // 如 "go for it", "ASAP", "lit"
+                        "type": "Phrases/Slang/Abbreviations", // 选择最恰当的类型
+                        "part_of_speech": "n./v./adj./adv./phrase/etc.", // 使用标准缩写
+                        "phonetic": "/美式音标/",             // 如 "/ɡoʊ fɔːr ɪt/"
+                        "chinese_meaning": "准确的中文释义",     // 如 "努力争取；放手一搏"
+                        "chinese_english_sentence": "这个机会很难得，你应该go for it。（This opportunity is rare, you should go for it.）"
+                        // 示例： 在这个完整的中文句子中自然地嵌入'目标词汇'
                     },
                     // ... 最多提炼25个项目
                 ]
@@ -1859,6 +2064,11 @@ class PodcastPlayerService: NSObject, ObservableObject {
                     // 打印每个生词的详细信息
                     for (index, vocab) in analysisResponse.difficultVocabulary.enumerated() {
                         print("🔍 [Vocabulary] 生词\(index + 1): \(vocab.vocabulary) - \(vocab.chineseMeaning)")
+                    }
+                    
+                    // 更新缓存（仅对全文解析）
+                    if !isSelectiveMode {
+                        updateVocabularyCache(analysisResponse.difficultVocabulary)
                     }
                     
                     await MainActor.run {
@@ -2175,6 +2385,38 @@ class PodcastPlayerService: NSObject, ObservableObject {
     /// 获取标注单词数量
     var markedWordCount: Int {
         return markedWords.count
+    }
+    
+    // MARK: - 精听模式功能
+    
+    /// 切换精听模式
+    func toggleIntensiveMode() {
+        if isIntensiveMode {
+            // 退出精听模式
+            isIntensiveMode = false
+            // 恢复之前的循环状态
+            if !previousLoopState && playbackState.isLooping {
+                toggleLoop()
+            }
+            print("🎯 [Player] 退出精听模式")
+        } else {
+            // 进入精听模式
+            isIntensiveMode = true
+            // 保存当前循环状态
+            previousLoopState = playbackState.isLooping
+            // 如果当前没有开启循环，则开启
+            if !playbackState.isLooping {
+                toggleLoop()
+            }
+            print("🎯 [Player] 进入精听模式")
+        }
+    }
+    
+    /// 重置精听模式状态（用于切换不同音频时）
+    func resetIntensiveModeState() {
+        isIntensiveMode = false
+        previousLoopState = false
+        print("🎯 [Player] 重置精听模式状态")
     }
 }
 

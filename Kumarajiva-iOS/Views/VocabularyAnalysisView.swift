@@ -39,6 +39,9 @@ struct VocabularyAnalysisView: View {
             .navigationBarHidden(true)
             .background(Color(.systemGroupedBackground))
         }
+        .onAppear {
+            initializeViewState()
+        }
     }
     
     // MARK: - 标题区域
@@ -60,10 +63,30 @@ struct VocabularyAnalysisView: View {
                 
                 Spacer()
                 
-                // 占位符保持平衡
-                Text("取消")
-                    .font(.system(size: 17))
-                    .foregroundColor(.clear)
+                // 在分段解析时显示查看结果按钮
+                Group {
+                    if currentStep == .analyzing,
+                       case .partialCompleted(let vocabulary, _, _) = playerService.vocabularyAnalysisState,
+                       !vocabulary.isEmpty {
+                        Button {
+                            analysisResult = vocabulary
+                            currentStep = .completed
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "list.bullet")
+                                    .font(.system(size: 14))
+                                Text("\(vocabulary.count)")
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .foregroundColor(.accentColor)
+                        }
+                    } else {
+                        // 占位符保持平衡
+                        Text("取消")
+                            .font(.system(size: 17))
+                            .foregroundColor(.clear)
+                    }
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -81,7 +104,13 @@ struct VocabularyAnalysisView: View {
         case .wordSelection:
             return "选择生词"
         case .analyzing:
-            return "分析中"
+            // 根据分析状态显示不同标题
+            switch playerService.vocabularyAnalysisState {
+            case .partialCompleted(_, let currentSegment, let totalSegments):
+                return "分析中 (\(currentSegment)/\(totalSegments))"
+            default:
+                return "分析中"
+            }
         case .completed, .failed:
             return "生词列表"
         }
@@ -334,35 +363,123 @@ struct VocabularyAnalysisView: View {
         VStack(spacing: 24) {
             Spacer()
             
-            // 加载动画
-            ZStack {
-                Circle()
-                    .stroke(Color.gray.opacity(0.3), lineWidth: 4)
-                    .frame(width: 60, height: 60)
-                
-                Circle()
-                    .trim(from: 0, to: 0.7)
-                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    .frame(width: 60, height: 60)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: UUID())
-                
-                Image(systemName: "sparkles")
-                    .font(.title3)
-                    .foregroundColor(.accentColor)
+            // 根据分析状态显示不同的视图
+            Group {
+                switch playerService.vocabularyAnalysisState {
+                case .partialCompleted(_, let currentSegment, let totalSegments):
+                    // 分段进度显示
+                    VStack(spacing: 16) {
+                        // 进度环
+                        ZStack {
+                            Circle()
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 4)
+                                .frame(width: 80, height: 80)
+                            
+                            Circle()
+                                .trim(from: 0, to: CGFloat(currentSegment) / CGFloat(totalSegments))
+                                .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                                .frame(width: 80, height: 80)
+                                .rotationEffect(.degrees(-90))
+                                .animation(.easeInOut(duration: 0.5), value: currentSegment)
+                            
+                            VStack(spacing: 2) {
+                                Text("\(currentSegment)")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.accentColor)
+                                Text("/\(totalSegments)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        // 详细进度条
+                        VStack(spacing: 8) {
+                            ProgressView(value: Double(currentSegment), total: Double(totalSegments))
+                                .progressViewStyle(LinearProgressViewStyle(tint: .accentColor))
+                                .frame(width: 250)
+                            
+                            Text("每1000词为一段，正在处理第 \(currentSegment) 段")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                default:
+                    // 默认加载动画
+                    ZStack {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 4)
+                            .frame(width: 60, height: 60)
+                        
+                        Circle()
+                            .trim(from: 0, to: 0.7)
+                            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                            .frame(width: 60, height: 60)
+                            .rotationEffect(.degrees(-90))
+                            .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: UUID())
+                        
+                        Image(systemName: "sparkles")
+                            .font(.title3)
+                            .foregroundColor(.accentColor)
+                    }
+                }
             }
             
             VStack(spacing: 8) {
-                Text("AI正在分析中...")
+                Text(analyzingStatusText)
                     .font(.headline)
                     .foregroundColor(.primary)
                 
-                Text("请稍候，这可能需要几秒钟")
+                Text(analyzingSubtitleText)
                     .font(.body)
                     .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            
+            // 在分段解析时显示 "查看已解析结果" 按钮
+            if case .partialCompleted(let vocabulary, _, _) = playerService.vocabularyAnalysisState,
+               !vocabulary.isEmpty {
+                Button {
+                    // 切换到完成状态，显示当前已解析的结果
+                    analysisResult = vocabulary
+                    currentStep = .completed
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "list.bullet")
+                        Text("查看已解析的 \(vocabulary.count) 个生词")
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color.accentColor)
+                    .cornerRadius(10)
+                }
+                .animation(.easeInOut(duration: 0.3), value: vocabulary.count)
             }
             
             Spacer()
+        }
+    }
+    
+    // 动态分析状态文本
+    private var analyzingStatusText: String {
+        switch playerService.vocabularyAnalysisState {
+        case .partialCompleted(_, let currentSegment, let totalSegments):
+            return "分段解析进行中"
+        default:
+            return "AI正在分析中..."
+        }
+    }
+    
+    // 动态分析副标题文本
+    private var analyzingSubtitleText: String {
+        switch playerService.vocabularyAnalysisState {
+        case .partialCompleted(let vocabulary, let currentSegment, let totalSegments):
+            let progressPercent = Int((Double(currentSegment) / Double(totalSegments)) * 100)
+            return "已完成 \(progressPercent)% (\(currentSegment)/\(totalSegments) 段)\n已解析出 \(vocabulary.count) 个生词，解析仍在继续..."
+        default:
+            return "正在准备分析文本，每1000词为一段逐步处理"
         }
     }
     
@@ -373,7 +490,7 @@ struct VocabularyAnalysisView: View {
                 // 统计信息
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("共解析 \(vocabulary.count) 个生词")
+                        Text(vocabularyListTitle(for: vocabulary))
                             .font(.headline)
                             .foregroundColor(.primary)
                         
@@ -386,9 +503,12 @@ struct VocabularyAnalysisView: View {
                     
                     // 重新解析按钮
                     Button {
+                        // 清除缓存和重置状态
+                        playerService.clearVocabularyCache()
                         currentStep = .modeSelection
                         selectedWords.removeAll()
                         analysisResult.removeAll()
+                        errorMessage = ""
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.clockwise")
@@ -440,8 +560,11 @@ struct VocabularyAnalysisView: View {
             }
             
             Button {
+                // 清除缓存和重置状态
+                playerService.clearVocabularyCache()
                 currentStep = .modeSelection
                 selectedWords.removeAll()
+                analysisResult.removeAll()
                 errorMessage = ""
             } label: {
                 HStack(spacing: 8) {
@@ -463,6 +586,62 @@ struct VocabularyAnalysisView: View {
     }
     
     // MARK: - Helper Methods
+    
+    // 初始化视图状态
+    private func initializeViewState() {
+        print("🔍 [VocabularyAnalysisView] 视图出现，初始化状态")
+        
+        // 检查是否有缓存的解析结果
+        if playerService.hasCachedVocabularyResult() {
+            let cachedResult = playerService.getCachedVocabularyResult()
+            print("🔍 [VocabularyAnalysisView] 发现缓存结果，直接显示，生词数量: \(cachedResult.count)")
+            
+            analysisResult = cachedResult
+            currentStep = .completed
+            playerService.vocabularyAnalysisState = .completed(cachedResult)
+            return
+        }
+        
+        // 检查当前解析状态
+        switch playerService.vocabularyAnalysisState {
+        case .completed(let vocabulary):
+            if !vocabulary.isEmpty && analysisResult.isEmpty {
+                print("🔍 [VocabularyAnalysisView] 检测到已完成的解析状态，加载结果")
+                analysisResult = vocabulary
+                currentStep = .completed
+            }
+        case .partialCompleted(let vocabulary, _, _):
+            if !vocabulary.isEmpty {
+                print("🔍 [VocabularyAnalysisView] 检测到部分完成状态，切换到分析中")
+                analysisResult = vocabulary
+                currentStep = .analyzing
+            }
+        case .analyzing:
+            print("🔍 [VocabularyAnalysisView] 检测到正在分析状态")
+            currentStep = .analyzing
+        case .failed(let error):
+            if !error.isEmpty && errorMessage.isEmpty {
+                print("🔍 [VocabularyAnalysisView] 检测到失败状态：\(error)")
+                errorMessage = error
+                currentStep = .failed
+            }
+        case .idle:
+            print("🔍 [VocabularyAnalysisView] 无缓存结果，显示模式选择")
+            currentStep = .modeSelection
+        }
+    }
+    
+    // 生词列表标题（支持分段解析信息）
+    private func vocabularyListTitle(for vocabulary: [DifficultVocabulary]) -> String {
+        switch playerService.vocabularyAnalysisState {
+        case .partialCompleted(_, let currentSegment, let totalSegments):
+            return "共解析 \(vocabulary.count) 个生词（第 \(currentSegment)/\(totalSegments) 段）"
+        case .completed:
+            return "共解析 \(vocabulary.count) 个生词（解析完成）"
+        default:
+            return "共解析 \(vocabulary.count) 个生词"
+        }
+    }
     
     private func selectAllWords() {
         var allWords: Set<String> = []
@@ -497,6 +676,13 @@ struct VocabularyAnalysisView: View {
         // 定期检查分析状态直到完成
         while true {
             switch playerService.vocabularyAnalysisState {
+            case .partialCompleted(let vocabulary, _, _):
+                // 部分完成，立即更新结果并显示
+                analysisResult = vocabulary
+                currentStep = .completed
+                // 继续等待完全完成，但用户已经可以看到部分结果
+                try? await Task.sleep(nanoseconds: 300_000_000) // 减少到0.3秒，更快响应
+                continue
             case .completed(let vocabulary):
                 analysisResult = vocabulary
                 currentStep = .completed
@@ -507,7 +693,7 @@ struct VocabularyAnalysisView: View {
                 return
             case .analyzing:
                 // 继续等待
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5秒
+                try? await Task.sleep(nanoseconds: 300_000_000) // 减少到0.3秒
                 continue
             case .idle:
                 // 如果还是idle状态，说明出现了问题
@@ -532,6 +718,12 @@ struct VocabularyAnalysisView: View {
         // 定期检查分析状态直到完成
         while true {
             switch playerService.vocabularyAnalysisState {
+            case .partialCompleted(let vocabulary, _, _):
+                // 选择解析模式不应该出现部分完成，直接当作完成处理
+                analysisResult = vocabulary
+                currentStep = .completed
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5秒
+                continue
             case .completed(let vocabulary):
                 analysisResult = vocabulary
                 currentStep = .completed

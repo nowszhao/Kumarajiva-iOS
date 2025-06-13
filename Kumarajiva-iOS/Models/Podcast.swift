@@ -362,6 +362,7 @@ struct VocabularyAnalysisResponse: Codable {
 enum VocabularyAnalysisState: Equatable {
     case idle
     case analyzing
+    case partialCompleted([DifficultVocabulary], currentSegment: Int, totalSegments: Int)
     case completed([DifficultVocabulary])
     case failed(String)
     
@@ -369,6 +370,9 @@ enum VocabularyAnalysisState: Equatable {
         switch (lhs, rhs) {
         case (.idle, .idle), (.analyzing, .analyzing):
             return true
+        case (.partialCompleted(let lhsVocab, let lhsCurrent, let lhsTotal), 
+              .partialCompleted(let rhsVocab, let rhsCurrent, let rhsTotal)):
+            return lhsVocab == rhsVocab && lhsCurrent == rhsCurrent && lhsTotal == rhsTotal
         case (.completed(let lhsVocab), .completed(let rhsVocab)):
             return lhsVocab == rhsVocab
         case (.failed(let lhsError), .failed(let rhsError)):
