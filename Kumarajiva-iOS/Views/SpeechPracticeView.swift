@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import UIKit
 
 struct SpeechPracticeView: View {
     let history: History
@@ -50,7 +51,7 @@ struct SpeechPracticeView: View {
                 
                 Spacer()
                 
-                Text("句子跟读")
+                Text("单词深度解析")
                     .font(.headline)
                 
                 Spacer()
@@ -70,6 +71,22 @@ struct SpeechPracticeView: View {
                     AudioService.shared.stopPlayback()
                     viewModel.stopPlayback()
                     selectedTab = 0
+                }
+                
+                TabButton(title: "智能解析", isSelected: selectedTab == 3) {
+                    // Stop any audio when switching tabs
+                    AudioService.shared.stopPlayback()
+                    viewModel.stopPlayback()
+                    selectedTab = 3
+                    // 检查是否有缓存的解析结果
+                    if case .notAnalyzed = viewModel.analysisState {
+                        // 检查缓存
+                        if WordAnalysisService.shared.hasAnalysis(for: history.word) {
+                            if let cachedAnalysis = WordAnalysisService.shared.getAnalysis(for: history.word) {
+                                viewModel.analysisState = .analyzed(cachedAnalysis)
+                            }
+                        }
+                    }
                 }
                 
                 TabButton(title: "练习记录", isSelected: selectedTab == 1) {
@@ -95,8 +112,10 @@ struct SpeechPracticeView: View {
                 PracticeTabView(history: history, viewModel: viewModel)
             } else if selectedTab == 1 {
                 RecordsTabView(viewModel: viewModel, history: history)
-            } else {
+            } else if selectedTab == 2 {
                 StudyRecordsTabView(viewModel: viewModel, history: history)
+            } else {
+                IntelligentAnalysisTabView(viewModel: viewModel, history: history)
             }
         }
         .navigationBarHidden(true)
@@ -104,6 +123,8 @@ struct SpeechPracticeView: View {
             // Clean up when view disappears
             AudioService.shared.stopPlayback()
             viewModel.stopPlayback()
+            // 清空解析状态（可选）
+            // viewModel.clearAnalysisState()
         }
     }
 }
@@ -118,9 +139,9 @@ struct TabButton: View {
         Button(action: action) {
             VStack(spacing: 8) {
                 Text(title)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(isSelected ? .blue : .primary)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 8)
                     .padding(.vertical, 8)
                 
                 Rectangle()
@@ -171,9 +192,9 @@ struct RecordsTabView: View {
                                     .font(.system(size: 14))
                             }
                             .foregroundColor(.red)
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 12)
-                            .background(Color(.systemGray6))
+                                                                     .padding(.vertical, 6)
+                                         .padding(.horizontal, 10)
+                            .background(Color(UIColor.systemGray6))
                             .cornerRadius(16)
                         }
                         .padding(.trailing, 16)
@@ -253,7 +274,7 @@ struct RecordItemView: View {
                     .font(.system(size: 16))
                     .foregroundColor(isPlaying ? .red : .blue)
                     .frame(width: 36, height: 36)
-                    .background(Color(.systemGray6).opacity(0.8))
+                    .background(Color(UIColor.systemGray6).opacity(0.8))
                     .cornerRadius(18)
             }
             
@@ -718,7 +739,7 @@ struct StudyRecordsHeaderView: View {
             }
             .padding(.horizontal, 16)
         }
-        .background(Color(.systemBackground))
+        .background(Color(UIColor.systemBackground))
         .cornerRadius(12)
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -777,5 +798,393 @@ struct StudyRecordItemView: View {
                 .cornerRadius(14)
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Intelligent Analysis Tab
+/// 智能解析标签页内容
+struct IntelligentAnalysisTabView: View {
+    @ObservedObject var viewModel: SpeechPracticeViewModel
+    let history: History
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            switch viewModel.analysisState {
+            case .notAnalyzed:
+                NotAnalyzedView(word: history.word) {
+                    viewModel.fetchWordAnalysis(for: history.word)
+                }
+                
+            case .analyzing:
+                AnalyzingView()
+                
+            case .analyzed(let analysis):
+                AnalysisResultView(analysis: analysis) {
+                    viewModel.fetchWordAnalysis(for: history.word, forceRefresh: true)
+                }
+                
+            case .failed(let error):
+                AnalysisErrorView(error: error) {
+                    viewModel.fetchWordAnalysis(for: history.word)
+                }
+            }
+        }
+        .onDisappear {
+            // 可选择是否清空状态
+            // viewModel.clearAnalysisState()
+        }
+    }
+}
+
+// MARK: - Analysis States Views
+
+/// 未解析状态视图
+struct NotAnalyzedView: View {
+    let word: String
+    let onAnalyze: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            // 图标和说明
+            VStack(spacing: 16) {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 56))
+                    .foregroundColor(.blue)
+                
+                Text("智能解析")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Text("通过AI分析单词的词根拆解、记忆方法\n场景例句和同义词辨析")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+            }
+            
+            Spacer()
+            
+            // 解析按钮
+            Button(action: onAnalyze) {
+                HStack(spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .medium))
+                    Text("开始解析 \"\(word)\"")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(
+                    LinearGradient(
+                        colors: [Color.blue, Color.blue.opacity(0.8)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(16)
+                .shadow(color: Color.blue.opacity(0.3), radius: 8, x: 0, y: 4)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
+        }
+    }
+}
+
+/// 解析中状态视图
+struct AnalyzingView: View {
+    @State private var dots = ""
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            // 加载动画
+            VStack(spacing: 20) {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .tint(.blue)
+                
+                Text("AI正在解析中")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Text("正在分析单词的词根结构、记忆方法和使用场景...")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+            }
+            
+            Spacer()
+        }
+        .onAppear {
+            startDotAnimation()
+        }
+    }
+    
+    private func startDotAnimation() {
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+            dots = dots.count >= 3 ? "" : dots + "."
+        }
+    }
+}
+
+/// 解析结果视图
+struct AnalysisResultView: View {
+    let analysis: WordAnalysis
+    let onReanalyze: () -> Void
+    
+    var body: some View {
+        ScrollView {
+                         VStack(alignment: .leading, spacing: 16) {
+                // 头部 - 单词和重新解析按钮
+                HStack {
+                                         VStack(alignment: .leading, spacing: 4) {
+                         Text(analysis.word)
+                             .font(.title2)
+                             .fontWeight(.bold)
+                             .foregroundColor(.primary)
+                         
+                         Text("智能解析结果")
+                             .font(.caption)
+                             .foregroundColor(.secondary)
+                     }
+                    
+                    Spacer()
+                    
+                    Button(action: onReanalyze) {
+                                                 HStack(spacing: 4) {
+                             Image(systemName: "arrow.clockwise")
+                                 .font(.system(size: 11))
+                             Text("重新解析")
+                                 .font(.system(size: 11, weight: .medium))
+                         }
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(12)
+                    }
+                }
+                .padding(.horizontal, 20)
+                                 .padding(.top, 16)
+                 
+                 VStack(spacing: 14) {
+                     // 基本信息卡片
+                    AnalysisCardView(
+                        title: "基本信息",
+                        icon: "textformat.abc",
+                        color: .blue
+                    ) {
+                                                 VStack(alignment: .leading, spacing: 10) {
+                             // 音标
+                             HStack(spacing: 16) {
+                                                                 VStack(alignment: .leading, spacing: 4) {
+                                     Text("英式")
+                                         .font(.caption)
+                                         .foregroundColor(.secondary)
+                                     Text(analysis.basicInfo.phoneticNotation.british)
+                                         .font(.system(size: 14).monospaced())
+                                         .foregroundColor(.primary)
+                                 }
+                                 
+                                 VStack(alignment: .leading, spacing: 4) {
+                                     Text("美式")
+                                         .font(.caption)
+                                         .foregroundColor(.secondary)
+                                     Text(analysis.basicInfo.phoneticNotation.american)
+                                         .font(.system(size: 14).monospaced())
+                                         .foregroundColor(.primary)
+                                 }
+                                
+                                Spacer()
+                            }
+                            
+                            Divider()
+                            
+                            // 释义
+                                                         VStack(alignment: .leading, spacing: 4) {
+                                 Text("释义")
+                                     .font(.caption)
+                                     .foregroundColor(.secondary)
+                                 Text(analysis.basicInfo.annotation)
+                                     .font(.subheadline)
+                                     .foregroundColor(.primary)
+                             }
+                        }
+                    }
+                    
+                    // 记忆方法卡片
+                    AnalysisCardView(
+                        title: "记忆方法",
+                        icon: "brain.head.profile",
+                        color: .green
+                    ) {
+                                                 Text(analysis.splitAssociationMethod)
+                             .font(.subheadline)
+                             .foregroundColor(.primary)
+                             .lineSpacing(3)
+                    }
+                    
+                    // 场景记忆卡片
+                    AnalysisCardView(
+                        title: "场景记忆",
+                        icon: "bubble.left.and.bubble.right",
+                        color: .orange
+                    ) {
+                                                 VStack(alignment: .leading, spacing: 10) {
+                             ForEach(Array(analysis.sceneMemory.enumerated()), id: \.element.id) { index, scene in
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text("场景 \(index + 1)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                    }
+                                    
+                                                                         Text(scene.scene)
+                                         .font(.subheadline)
+                                         .foregroundColor(.primary)
+                                                                                  .lineSpacing(2)
+                                         .padding(.vertical, 6)
+                                         .padding(.horizontal, 10)
+                                        .background(Color(UIColor.systemGray6).opacity(0.5))
+                                        .cornerRadius(8)
+                                }
+                                
+                                if index < analysis.sceneMemory.count - 1 {
+                                    Divider()
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 同义词辨析卡片
+                    AnalysisCardView(
+                        title: "同义词辨析",
+                        icon: "arrow.left.arrow.right",
+                        color: .purple
+                    ) {
+                                                 VStack(alignment: .leading, spacing: 10) {
+                             ForEach(Array(analysis.synonymPreciseGuidance.enumerated()), id: \.element.id) { index, guidance in
+                                VStack(alignment: .leading, spacing: 8) {
+                                                                         HStack {
+                                         Text(guidance.synonym)
+                                             .font(.system(size: 15, weight: .semibold))
+                                             .foregroundColor(.primary)
+                                         Spacer()
+                                     }
+                                     
+                                     Text(guidance.explanation)
+                                         .font(.subheadline)
+                                         .foregroundColor(.secondary)
+                                         .lineSpacing(2)
+                                }
+                                                                 .padding(.vertical, 6)
+                                 .padding(.horizontal, 10)
+                                .background(Color(UIColor.systemGray6).opacity(0.3))
+                                .cornerRadius(8)
+                                
+                                if index < analysis.synonymPreciseGuidance.count - 1 {
+                                    Divider()
+                                }
+                            }
+                        }
+                    }
+                }
+                                 .padding(.horizontal, 16)
+                 .padding(.bottom, 20)
+            }
+        }
+    }
+}
+
+/// 解析错误视图
+struct AnalysisErrorView: View {
+    let error: String
+    let onRetry: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            VStack(spacing: 16) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 48))
+                    .foregroundColor(.red)
+                
+                Text("解析失败")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Text(error)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+            }
+            
+            Spacer()
+            
+            Button(action: onRetry) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.clockwise")
+                    Text("重试")
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 120, height: 44)
+                .background(Color.blue)
+                .cornerRadius(12)
+            }
+            .padding(.bottom, 32)
+        }
+    }
+}
+
+/// 解析卡片视图
+struct AnalysisCardView<Content: View>: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let content: Content
+    
+    init(title: String, icon: String, color: Color, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.icon = icon
+        self.color = color
+        self.content = content()
+    }
+    
+    var body: some View {
+                 VStack(alignment: .leading, spacing: 10) {
+             // 卡片标题
+             HStack(spacing: 8) {
+                 Image(systemName: icon)
+                     .font(.system(size: 14, weight: .medium))
+                     .foregroundColor(color)
+                 
+                 Text(title)
+                     .font(.system(size: 15, weight: .semibold))
+                     .foregroundColor(.primary)
+                 
+                 Spacer()
+             }
+             
+             Divider()
+             
+             // 卡片内容
+             content
+         }
+         .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(UIColor.systemBackground))
+                .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        )
     }
 }

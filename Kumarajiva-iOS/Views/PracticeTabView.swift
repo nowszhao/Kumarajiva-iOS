@@ -110,9 +110,6 @@ struct PracticeTabView: View {
 //                            .fixedSize(horizontal: false, vertical: true)
 //                    }
                     
-                    // Add Word Collocation section
-                    WordCollocationView(word: history.word)
-                        .padding(.top, 4)
                     
                     // Play example button with speed options
                     HStack(spacing: 12) {

@@ -21,6 +21,10 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
     @Published var isLoadingStudyRecords = false
     @Published var studyRecordsError: String?
     
+    // 添加智能解析相关属性
+    @Published var analysisState: AnalysisState = .notAnalyzed
+    @Published var isAnalyzing = false
+    
     private let speechService = SpeechRecognitionService.shared
     private var audioPlayer: AVAudioPlayer?
     private var playbackCompletionHandler: (() -> Void)?
@@ -307,6 +311,134 @@ class SpeechPracticeViewModel: NSObject, ObservableObject {
     func clearStudyRecords() {
         studyRecords = []
         studyRecordsError = nil
+    }
+    
+    // MARK: - Word Analysis Methods
+    
+    /// 获取单词智能解析
+    func fetchWordAnalysis(for word: String, forceRefresh: Bool = false) {
+        // 检查是否有缓存且不强制刷新
+        if !forceRefresh, let cachedAnalysis = WordAnalysisService.shared.getAnalysis(for: word) {
+            analysisState = .analyzed(cachedAnalysis)
+            return
+        }
+        
+        analysisState = .analyzing
+        isAnalyzing = true
+        
+        Task {
+            do {
+                let prompt = generateAnalysisPrompt(for: word)
+                let response = try await LLMService.shared.sendChatMessage(prompt: prompt)
+                
+                // 解析LLM响应
+                if let analysis = parseAnalysisResponse(response, word: word) {
+                    // 保存到缓存
+                    WordAnalysisService.shared.saveAnalysis(analysis)
+                    
+                    DispatchQueue.main.async {
+                        self.analysisState = .analyzed(analysis)
+                        self.isAnalyzing = false
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self.analysisState = .failed("解析结果格式错误")
+                        self.isAnalyzing = false
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.analysisState = .failed(error.localizedDescription)
+                    self.isAnalyzing = false
+                }
+                print("🧠 [Analysis] 智能解析失败: \(error)")
+            }
+        }
+    }
+    
+    /// 生成分析提示词
+    private func generateAnalysisPrompt(for word: String) -> String {
+        return """
+        根据人类记忆原理和人性，我立马记住这个单词且终身难忘。
+        1、举例：ubiquitous
+        2、按照 Json 格式输出：
+        {
+            "word": "ubiquitous",
+            "basic_info": {
+                "phonetic_notation": {
+                    "British": "/juːˈbɪkwɪtəs/",
+                    "American": "/juːˈbɪkwɪtəs/"
+                },
+                "annotation": "adj. 普遍存在的；无处不在的"
+            },
+            "split_association_method": "把"ubiquitous"拆分成"u（看作'you'，你） + bi（谐音'必'） + quit（离开） + ous（形容词后缀）" 。联想成"你必离开"一个地方，但无论你走到哪儿，都能发现某个事物，这就说明这个事物是"普遍存在的；无处不在的" 。",
+            "scene_memory": [{
+                    "scene": "如今，智能手机几乎是"ubiquitous"的。在公交上、餐厅里、校园中，随处都能看到人们拿着智能手机，它已经成为人们生活中不可或缺的一部分，无处不在。"
+                },
+                {
+                    "scene": "在现代城市中，WiFi信号几乎是ubiquitous的，无论走到哪里都能连接网络。"
+                }
+            ],
+            "synonym_precise_guidance": [{
+                    "synonym": "Universal",
+                    "explanation": "强调在所有地方或所有人中都存在，更具普遍性，常涉及概念、真理、现象等，如universal truth（普遍真理）。"
+                },
+                {
+                    "synonym": "Widespread",
+                    "explanation": "强调分布广泛，但不一定在每个地方都存在，如widespread support（广泛支持）。"
+                }
+            ]
+        }
+
+        新单词：\(word)
+        """
+    }
+    
+    /// 解析LLM响应为WordAnalysis对象
+    private func parseAnalysisResponse(_ response: String, word: String) -> WordAnalysis? {
+        // 提取JSON部分
+        guard let jsonData = extractJSONFromResponse(response) else {
+            print("🧠 [Analysis] 无法从响应中提取JSON")
+            return nil
+        }
+        
+        do {
+            let llmResponse = try JSONDecoder().decode(LLMAnalysisResponse.self, from: jsonData)
+            
+            // 转换为WordAnalysis对象
+            let analysis = WordAnalysis(
+                word: word,
+                basicInfo: llmResponse.basicInfo,
+                splitAssociationMethod: llmResponse.splitAssociationMethod,
+                sceneMemory: llmResponse.sceneMemory,
+                synonymPreciseGuidance: llmResponse.synonymPreciseGuidance,
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            
+            return analysis
+        } catch {
+            print("🧠 [Analysis] JSON解析失败: \(error)")
+            return nil
+        }
+    }
+    
+    /// 从LLM响应中提取JSON部分
+    private func extractJSONFromResponse(_ response: String) -> Data? {
+        // 查找第一个 { 和最后一个 }
+        guard let firstBrace = response.firstIndex(of: "{"),
+              let lastBrace = response.lastIndex(of: "}") else {
+            return nil
+        }
+        
+        let jsonString = String(response[firstBrace...lastBrace])
+        return jsonString.data(using: .utf8)
+    }
+    
+    /// 清空分析状态
+    func clearAnalysisState() {
+        analysisState = .notAnalyzed
+        isAnalyzing = false
     }
 }
 
