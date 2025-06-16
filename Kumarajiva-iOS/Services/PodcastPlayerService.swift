@@ -827,6 +827,12 @@ class PodcastPlayerService: NSObject, ObservableObject {
                 if playbackState.isPlaying && player.rate == 0 {
                     print("🎧 [Player] ⚠️ 播放状态为true但播放速率为0，尝试手动播放")
                     player.play()
+                    // 延迟设置播放速度，确保播放开始后再设置
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                        guard let self = self, let player = self.audioPlayer else { return }
+                        player.rate = self.playbackState.playbackRate
+                        print("🎧 [Player] 手动播放后延迟设置播放速度: \(self.playbackState.playbackRate)x")
+                    }
                     
                     // 延迟检查播放状态
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -927,7 +933,16 @@ class PodcastPlayerService: NSObject, ObservableObject {
                     // 检查是否播放卡住了
                     if playbackState.isPlaying && player.rate == 0 {
                         print("🎧 [Player] ⚠️ 检测到播放卡住，尝试恢复播放")
+                        // 确保保持播放速度
+                        player.rate = playbackState.playbackRate
                         player.play()
+                    }
+                    
+                    // 检查播放速度是否被重置了
+                    if playbackState.isPlaying && abs(player.rate - playbackState.playbackRate) > 0.01 {
+                        print("🎧 [Player] ⚠️ 检测到播放速度不匹配，期望: \(playbackState.playbackRate)x, 实际: \(player.rate)x")
+                        player.rate = playbackState.playbackRate
+                        print("🎧 [Player] ✅ 已修正播放速度为: \(playbackState.playbackRate)x")
                     }
                 }
             }
@@ -974,13 +989,21 @@ class PodcastPlayerService: NSObject, ObservableObject {
             print("🎧 [Player] 音频会话激活失败: \(error)")
         }
         
+        // 先开始播放，然后设置播放速度
         audioPlayer?.play()
         playbackState.isPlaying = true
+        
+        // 延迟设置播放速度，确保AVPlayer完全准备好
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self, let player = self.audioPlayer else { return }
+            player.rate = self.playbackState.playbackRate
+            print("🎧 [Player] 延迟设置播放速度: \(self.playbackState.playbackRate)x, 实际rate: \(player.rate)")
+        }
         
         // 更新锁屏显示信息
         updateNowPlayingInfo()
         
-        print("🎧 [Player] 开始播放: \(playbackState.currentEpisode?.title ?? "未知")")
+        print("🎧 [Player] 开始播放: \(playbackState.currentEpisode?.title ?? "未知")，播放速度: \(playbackState.playbackRate)x")
         
         monitorPlaybackStartup()
     }
@@ -1000,11 +1023,21 @@ class PodcastPlayerService: NSObject, ObservableObject {
             return
         }
         
+        // 先开始播放，然后设置播放速度
         audioPlayer?.play()
         playbackState.isPlaying = true
         
+        // 延迟设置播放速度，确保AVPlayer完全准备好
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self, let player = self.audioPlayer else { return }
+            player.rate = self.playbackState.playbackRate
+            print("🎧 [Player] 延迟设置播放速度: \(self.playbackState.playbackRate)x, 实际rate: \(player.rate)")
+        }
+        
         // 更新锁屏显示信息
         updateNowPlayingInfo()
+        
+        print("🎧 [Player] 恢复播放，播放速度: \(playbackState.playbackRate)x")
     }
     
     func stopPlayback() {
@@ -1042,6 +1075,18 @@ class PodcastPlayerService: NSObject, ObservableObject {
     func seek(to time: TimeInterval) {
         audioPlayer?.seek(to: CMTime(seconds: time, preferredTimescale: 1000))
         playbackState.currentTime = time
+        
+        // 在seek后重新设置播放速度，因为AVPlayer可能会重置速度
+        if playbackState.isPlaying {
+            // 延迟设置播放速度，确保seek操作完成
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                guard let self = self, let player = self.audioPlayer else { return }
+                player.rate = self.playbackState.playbackRate
+                print("🎧 [Player] Seek后延迟设置播放速度: \(self.playbackState.playbackRate)x, 实际rate: \(player.rate)")
+            }
+        }
+        
+        print("🎧 [Player] Seek到: \(formatTime(time)), 播放状态: \(playbackState.isPlaying)")
     }
     
     // MARK: - 时间跳转控制
@@ -1051,6 +1096,9 @@ class PodcastPlayerService: NSObject, ObservableObject {
         let newTime = max(0, audioPlayer.currentTime().seconds - seconds)
         audioPlayer.seek(to: CMTime(seconds: newTime, preferredTimescale: 1000))
         playbackState.currentTime = newTime
+        
+        // 在seek后重新设置播放速度
+        audioPlayer.rate = playbackState.isPlaying ? playbackState.playbackRate : 0
         
         print("🎧 [Player] 快退 \(seconds) 秒到: \(formatTime(newTime))")
     }
@@ -1062,6 +1110,9 @@ class PodcastPlayerService: NSObject, ObservableObject {
         let newTime = min(duration, audioPlayer.currentTime().seconds + seconds)
         audioPlayer.seek(to: CMTime(seconds: newTime, preferredTimescale: 1000))
         playbackState.currentTime = newTime
+        
+        // 在seek后重新设置播放速度
+        audioPlayer.rate = playbackState.isPlaying ? playbackState.playbackRate : 0
         
         print("🎧 [Player] 快进 \(seconds) 秒到: \(formatTime(newTime))")
     }
@@ -1076,6 +1127,9 @@ class PodcastPlayerService: NSObject, ObservableObject {
         audioPlayer.seek(to: CMTime(seconds: targetTime, preferredTimescale: 1000))
         playbackState.currentTime = targetTime
         
+        // 在seek后重新设置播放速度
+        audioPlayer.rate = playbackState.isPlaying ? playbackState.playbackRate : 0
+        
         print("🎧 [Player] 快退 \(wordCount) 个单词到: \(formatTime(targetTime))")
     }
     
@@ -1088,6 +1142,9 @@ class PodcastPlayerService: NSObject, ObservableObject {
         
         audioPlayer.seek(to: CMTime(seconds: targetTime, preferredTimescale: 1000))
         playbackState.currentTime = targetTime
+        
+        // 在seek后重新设置播放速度
+        audioPlayer.rate = playbackState.isPlaying ? playbackState.playbackRate : 0
         
         print("🎧 [Player] 快进 \(wordCount) 个单词到: \(formatTime(targetTime))")
     }
