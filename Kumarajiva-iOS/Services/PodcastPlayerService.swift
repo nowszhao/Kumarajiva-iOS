@@ -1075,18 +1075,6 @@ class PodcastPlayerService: NSObject, ObservableObject {
     func seek(to time: TimeInterval) {
         audioPlayer?.seek(to: CMTime(seconds: time, preferredTimescale: 1000))
         playbackState.currentTime = time
-        
-        // 在seek后重新设置播放速度，因为AVPlayer可能会重置速度
-        if playbackState.isPlaying {
-            // 延迟设置播放速度，确保seek操作完成
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                guard let self = self, let player = self.audioPlayer else { return }
-                player.rate = self.playbackState.playbackRate
-                print("🎧 [Player] Seek后延迟设置播放速度: \(self.playbackState.playbackRate)x, 实际rate: \(player.rate)")
-            }
-        }
-        
-        print("🎧 [Player] Seek到: \(formatTime(time)), 播放状态: \(playbackState.isPlaying)")
     }
     
     // MARK: - 时间跳转控制
@@ -1096,9 +1084,6 @@ class PodcastPlayerService: NSObject, ObservableObject {
         let newTime = max(0, audioPlayer.currentTime().seconds - seconds)
         audioPlayer.seek(to: CMTime(seconds: newTime, preferredTimescale: 1000))
         playbackState.currentTime = newTime
-        
-        // 在seek后重新设置播放速度
-        audioPlayer.rate = playbackState.isPlaying ? playbackState.playbackRate : 0
         
         print("🎧 [Player] 快退 \(seconds) 秒到: \(formatTime(newTime))")
     }
@@ -1110,9 +1095,6 @@ class PodcastPlayerService: NSObject, ObservableObject {
         let newTime = min(duration, audioPlayer.currentTime().seconds + seconds)
         audioPlayer.seek(to: CMTime(seconds: newTime, preferredTimescale: 1000))
         playbackState.currentTime = newTime
-        
-        // 在seek后重新设置播放速度
-        audioPlayer.rate = playbackState.isPlaying ? playbackState.playbackRate : 0
         
         print("🎧 [Player] 快进 \(seconds) 秒到: \(formatTime(newTime))")
     }
@@ -1127,9 +1109,6 @@ class PodcastPlayerService: NSObject, ObservableObject {
         audioPlayer.seek(to: CMTime(seconds: targetTime, preferredTimescale: 1000))
         playbackState.currentTime = targetTime
         
-        // 在seek后重新设置播放速度
-        audioPlayer.rate = playbackState.isPlaying ? playbackState.playbackRate : 0
-        
         print("🎧 [Player] 快退 \(wordCount) 个单词到: \(formatTime(targetTime))")
     }
     
@@ -1142,9 +1121,6 @@ class PodcastPlayerService: NSObject, ObservableObject {
         
         audioPlayer.seek(to: CMTime(seconds: targetTime, preferredTimescale: 1000))
         playbackState.currentTime = targetTime
-        
-        // 在seek后重新设置播放速度
-        audioPlayer.rate = playbackState.isPlaying ? playbackState.playbackRate : 0
         
         print("🎧 [Player] 快进 \(wordCount) 个单词到: \(formatTime(targetTime))")
     }
