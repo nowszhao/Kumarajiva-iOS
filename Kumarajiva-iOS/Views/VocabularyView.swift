@@ -820,7 +820,7 @@ struct EditVocabularyView: View {
             memoryMethod: memoryMethod.isEmpty ? nil : memoryMethod,
             pronunciation: pronunciation.isEmpty ? nil : pronunciation,
             mastered: mastered ? 1 : 0,
-            timestamp: Date().timeIntervalSince1970Milliseconds,
+            timestamp: originalVocabulary.timestamp,  // 保持原有时间戳，不更新时间
             userId: originalVocabulary.userId,
             isNewlyAdded: originalVocabulary.isNewlyAdded
         )

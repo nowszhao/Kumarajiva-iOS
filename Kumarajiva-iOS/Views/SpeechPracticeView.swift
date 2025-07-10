@@ -911,12 +911,6 @@ struct AnalyzingView: View {
                 Text("AI正在解析中")
                     .font(.headline)
                     .foregroundColor(.primary)
-                
-                Text("正在分析单词的词根结构、记忆方法和使用场景...")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(2)
             }
             
             Spacer()
