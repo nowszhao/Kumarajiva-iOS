@@ -134,6 +134,7 @@ struct Subtitle: Identifiable, Codable {
     let confidence: Float? // Whisper识别置信度
     let words: [SubtitleWord] // 单词级别的时间戳
     let language: String? // 语言标识
+    var translatedText: String? // 翻译后的文本
     
     init(id: String = UUID().uuidString,
          startTime: TimeInterval,
@@ -141,7 +142,8 @@ struct Subtitle: Identifiable, Codable {
          text: String,
          confidence: Float? = nil,
          words: [SubtitleWord] = [],
-         language: String? = nil) {
+         language: String? = nil,
+         translatedText: String? = nil) {
         self.id = id
         self.startTime = startTime
         self.endTime = endTime
@@ -149,6 +151,7 @@ struct Subtitle: Identifiable, Codable {
         self.confidence = confidence
         self.words = words.isEmpty ? Self.generateWordsFromText(text, startTime: startTime, endTime: endTime) : words
         self.language = language
+        self.translatedText = translatedText
     }
     
     // 从文本自动生成单词时间戳（当WhisperKit没有提供单词级别数据时）
@@ -440,4 +443,4 @@ struct EpisodePlaybackRecord: Codable, Identifiable {
             return .notPlayed
         }
     }
-} 
+}

@@ -1,11 +1,13 @@
 import Foundation
 import AVFoundation
 import CryptoKit
+import Combine
 
 class EdgeTTSService {
     static let shared = EdgeTTSService()
     
-    private let apiUrl = "http://47.121.117.100:5050/tts"
+    private let ttsApiUrl = "http://47.121.117.100:5050/tts"
+    private let translateApiUrl = "http://47.121.117.100:5050/translate"
     private let cacheDirectory: URL
     private var audioCache = [String: URL]()
     
@@ -85,7 +87,7 @@ class EdgeTTSService {
         }
         
         // Prepare API request
-        guard let url = URL(string: apiUrl) else {
+        guard let url = URL(string: ttsApiUrl) else {
             completion(nil)
             return
         }
@@ -158,6 +160,134 @@ class EdgeTTSService {
             print("TTS cache cleared")
         } catch {
             print("Failed to clear cache: \(error)")
+        }
+    }
+    
+    // 翻译响应结构体
+    struct TranslationResponse: Codable {
+        let dest: String
+        let from_cache: Bool
+        let pronunciation: String?
+        let service: String
+        let src: String
+        let text: String
+        let translated: String
+    }
+    
+    /// 将文本翻译为指定语言
+    /// - Parameters:
+    ///   - text: 要翻译的文本
+    ///   - destLanguage: 目标语言代码，例如 "zh-cn"、"en"、"ja" 等
+    /// - Returns: 包含翻译结果的Publisher
+    func translate(text: String, destLanguage: String) -> AnyPublisher<TranslationResponse, Error> {
+        // 创建URL
+        guard let url = URL(string: translateApiUrl) else {
+            return Fail(error: NSError(domain: "EdgeTTSService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])).eraseToAnyPublisher()
+        }
+        
+        // 创建请求
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // 准备请求参数
+        let params: [String: Any] = [
+            "text": text,
+            "dest": destLanguage
+        ]
+        
+        // 序列化请求体
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: params)
+        } catch {
+            return Fail(error: error).eraseToAnyPublisher()
+        }
+        
+        // 执行请求并返回Publisher
+        return URLSession.shared.dataTaskPublisher(for: request)
+            .tryMap { data, response -> Data in
+                guard let httpResponse = response as? HTTPURLResponse,
+                      httpResponse.statusCode == 200 else {
+                    throw NSError(domain: "EdgeTTSService", code: -2, userInfo: [NSLocalizedDescriptionKey: "API Error"])
+                }
+                return data
+            }
+            .decode(type: TranslationResponse.self, decoder: JSONDecoder())
+            .eraseToAnyPublisher()
+    }
+    
+    /// 将文本翻译为指定语言（使用回调方式）
+    /// - Parameters:
+    ///   - text: 要翻译的文本
+    ///   - destLanguage: 目标语言代码，例如 "zh-cn"、"en"、"ja" 等
+    ///   - completion: 完成回调，返回翻译结果或错误
+    func translate(text: String, destLanguage: String, completion: @escaping (Result<TranslationResponse, Error>) -> Void) {
+        // 创建URL
+        guard let url = URL(string: translateApiUrl) else {
+            completion(.failure(NSError(domain: "EdgeTTSService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+        
+        // 创建请求
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        // 准备请求参数
+        let params: [String: Any] = [
+            "text": text,
+            "dest": destLanguage
+        ]
+        
+        // 序列化请求体
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: params)
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        
+        // 执行请求
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            
+            guard let data = data,
+                  let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                completion(.failure(NSError(domain: "EdgeTTSService", code: -2, userInfo: [NSLocalizedDescriptionKey: "API Error"])))
+                return
+            }
+            
+            do {
+                let translationResponse = try JSONDecoder().decode(TranslationResponse.self, from: data)
+                completion(.success(translationResponse))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+        
+        task.resume()
+    }
+    
+    /// 将文本翻译为指定语言（异步方法）
+    /// - Parameters:
+    ///   - text: 要翻译的文本
+    ///   - to: 目标语言代码，例如 "zh-CN"、"en"、"ja" 等
+    /// - Returns: 翻译后的文本，如果翻译失败则返回nil
+    func translate(text: String, to destLanguage: String) async -> String? {
+        return await withCheckedContinuation { continuation in
+            translate(text: text, destLanguage: destLanguage.lowercased()) { result in
+                switch result {
+                case .success(let response):
+                    continuation.resume(returning: response.translated)
+                case .failure(let error):
+                    print("翻译失败: \(error.localizedDescription)")
+                    continuation.resume(returning: nil)
+                }
+            }
         }
     }
 }

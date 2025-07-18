@@ -15,6 +15,8 @@ struct VideoPlayerView: View {
     @State private var showDownloadProgress = false
     @State private var isSeeking = false
     @State private var seekDebounceTimer: Timer?
+    @State private var showTranslation = false // 控制是否显示翻译
+    @State private var isTranslating = false // 控制翻译加载状态
     
     var body: some View {
         VStack(spacing: 0) {
@@ -231,6 +233,83 @@ struct VideoPlayerView: View {
         .background(Color(.systemGroupedBackground))
     }
     
+    // 自定义SubtitleRowView，支持显示翻译
+    struct SubtitleRowView: View {
+        let subtitle: Subtitle
+        let isActive: Bool
+        let currentTime: TimeInterval
+        let showTranslation: Bool
+        let onTap: () -> Void
+        
+        var body: some View {
+            Button(action: onTap) {
+                VStack(alignment: .leading, spacing: 8) {
+                    // 时间和单词统计信息 - 移到上方
+                    HStack {
+                        Text(formatTime(subtitle.startTime))
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .foregroundColor(isActive ? .accentColor : .secondary)
+                        
+                        Spacer()
+                        
+                        Text("\(subtitle.words.count)词")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, isActive ? 16 : 12)
+                    .padding(.top, 8)
+                    
+                    // 字幕文本区域
+                    VStack(alignment: .leading, spacing: showTranslation && subtitle.translatedText != nil ? 8 : 0) {
+                        // 原始字幕文本
+                        Text(subtitle.text)
+                            .font(.system(size: 15, weight: isActive ? .medium : .regular))
+                            .foregroundColor(isActive ? .primary : .secondary)
+                            .lineSpacing(3)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, isActive ? 12 : 10)
+                            .padding(.horizontal, isActive ? 16 : 12)
+                        
+                        // 翻译文本（如果有）
+                        if showTranslation, let translatedText = subtitle.translatedText {
+                            Divider()
+                                .padding(.horizontal, isActive ? 16 : 12)
+                                
+                            Text(translatedText)
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundColor(.blue)
+                                .lineSpacing(3)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, isActive ? 12 : 10)
+                                .padding(.horizontal, isActive ? 16 : 12)
+                        }
+                    }
+                    .padding(.bottom, showTranslation && subtitle.translatedText != nil ? 0 : 8)
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: isActive ? 14 : 10)
+                        .fill(isActive ? Color.accentColor.opacity(0.08) : Color(.systemGray6).opacity(0.5))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: isActive ? 14 : 10)
+                                .stroke(isActive ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: isActive ? 2 : 0)
+                        )
+                )
+                .animation(.easeInOut(duration: 0.2), value: isActive)
+                .padding(.horizontal, 2)
+                .padding(.vertical, 3)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        
+        private func formatTime(_ time: TimeInterval) -> String {
+            let minutes = Int(time) / 60
+            let seconds = Int(time) % 60
+            return String(format: "%d:%02d", minutes, seconds)
+        }
+    }
+    
     private var emptySubtitleView: some View {
         VStack(spacing: 16) {
             if playerService.isGeneratingSubtitles {
@@ -352,6 +431,7 @@ struct VideoPlayerView: View {
                         subtitle: subtitle,
                         isActive: playerService.playbackState.currentSubtitleIndex == index,
                         currentTime: playerService.playbackState.currentTime,
+                        showTranslation: showTranslation,
                         onTap: {
                             playerService.seek(to: subtitle.startTime)
                         }
@@ -378,6 +458,50 @@ struct VideoPlayerView: View {
                     }
                 }
             }
+        }
+    }
+    
+    // 翻译字幕方法
+    private func translateSubtitles() async {
+        guard !playerService.currentSubtitles.isEmpty else { return }
+        
+        await MainActor.run {
+            isTranslating = true
+        }
+        
+        // 创建一个任务组，用于并行翻译多个字幕
+        await withTaskGroup(of: (Int, String?).self) { group in
+            // 为每个需要翻译的字幕创建一个任务
+            for (index, subtitle) in playerService.currentSubtitles.enumerated() {
+                // 如果已经有翻译，跳过
+                if subtitle.translatedText != nil {
+                    continue
+                }
+                
+                group.addTask {
+                    // 调用EdgeTTSService的翻译方法
+                    let translatedText = await EdgeTTSService.shared.translate(text: subtitle.text, to: "zh-CN")
+                    return (index, translatedText)
+                }
+            }
+            
+            // 处理翻译结果
+            var updatedSubtitles = playerService.currentSubtitles
+            for await (index, translatedText) in group {
+                if let translatedText = translatedText {
+                    // 更新字幕的翻译文本
+                    updatedSubtitles[index].translatedText = translatedText
+                }
+            }
+            
+            // 使用updateSubtitles方法更新字幕
+            await MainActor.run {
+                playerService.updateSubtitles(updatedSubtitles)
+            }
+        }
+        
+        await MainActor.run {
+            isTranslating = false
         }
     }
     
@@ -498,98 +622,151 @@ struct VideoPlayerView: View {
     
     // 功能按钮和主控制区域代码与PodcastPlayerView相同
     private var functionButtonsView: some View {
-        HStack(spacing: 0) {
-            // 循环播放
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    playerService.toggleLoop()
-                }
-            } label: {
-                VStack(spacing: 2) {
-                    Image(systemName: playerService.playbackState.isLooping ? "repeat.1" : "repeat")
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
-                    Text("循环")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-            }
-            
-            // 生词解析
-            Button {
-                // 如果当前已有字幕（包括SRT字幕），直接显示分析
-                if !playerService.currentSubtitles.isEmpty {
-                    showingVocabularyAnalysis = true
-                } else {
-                    // 如果没有字幕，提示用户先生成字幕
-                    errorMessage = "请先生成字幕再进行生词解析"
-                    showingErrorAlert = true
-                }
-            } label: {
-                VStack(spacing: 2) {
-                    ZStack {
-                        Image(systemName: "text.magnifyingglass")
+        VStack(spacing: 16) {
+            // 第一行功能按钮
+            HStack(spacing: 0) {
+                // 循环播放
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        playerService.toggleLoop()
+                    }
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: playerService.playbackState.isLooping ? "repeat.1" : "repeat")
                             .font(.system(size: 22, weight: .medium))
+                            .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
+                        Text("循环")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                }
+                
+                // 生词解析
+                Button {
+                    // 如果当前已有字幕（包括SRT字幕），直接显示分析
+                    if !playerService.currentSubtitles.isEmpty {
+                        showingVocabularyAnalysis = true
+                    } else {
+                        // 如果没有字幕，提示用户先生成字幕
+                        errorMessage = "请先生成字幕再进行生词解析"
+                        showingErrorAlert = true
+                    }
+                } label: {
+                    VStack(spacing: 2) {
+                        ZStack {
+                            Image(systemName: "text.magnifyingglass")
+                                .font(.system(size: 22, weight: .medium))
+                            
+                            // 如果有标注单词，显示小红点
+                            if playerService.markedWordCount > 0 {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 8, y: -8)
+                            }
+                        }
                         
-                        // 如果有标注单词，显示小红点
+                        Text("生词解析")
+                            .font(.system(size: 10, weight: .medium))
+                        
+                        // 显示标注数量
                         if playerService.markedWordCount > 0 {
-                            Circle()
-                                .fill(Color.red)
-                                .frame(width: 8, height: 8)
-                                .offset(x: 8, y: -8)
+                            Text("(\(playerService.markedWordCount))")
+                                .font(.system(size: 8, weight: .medium))
+                                .foregroundColor(.red)
                         }
                     }
-                    
-                    Text("生词解析")
-                        .font(.system(size: 10, weight: .medium))
-                    
-                    // 显示标注数量
-                    if playerService.markedWordCount > 0 {
-                        Text("(\(playerService.markedWordCount))")
-                            .font(.system(size: 8, weight: .medium))
-                            .foregroundColor(.red)
+                    .foregroundColor(!playerService.currentSubtitles.isEmpty ? .primary : .secondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                }
+                
+                // 重新转录字幕
+                Button {
+                    if !playerService.isGeneratingSubtitles {
+                        Task {
+                            await generateSubtitlesForVideo()
+                        }
                     }
-                }
-                .foregroundColor(!playerService.currentSubtitles.isEmpty ? .primary : .secondary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-            }
-            
-            // 重新转录字幕
-            Button {
-                if !playerService.isGeneratingSubtitles {
-                    Task {
-                        await generateSubtitlesForVideo()
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 22, weight: .medium))
+                        Text("重新转录")
+                            .font(.system(size: 10, weight: .medium))
                     }
+                    .foregroundColor(playerService.isGeneratingSubtitles ? .secondary : .primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
                 }
-            } label: {
-                VStack(spacing: 2) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 22, weight: .medium))
-                    Text("重新转录")
-                        .font(.system(size: 10, weight: .medium))
+                .disabled(playerService.isGeneratingSubtitles)
+                
+                // 听力模式
+                NavigationLink(destination: ListeningModeView(playerService: playerService)) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "headphones.circle")
+                            .font(.system(size: 22, weight: .medium))
+                        Text("听力模式")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
                 }
-                .foregroundColor(playerService.isGeneratingSubtitles ? .secondary : .primary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .disabled(playerService.isGeneratingSubtitles || playerService.currentSubtitles.isEmpty)
+
+                
+                // 中文翻译按钮
+                Button {
+                    // 如果当前已有字幕，切换翻译状态
+                    if !playerService.currentSubtitles.isEmpty {
+                        if !showTranslation {
+                            // 开启翻译
+                            withAnimation {
+                                showTranslation = true
+                            }
+                            // 执行翻译操作
+                            Task {
+                                await translateSubtitles()
+                            }
+                        } else {
+                            // 关闭翻译
+                            withAnimation {
+                                showTranslation = false
+                            }
+                        }
+                    } else {
+                        // 如果没有字幕，提示用户先生成字幕
+                        errorMessage = "请先生成字幕再使用翻译功能"
+                        showingErrorAlert = true
+                    }
+                } label: {
+                    VStack(spacing: 2) {
+                        ZStack {
+                            Image(systemName: showTranslation ? "character.bubble.fill" : "character.bubble")
+                                .font(.system(size: 22, weight: .medium))
+                                .foregroundColor(showTranslation ? .accentColor : .primary)
+                            
+                            // 显示翻译加载状态
+                            if isTranslating {
+                                ProgressView()
+                                    .scaleEffect(0.7)
+                                    .offset(x: 12, y: 12)
+                            }
+                        }
+                        
+                        Text("中文翻译")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(showTranslation ? .accentColor : .primary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                }
+                .disabled(playerService.isGeneratingSubtitles || isTranslating)
+
             }
-            .disabled(playerService.isGeneratingSubtitles)
-            
-            // 听力模式
-            NavigationLink(destination: ListeningModeView(playerService: playerService)) {
-                VStack(spacing: 2) {
-                    Image(systemName: "headphones.circle")
-                        .font(.system(size: 22, weight: .medium))
-                    Text("听力模式")
-                        .font(.system(size: 10, weight: .medium))
-                }
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-            }
-            .disabled(playerService.isGeneratingSubtitles || playerService.currentSubtitles.isEmpty)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
@@ -940,4 +1117,4 @@ struct VideoPlayerView: View {
 // MARK: - 预览
 #Preview {
     VideoPlayerView(video: YouTubeVideo.example)
-} 
+}

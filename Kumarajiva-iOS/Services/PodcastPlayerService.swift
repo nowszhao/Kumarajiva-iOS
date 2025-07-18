@@ -1574,6 +1574,12 @@ class PodcastPlayerService: NSObject, ObservableObject {
         }
     }
     
+    /// 更新当前字幕列表
+    func updateSubtitles(_ subtitles: [Subtitle]) {
+        setSubtitlesAndClearCache(subtitles)
+        saveSubtitlesDebounced()
+    }
+    
     // MARK: - 字幕查找
     
     /// 获取当前时间对应的字幕
