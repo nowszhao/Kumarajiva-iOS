@@ -12,19 +12,17 @@ struct VideoPlayerView: View {
     @State private var errorMessage = ""
     @State private var showingVocabularyAnalysis = false
     @State private var showingConfigPanel = false
-    @State private var showDownloadProgress = false
+    // showDownloadProgress 状态变量已移除，不再需要顶部进度栏
     @State private var isSeeking = false
     @State private var seekDebounceTimer: Timer?
     @State private var showTranslation = false // 控制是否显示翻译
     @State private var isTranslating = false // 控制翻译加载状态
+    @State private var hasDownloaded = false // 是否已下载视频
+    @State private var isDownloading = false // 是否正在下载
     
     var body: some View {
         VStack(spacing: 0) {
-            // YouTube下载进度顶部栏
-            if showDownloadProgress {
-                downloadProgressTopBar
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
+            // YouTube下载进度顶部栏已移除，使用页面中央的进度显示
             
             // 字幕显示区域
             subtitleDisplayView
@@ -50,24 +48,22 @@ struct VideoPlayerView: View {
         }
         .onReceive(youtubeExtractor.$downloadStatus) { status in
             print("📺 [VideoPlayer] 下载状态更新: '\(status)'")
-            withAnimation(.easeInOut(duration: 0.3)) {
-                showDownloadProgress = !status.isEmpty
+            
+            // 更新手动下载状态
+            if status == "下载完成" {
+                isDownloading = false
+                hasDownloaded = true
+            } else if status.contains("错误") || status.contains("失败") {
+                isDownloading = false
+                hasDownloaded = false
             }
         }
         .onReceive(youtubeExtractor.$isExtracting) { isExtracting in
             print("📺 [VideoPlayer] 提取状态更新: \(isExtracting)")
+            
+            // 同步下载状态
             if isExtracting {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    showDownloadProgress = true
-                }
-            } else {
-                // 下载完成后延迟3秒隐藏进度条
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        print("📺 [VideoPlayer] 隐藏下载进度条")
-                        showDownloadProgress = false
-                    }
-                }
+                isDownloading = true
             }
         }
         .onReceive(youtubeExtractor.$extractionProgress) { progress in
@@ -92,78 +88,7 @@ struct VideoPlayerView: View {
         }
     }
     
-    // MARK: - YouTube下载进度顶部栏
-    
-    private var downloadProgressTopBar: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 12) {
-                // 下载图标
-                ZStack {
-                    if youtubeExtractor.isExtracting {
-                        Circle()
-                            .stroke(Color.blue.opacity(0.3), lineWidth: 3)
-                            .frame(width: 24, height: 24)
-                        
-                        Circle()
-                            .trim(from: 0, to: youtubeExtractor.extractionProgress)
-                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                            .frame(width: 24, height: 24)
-                            .rotationEffect(.degrees(-90))
-                            .animation(.easeInOut(duration: 0.3), value: youtubeExtractor.extractionProgress)
-                        
-                        Image(systemName: "arrow.down")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(.blue)
-                    } else {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundColor(.green)
-                    }
-                }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(youtubeExtractor.downloadStatus)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                            .lineLimit(1)
-                        
-                        Spacer()
-                        
-                        if youtubeExtractor.isExtracting {
-                            Text("\(Int(youtubeExtractor.extractionProgress * 100))%")
-                                .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    
-                    // 下载进度条
-                    if youtubeExtractor.isExtracting && youtubeExtractor.extractionProgress > 0 {
-                        ProgressView(value: youtubeExtractor.extractionProgress)
-                            .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                            .frame(height: 6)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(3)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 0)
-                    .fill(youtubeExtractor.isExtracting ? 
-                          Color.blue.opacity(0.05) : Color.green.opacity(0.05))
-                    .overlay(
-                        Rectangle()
-                            .fill(youtubeExtractor.isExtracting ? 
-                                  Color.blue.opacity(0.2) : Color.green.opacity(0.2))
-                            .frame(height: 1),
-                        alignment: .bottom
-                    )
-            )
-        }
-        .animation(.easeInOut(duration: 0.3), value: youtubeExtractor.isExtracting)
-    }
+    // MARK: - YouTube下载进度顶部栏已移除，使用页面中央的进度显示
     
     // MARK: - 字幕显示区域
     
@@ -312,7 +237,45 @@ struct VideoPlayerView: View {
     
     private var emptySubtitleView: some View {
         VStack(spacing: 16) {
-            if playerService.isGeneratingSubtitles {
+            if isDownloading {
+                VStack(spacing: 12) {
+                    // 下载进度显示
+                    ZStack {
+                        Circle()
+                            .stroke(Color.blue.opacity(0.3), lineWidth: 8)
+                            .frame(width: 80, height: 80)
+                        
+                        Circle()
+                            .trim(from: 0, to: youtubeExtractor.extractionProgress)
+                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                            .frame(width: 80, height: 80)
+                            .rotationEffect(.degrees(-90))
+                            .animation(.easeInOut(duration: 0.3), value: youtubeExtractor.extractionProgress)
+                        
+                        if youtubeExtractor.extractionProgress > 0 {
+                            Text("\(Int(youtubeExtractor.extractionProgress * 100))%")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.blue)
+                        } else {
+                            Image(systemName: "arrow.down")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    
+                    Text("正在下载视频...")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                    
+                    if !youtubeExtractor.downloadStatus.isEmpty {
+                        Text(youtubeExtractor.downloadStatus)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+            } else if playerService.isGeneratingSubtitles {
                 VStack(spacing: 12) {
                     // 圆形进度条
                     ZStack {
@@ -356,6 +319,44 @@ struct VideoPlayerView: View {
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
+            } else if !hasDownloaded {
+                VStack(spacing: 16) {
+                    Image(systemName: "play.rectangle")
+                        .font(.system(size: 50))
+                        .foregroundColor(.secondary)
+                    
+                    VStack(spacing: 8) {
+                        Text("准备播放视频")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        
+                        Text("点击下载按钮开始播放")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    
+                    Button {
+                        downloadVideoManually()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "icloud.and.arrow.down")
+                                .font(.system(size: 18, weight: .medium))
+                            Text("下载并播放")
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.accentColor)
+                        )
+                    }
+                    .disabled(isDownloading)
+                    .padding(.top, 8)
+                }
             } else {
                 VStack(spacing: 12) {
                     Image(systemName: "captions.bubble")
@@ -365,58 +366,6 @@ struct VideoPlayerView: View {
                     Text("暂无字幕")
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    
-                    // Text("点击下方按钮生成字幕")
-                    //     .font(.body)
-                    //     .foregroundColor(.secondary)
-                    //     .multilineTextAlignment(.center)
-                    
-                    // Button {
-                    //     generateSubtitlesManually()
-                    // } label: {
-                    //     Label("生成字幕", systemImage: "waveform.and.mic")
-                    //         .font(.headline)
-                    //         .foregroundColor(.white)
-                    //         .padding()
-                    //         .background(isWhisperKitReady ? Color.accentColor : Color.gray)
-                    //         .cornerRadius(12)
-                    // }
-                    // .disabled(!isWhisperKitReady)
-                    // .padding(.top, 8)
-                    
-                    // if !isWhisperKitReady {
-                    //     VStack(spacing: 8) {
-                    //         if WhisperKitService.shared.shouldPromptForModelDownload() {
-                    //             Button {
-                    //                 Task {
-                    //                     await WhisperKitService.shared.smartDownloadModel()
-                    //                 }
-                    //             } label: {
-                    //                 HStack {
-                    //                     Image(systemName: "icloud.and.arrow.down")
-                    //                     Text("下载WhisperKit模型")
-                    //                 }
-                    //                 .font(.caption)
-                    //                 .foregroundColor(.white)
-                    //                 .padding(.horizontal, 12)
-                    //                 .padding(.vertical, 6)
-                    //                 .background(Color.blue)
-                    //                 .cornerRadius(8)
-                    //             }
-                    //         } else {
-                    //             Text("请先在\"我的\"页面设置中配置WhisperKit")
-                    //                 .font(.caption)
-                    //                 .foregroundColor(.orange)
-                    //                 .multilineTextAlignment(.center)
-                    //         }
-                            
-                    //         Text("当前状态: \(whisperStatusText)")
-                    //             .font(.caption2)
-                    //             .foregroundColor(.secondary)
-                    //             .multilineTextAlignment(.center)
-                    //     }
-                    //     .padding(.top, 4)
-                    // }
                 }
             }
         }
@@ -963,24 +912,81 @@ struct VideoPlayerView: View {
         if !isSameVideo {
             // 只有切换到不同视频时才清空播放器状态
             playerService.clearCurrentPlaybackState()
+            hasDownloaded = false
             print("📺 [VideoPlayer] 切换到新视频，清空播放状态: \(video.title)")
         } else {
             print("📺 [VideoPlayer] 打开当前播放视频，保持播放状态: \(video.title)")
             // 如果是同一个视频且已经准备好，直接返回
             if playerService.audioPreparationState == .audioReady {
+                hasDownloaded = true
                 print("📺 [VideoPlayer] 视频已准备完成，无需重新处理")
                 return
             }
         }
         
-        // 使用YouTube音频提取器v2.0获取音频和字幕
+        print("📺 [VideoPlayer] 视频准备完成，等待用户手动下载")
+    }
+    
+    /// 检查URL是否为YouTube URL
+    private func isYouTubeURL(_ url: String) -> Bool {
+        return YouTubeAudioExtractor.shared.isYouTubeURL(url)
+    }
+    
+    /// 创建模拟Episode对象从视频信息（更新版本，支持SRT字幕）
+    private func createMockEpisodeFromVideo(audioURL: String, subtitles: [Subtitle] = [], videoInfo: VideoInfo? = nil) -> PodcastEpisode {
+        // 将YouTube视频转换为PodcastEpisode格式以复用现有播放器
+        // 如果有来自后端的视频信息，使用更准确的数据
+        if let info = videoInfo {
+            return PodcastEpisode(
+                id: video.videoId,
+                title: info.title,
+                description: info.description,
+                audioURL: audioURL,
+                duration: info.duration,
+                publishDate: video.publishDate,
+                subtitles: subtitles,
+                subtitleGenerationDate: Date(), // VTT字幕是预生成的
+                subtitleVersion: "vtt_1.0"  // 更新为VTT版本
+            )
+        } else {
+            // 回退到原始视频信息
+            return PodcastEpisode(
+                id: video.videoId,
+                title: video.title,
+                description: video.description ?? "",
+                audioURL: audioURL,
+                duration: video.duration,
+                publishDate: video.publishDate,
+                subtitles: subtitles,
+                subtitleGenerationDate: Date(),
+                subtitleVersion: "vtt_1.0"  // 更新为VTT版本
+            )
+        }
+    }
+    
+    private func generateSubtitlesManually() {
+        Task { @MainActor in
+            await generateSubtitlesForVideo()
+        }
+    }
+    
+    // MARK: - 手动下载视频
+    
+    private func downloadVideoManually() {
+        guard !isDownloading else { return }
+        
         Task {
+            await MainActor.run {
+                isDownloading = true
+            }
+            
             do {
                 // 从YouTube URL中提取视频ID
                 guard let videoId = YouTubeAudioExtractor.shared.extractVideoId(from: video.youtubeURL) else {
                     await MainActor.run {
                         errorMessage = "无法从URL中提取视频ID"
                         showingErrorAlert = true
+                        isDownloading = false
                     }
                     return
                 }
@@ -993,6 +999,7 @@ struct VideoPlayerView: View {
                 print("📺 [VideoPlayer] ✅ 音频和字幕提取成功")
                 print("📺 [VideoPlayer] 音频URL: \(downloadResult.audioURL.prefix(100))...")
                 print("📺 [VideoPlayer] 字幕数量: \(downloadResult.subtitles.count)")
+                
                 // 使用音频流URL和字幕创建Episode并开始播放
                 await MainActor.run {
                     // 创建包含SRT字幕的模拟Episode对象
@@ -1003,6 +1010,8 @@ struct VideoPlayerView: View {
                     )
                     // 开始播放
                     playerService.prepareEpisode(mockEpisode)
+                    hasDownloaded = true
+                    isDownloading = false
                     
                     print("📺 [VideoPlayer] ✅ 开始播放YouTube音频，包含 \(downloadResult.subtitles.count) 条SRT字幕")
                 }
@@ -1010,6 +1019,7 @@ struct VideoPlayerView: View {
             } catch {
                 await MainActor.run {
                     print("📺 [VideoPlayer] 音频流提取失败: \(error)")
+                    isDownloading = false
                     
                     // 根据错误类型提供不同的用户友好信息
                     if let youtubeError = error as? YouTubeExtractionError {
@@ -1057,49 +1067,6 @@ struct VideoPlayerView: View {
                     showingErrorAlert = true
                 }
             }
-        }
-    }
-    
-    /// 检查URL是否为YouTube URL
-    private func isYouTubeURL(_ url: String) -> Bool {
-        return YouTubeAudioExtractor.shared.isYouTubeURL(url)
-    }
-    
-    /// 创建模拟Episode对象从视频信息（更新版本，支持SRT字幕）
-    private func createMockEpisodeFromVideo(audioURL: String, subtitles: [Subtitle] = [], videoInfo: VideoInfo? = nil) -> PodcastEpisode {
-        // 将YouTube视频转换为PodcastEpisode格式以复用现有播放器
-        // 如果有来自后端的视频信息，使用更准确的数据
-        if let info = videoInfo {
-            return PodcastEpisode(
-                id: video.videoId,
-                title: info.title,
-                description: info.description,
-                audioURL: audioURL,
-                duration: info.duration,
-                publishDate: video.publishDate,
-                subtitles: subtitles,
-                subtitleGenerationDate: Date(), // VTT字幕是预生成的
-                subtitleVersion: "vtt_1.0"  // 更新为VTT版本
-            )
-        } else {
-            // 回退到原始视频信息
-            return PodcastEpisode(
-                id: video.videoId,
-                title: video.title,
-                description: video.description ?? "",
-                audioURL: audioURL,
-                duration: video.duration,
-                publishDate: video.publishDate,
-                subtitles: subtitles,
-                subtitleGenerationDate: Date(),
-                subtitleVersion: "vtt_1.0"  // 更新为VTT版本
-            )
-        }
-    }
-    
-    private func generateSubtitlesManually() {
-        Task { @MainActor in
-            await generateSubtitlesForVideo()
         }
     }
     

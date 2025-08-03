@@ -4,22 +4,22 @@ struct ReviewView: View {
     @StateObject private var viewModel = ReviewViewModel()
     
     var body: some View {
-            Group {
-                if viewModel.isLoading {
+        Group {
+            if viewModel.isLoading {
                 LoadingView()
-                } else if let quiz = viewModel.currentQuiz {
+            } else if let quiz = viewModel.currentQuiz {
                 QuizView(quiz: quiz, progress: viewModel.progress, viewModel: viewModel) { isCorrect in
-                        Task {
-                            await viewModel.submitAnswer(word: quiz.word, isCorrect: isCorrect)
-                        }
+                    Task {
+                        await viewModel.submitAnswer(word: quiz.word, isCorrect: isCorrect)
                     }
-                } else if let progress = viewModel.progress {
-                    CompletionView(progress: progress) {
-                        Task {
-                            await viewModel.reset()
-                        }
+                }
+            } else if let progress = viewModel.progress {
+                CompletionView(progress: progress) {
+                    Task {
+                        await viewModel.reset()
                     }
-                } else {
+                }
+            } else {
                 ReviewEmptyStateView()
             }
         }
@@ -87,6 +87,7 @@ struct CompletionView: View {
     let onReset: () -> Void
     @State private var animateCheckmark = false
     @State private var animateStats = false
+    @State private var showingRandomQuiz = false
     
     var body: some View {
         ZStack {
@@ -191,25 +192,45 @@ struct CompletionView: View {
                     .opacity(animateStats ? 1.0 : 0)
                     .animation(.easeInOut(duration: 0.6).delay(1.1), value: animateStats)
                     
-                    // 次要操作 - 重新开始按钮（低调样式）
-                    Button(action: onReset) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 14, weight: .medium))
-                            Text("重新练习")
-                                .font(.system(size: 14, weight: .medium))
+                    // 操作按钮区域
+                    HStack(spacing: 12) {
+                        // 重新练习按钮
+                        Button(action: onReset) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 14, weight: .medium))
+                                Text("重新练习")
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .fill(Color(.systemBackground))
+                                    )
+                            )
                         }
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(Color(.systemBackground))
-                                )
-                        )
+                        
+                        // 随机测验按钮
+                        Button(action: { showingRandomQuiz = true }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "questionmark.circle")
+                                    .font(.system(size: 14, weight: .medium))
+                                Text("随机测验")
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(Color.blue)
+                            )
+                        }
                     }
                     .opacity(animateStats ? 1.0 : 0)
                     .scaleEffect(animateStats ? 1.0 : 0.9)
@@ -221,6 +242,9 @@ struct CompletionView: View {
         .onAppear {
             animateCheckmark = true
             animateStats = true
+        }
+        .sheet(isPresented: $showingRandomQuiz) {
+            RandomQuizView()
         }
     }
     
