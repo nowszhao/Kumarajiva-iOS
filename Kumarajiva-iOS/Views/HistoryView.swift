@@ -10,6 +10,7 @@ struct HistoryView: View {
     @State private var showingFilterSheet = false
     @State private var selectedHistory: ReviewHistoryItem? = nil
     @State private var showBookmarkedOnly = false
+    @State private var showCopyToast = false
     @AppStorage("lastPlaybackIndex") private var lastPlaybackIndex: Int = 0
     
     private var filterTypeText: String {
@@ -45,11 +46,30 @@ struct HistoryView: View {
     }
     
     var body: some View {
-            VStack(spacing: 0) {
-                filterToolbar
-                contentView
+            ZStack {
+                VStack(spacing: 0) {
+                    filterToolbar
+                    contentView
+                }
+                .overlay(playbackControlPanel, alignment: .bottom)
+                
+                // 复制成功提示
+                if showCopyToast {
+                    VStack {
+                        Text("复制成功！")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.black.opacity(0.7))
+                            )
+                    }
+                    .transition(.opacity)
+                    .zIndex(100)
+                }
             }
-            .overlay(playbackControlPanel, alignment: .bottom)
         .task {
             await viewModel.loadHistory(filter: selectedFilter)
         }
@@ -127,6 +147,37 @@ struct HistoryView: View {
                                 .stroke(showBookmarkedOnly ? Color.orange.opacity(0.3) : Color.clear, lineWidth: 1)
                         )
                 )
+            }
+            
+            // 添加复制按钮
+            Button(action: {
+                // 复制当前筛选后的单词列表到剪贴板
+                let text = formatHistoriesForCopy(filteredHistories)
+                UIPasteboard.general.string = text
+                
+                // 添加触觉反馈
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+                
+                // 显示复制成功提示
+                withAnimation {
+                    showCopyToast = true
+                    // 2秒后自动隐藏
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation {
+                            showCopyToast = false
+                        }
+                    }
+                }
+            }) {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.blue)
+                    .padding(8)
+                    .background(
+                        Circle()
+                            .fill(Color.blue.opacity(0.1))
+                    )
             }
             
             // 添加刷新按钮
@@ -299,6 +350,38 @@ struct HistoryView: View {
             formatter.dateFormat = "MM月dd日"
             return formatter.string(from: date)
         }
+    }
+    
+    // 格式化单词列表用于复制
+    private func formatHistoriesForCopy(_ histories: [ReviewHistoryItem]) -> String {
+        var result = ""
+        
+        for history in histories {
+            // 添加单词
+            result += "\n\n【\(history.word)】"
+            
+            // 添加音标
+            if let pronunciation = history.pronunciation {
+                let pron = pronunciation.American.isEmpty == false ? pronunciation.American : pronunciation.British
+                if !pron.isEmpty {
+                    result += "\n\(pron)"
+                }
+            }
+            
+            // 添加释义
+            for definition in history.definitions {
+                result += "\n\(definition.pos) \(definition.meaning)"
+            }
+            
+            // 添加记忆方法
+            if let memoryMethod = history.memoryMethod, !memoryMethod.isEmpty {
+                result += "\n记忆方法: \(memoryMethod)"
+            }
+            
+            result += "\n---"
+        }
+        
+        return result.isEmpty ? "没有可复制的内容" : "词汇列表：\(result)"
     }
     
     private func toggleWordTypeFilter(_ filter: WordTypeFilter) {
