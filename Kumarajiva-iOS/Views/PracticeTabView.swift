@@ -6,6 +6,11 @@ import AVFoundation
 struct PracticeTabView: View {
     let history: History
     @ObservedObject var viewModel: SpeechPracticeViewModel
+    // 新增：上一个/下一个的可用性与回调（由显式 init 提供默认值以保持兼容）
+    let hasPrev: Bool
+    let hasNext: Bool
+    let onPrev: (() -> Void)?
+    let onNext: (() -> Void)?
     @State private var isExamplePlaying = false
     @State private var showScoreAlert = false
     @State private var isLongPressing = false
@@ -14,7 +19,24 @@ struct PracticeTabView: View {
     @State private var showCancelAlert = false
     @State private var playbackRate: Float = 0.75
     @State private var hasAutoPlayed = false // 添加标记避免重复自动播放
-    
+
+    // 显式构造器，允许外部按需传入hasPrev/hasNext和回调，保持默认值兼容
+    init(
+        history: History,
+        viewModel: SpeechPracticeViewModel,
+        hasPrev: Bool = false,
+        hasNext: Bool = false,
+        onPrev: (() -> Void)? = nil,
+        onNext: (() -> Void)? = nil
+    ) {
+        self.history = history
+        self.viewModel = viewModel
+        self.hasPrev = hasPrev
+        self.hasNext = hasNext
+        self.onPrev = onPrev
+        self.onNext = onNext
+    }
+
     private var exampleToShow: String {
         var exampleToShow = "No example available."
         if let method = history.memoryMethod, !method.isEmpty {
@@ -236,7 +258,7 @@ struct PracticeTabView: View {
                                             .foregroundColor(.secondary)
                                             .frame(maxWidth: .infinity, alignment: .leading)
                                     } else {
-                                        Text("正在识别...")
+                                        Text("正在识别…")
                                             .font(.system(size: 15))
                                             .foregroundColor(.secondary)
                                     }
@@ -284,7 +306,7 @@ struct PracticeTabView: View {
                     // Recording indicator
                     if viewModel.isRecording {
                         HStack {
-                            Text("录音中...")
+                            Text("录音中…")
                                 .font(.system(size: 14))
                                 .foregroundColor(.red)
                             
@@ -306,87 +328,132 @@ struct PracticeTabView: View {
                     }
                
                     
-                    // Recording button with gesture
-                    ZStack {
-                        // Determine circle color based on state
-                        let circleColor: Color = {
-                            if isLongPressing {
-                                return isCompleting ? Color.green : Color.red
-                            } else {
-                                return Color.blue
+                    // 录音主按钮 + 上/下一个按钮
+                    HStack(alignment: .center, spacing: 24) {
+                        // 上一个
+                        let prevEnabled = hasPrev && !isLongPressing
+                        Button(action: {
+                            if prevEnabled {
+                                // 切换前停止任意播放
+                                AudioService.shared.stopPlayback()
+                                onPrev?()
                             }
-                        }()
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(prevEnabled ? Color.blue : Color.gray.opacity(0.3))
+                                    .frame(width: 44, height: 44)
+                                    .shadow(color: Color.black.opacity(0.15), radius: 3, x: 0, y: 1)
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .disabled(!prevEnabled)
                         
-                        Circle()
-                            .fill(circleColor)
-                            .frame(width: 64, height: 64)
-                            .shadow(color: Color.black.opacity(0.15), radius: 3, x: 0, y: 1)
-                        
-                        // Determine which icon to show
-                        if isLongPressing {
-                            if isCompleting {
-                                Image(systemName: "checkmark")
+                        // 录音按钮（保持原有交互）
+                        ZStack {
+                            // Determine circle color based on state
+                            let circleColor: Color = {
+                                if isLongPressing {
+                                    return isCompleting ? Color.green : Color.red
+                                } else {
+                                    return Color.blue
+                                }
+                            }()
+                            
+                            Circle()
+                                .fill(circleColor)
+                                .frame(width: 64, height: 64)
+                                .shadow(color: Color.black.opacity(0.15), radius: 3, x: 0, y: 1)
+                            
+                            // Determine which icon to show
+                            if isLongPressing {
+                                if isCompleting {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 26))
+                                        .foregroundColor(.white)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color.white)
+                                        .frame(width: 20, height: 20)
+                                }
+                            } else {
+                                Image(systemName: "mic.fill")
                                     .font(.system(size: 26))
                                     .foregroundColor(.white)
-                            } else {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.white)
-                                    .frame(width: 20, height: 20)
                             }
-                        } else {
-                            Image(systemName: "mic.fill")
-                                .font(.system(size: 26))
-                                .foregroundColor(.white)
-                        }
-                        
-                        // 添加向右滑动箭头指示(当录音开始时)
-                        if isLongPressing && !isCompleting {
-                            HStack {
-                                Spacer()
-                                Image(systemName: "arrow.right")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.white)
-                                    .offset(x: 40)
-                            }
-                            .frame(width: 120)
-                        }
-                    }
-                    .offset(dragOffset)
-                    .gesture(
-                        DragGesture()
-                            .onChanged { gesture in
-                                if isLongPressing {
-                                    // 只允许水平方向的滑动
-                                    let horizontalDrag = CGSize(width: gesture.translation.width, height: 0)
-                                    dragOffset = horizontalDrag
-                                    
-                                    // 如果向右滑动超过50，则标记为完成状态
-                                    isCompleting = gesture.translation.width > 50
+                            
+                            // 添加向右滑动箭头指示(当录音开始时)
+                            if isLongPressing && !isCompleting {
+                                HStack {
+                                    Spacer()
+                                    Image(systemName: "arrow.right")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.white)
+                                        .offset(x: 40)
                                 }
+                                .frame(width: 120)
                             }
-                            .onEnded { _ in
-                                if isLongPressing {
-                                    if isCompleting {
-                                        // Extract completion logic to reduce complexity
-                                        self.handleCompletedRecording()
-                                    } else {
-                                        // Extract cancellation logic to reduce complexity
-                                        self.handleCancelledRecording()
+                        }
+                        .offset(dragOffset)
+                        .gesture(
+                            DragGesture()
+                                .onChanged { gesture in
+                                    if isLongPressing {
+                                        // 只允许水平方向的滑动
+                                        let horizontalDrag = CGSize(width: gesture.translation.width, height: 0)
+                                        dragOffset = horizontalDrag
+                                        
+                                        // 如果向右滑动超过50，则标记为完成状态
+                                        isCompleting = gesture.translation.width > 50
                                     }
                                 }
-                            }
-                    )
-                    .simultaneousGesture(
-                        LongPressGesture(minimumDuration: 0.3)
-                            .onEnded { _ in
-                                if !isLongPressing {
-                                    isLongPressing = true
-                                    dragOffset = .zero
-                                    isCompleting = false
-                                    viewModel.startRecording()
+                                .onEnded { _ in
+                                    if isLongPressing {
+                                        if isCompleting {
+                                            // Extract completion logic to reduce complexity
+                                            self.handleCompletedRecording()
+                                        } else {
+                                            // Extract cancellation logic to reduce complexity
+                                            self.handleCancelledRecording()
+                                        }
+                                    }
                                 }
+                        )
+                        .simultaneousGesture(
+                            LongPressGesture(minimumDuration: 0.3)
+                                .onEnded { _ in
+                                    if !isLongPressing {
+                                        isLongPressing = true
+                                        dragOffset = .zero
+                                        isCompleting = false
+                                        viewModel.startRecording()
+                                    }
+                                }
+                        )
+                        
+                        // 下一个
+                        let nextEnabled = hasNext && !isLongPressing
+                        Button(action: {
+                            if nextEnabled {
+                                // 切换前停止任意播放
+                                AudioService.shared.stopPlayback()
+                                onNext?()
                             }
-                    )
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(nextEnabled ? Color.blue : Color.gray.opacity(0.3))
+                                    .frame(width: 44, height: 44)
+                                    .shadow(color: Color.black.opacity(0.15), radius: 3, x: 0, y: 1)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .disabled(!nextEnabled)
+                    }
                     .padding(.vertical, 12)
                 }
                 .padding(16)

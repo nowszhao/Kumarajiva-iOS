@@ -74,7 +74,9 @@ struct HistoryView: View {
             await viewModel.loadHistory(filter: selectedFilter)
         }
         .sheet(item: $selectedHistory) { history in
-            SpeechPracticeView(reviewHistory: history)
+            let list = filteredHistories
+            let startIndex = list.firstIndex(where: { $0.word == history.word }) ?? 0
+            SpeechPracticeView(reviewHistory: history, list: list, startIndex: startIndex)
                 .onAppear {
                     print("🔥 [HistoryView] Sheet 已显示，selectedHistory: \(history.word)")
                 }

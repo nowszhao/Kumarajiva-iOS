@@ -3,15 +3,19 @@ import AVFoundation
 import UIKit
 
 struct SpeechPracticeView: View {
-    let history: History
+    // 将 history 改为可变状态，以便“下一个”切换
+    @State private var history: History
+    // 可选的复习列表与当前索引（用于“下一个/上一个”）
+    private let reviewList: [ReviewHistoryItem]
+    @State private var currentIndex: Int
+    
     @StateObject private var viewModel = SpeechPracticeViewModel()
     @State private var selectedTab = 0
     @Environment(\.presentationMode) var presentationMode
-    
-    // New initializer for ReviewHistoryItem
-    init(reviewHistory: ReviewHistoryItem) {
-        // Convert ReviewHistoryItem to History format for compatibility
-        self.history = History(
+
+    // 统一的 ReviewHistoryItem -> History 转换
+    private func convert(_ reviewHistory: ReviewHistoryItem) -> History {
+        return History(
             word: reviewHistory.word,
             definitions: reviewHistory.definitions,
             examples: reviewHistory.examples,
@@ -30,9 +34,71 @@ struct SpeechPracticeView: View {
         )
     }
     
-    // Original initializer for History
+    // 新的初始化 - 支持传入列表与起始索引（默认依然兼容旧调用）
+    init(reviewHistory: ReviewHistoryItem, list: [ReviewHistoryItem] = [], startIndex: Int = 0) {
+        _history = State(initialValue: History(
+            word: reviewHistory.word,
+            definitions: reviewHistory.definitions,
+            examples: reviewHistory.examples,
+            lastReviewDate: reviewHistory.lastReviewDate,
+            reviewCount: reviewHistory.reviewCount,
+            correctCount: reviewHistory.correctCount,
+            pronunciation: reviewHistory.pronunciation.map { pronunciation in
+                History.Pronunciation(
+                    American: pronunciation.American,
+                    British: pronunciation.British
+                )
+            },
+            memoryMethod: reviewHistory.memoryMethod,
+            mastered: reviewHistory.mastered,
+            timestamp: reviewHistory.timestamp
+        ))
+        self.reviewList = list
+        _currentIndex = State(initialValue: min(max(startIndex, 0), max(list.count - 1, 0)))
+    }
+
+    // 保留原始 History 初始化，单个词进入时也可使用
     init(history: History) {
-        self.history = history
+        _history = State(initialValue: history)
+        self.reviewList = []
+        _currentIndex = State(initialValue: 0)
+    }
+    
+    private var hasNext: Bool {
+        return currentIndex < reviewList.count - 1
+    }
+    
+    // 新增：是否有上一个
+    private var hasPrev: Bool {
+        return !reviewList.isEmpty && currentIndex > 0
+    }
+
+    private func goNext() {
+        guard hasNext else { return }
+        // 切换前停止播放
+        AudioService.shared.stopPlayback()
+        viewModel.stopPlayback()
+        let nextIndex = currentIndex + 1
+        _currentIndex.wrappedValue = nextIndex
+        let nextItem = reviewList[nextIndex]
+        _history.wrappedValue = convert(nextItem)
+        // 可选：切回“跟读练习”tab
+        // selectedTab = 0
+    }
+    
+    // 新增：切换到上一个
+    private func goPrev() {
+        guard hasPrev else { return }
+        // 切换前停止播放
+        AudioService.shared.stopPlayback()
+        viewModel.stopPlayback()
+        let prevIndex = currentIndex - 1
+        _currentIndex.wrappedValue = prevIndex
+        let prevItem = reviewList[prevIndex]
+        _history.wrappedValue = convert(prevItem)
+        // 可选：切回“跟读练习”tab
+        // selectedTab = 0
+        
     }
     
     var body: some View {
@@ -56,8 +122,8 @@ struct SpeechPracticeView: View {
                 
                 Spacer()
                 
-                // Empty view for balanced layout
-                Image(systemName: "chevron.left")
+                // 右侧占位，保持布局高度/间距统一（已将“下一个”移至录音按钮旁）
+                Image(systemName: "chevron.right")
                     .font(.system(size: 16, weight: .semibold))
                     .opacity(0)
             }
@@ -109,7 +175,14 @@ struct SpeechPracticeView: View {
             
             // Content based on selected tab
             if selectedTab == 0 {
-                PracticeTabView(history: history, viewModel: viewModel)
+                PracticeTabView(
+                    history: history,
+                    viewModel: viewModel,
+                    hasPrev: hasPrev,
+                    hasNext: hasNext,
+                    onPrev: { goPrev() },
+                    onNext: { goNext() }
+                )
             } else if selectedTab == 1 {
                 RecordsTabView(viewModel: viewModel, history: history)
             } else if selectedTab == 2 {
