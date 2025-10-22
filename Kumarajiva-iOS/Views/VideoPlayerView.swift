@@ -158,8 +158,8 @@ struct VideoPlayerView: View {
         .background(Color(.systemGroupedBackground))
     }
     
-    // 自定义SubtitleRowView，支持显示翻译
-    struct SubtitleRowView: View {
+    // 自定义视频字幕行视图，支持显示翻译
+    struct VideoSubtitleRowView: View {
         let subtitle: Subtitle
         let isActive: Bool
         let currentTime: TimeInterval
@@ -376,7 +376,7 @@ struct VideoPlayerView: View {
         ScrollViewReader { proxy in
             LazyVStack(spacing: 4) {
                 ForEach(Array(playerService.currentSubtitles.enumerated()), id: \.element.id) { index, subtitle in
-                    SubtitleRowView(
+                    VideoSubtitleRowView(
                         subtitle: subtitle,
                         isActive: playerService.playbackState.currentSubtitleIndex == index,
                         currentTime: playerService.playbackState.currentTime,
@@ -569,156 +569,162 @@ struct VideoPlayerView: View {
         }
     }
     
-    // 功能按钮和主控制区域代码与PodcastPlayerView相同
+    // 功能按钮区域 - 优化为网格布局
     private var functionButtonsView: some View {
-        VStack(spacing: 16) {
-            // 第一行功能按钮
-            HStack(spacing: 0) {
-                // 循环播放
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        playerService.toggleLoop()
-                    }
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: playerService.playbackState.isLooping ? "repeat.1" : "repeat")
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
-                        Text("循环")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(playerService.playbackState.isLooping ? .accentColor : .primary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                }
-                
-                // 生词解析
-                Button {
-                    // 如果当前已有字幕（包括SRT字幕），直接显示分析
-                    if !playerService.currentSubtitles.isEmpty {
-                        showingVocabularyAnalysis = true
-                    } else {
-                        // 如果没有字幕，提示用户先生成字幕
-                        errorMessage = "请先生成字幕再进行生词解析"
-                        showingErrorAlert = true
-                    }
-                } label: {
-                    VStack(spacing: 2) {
-                        ZStack {
-                            Image(systemName: "text.magnifyingglass")
-                                .font(.system(size: 22, weight: .medium))
-                            
-                            // 如果有标注单词，显示小红点
-                            if playerService.markedWordCount > 0 {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 8, height: 8)
-                                    .offset(x: 8, y: -8)
-                            }
-                        }
-                        
-                        Text("生词解析")
-                            .font(.system(size: 10, weight: .medium))
-                        
-                        // 显示标注数量
-                        if playerService.markedWordCount > 0 {
-                            Text("(\(playerService.markedWordCount))")
-                                .font(.system(size: 8, weight: .medium))
-                                .foregroundColor(.red)
+        TabView {
+            // 第一页：5个按钮
+            videoFunctionButtonsGrid(buttons: [
+                FunctionButton(
+                    icon: playerService.playbackState.isLooping ? "repeat.1" : "repeat",
+                    title: "循环",
+                    isActive: playerService.playbackState.isLooping,
+                    isDisabled: false,
+                    action: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            playerService.toggleLoop()
                         }
                     }
-                    .foregroundColor(!playerService.currentSubtitles.isEmpty ? .primary : .secondary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                }
-                
-                // 重新转录字幕
-                Button {
-                    if !playerService.isGeneratingSubtitles {
-                        Task {
-                            await generateSubtitlesForVideo()
+                ),
+                FunctionButton(
+                    icon: "text.magnifyingglass",
+                    title: "生词解析",
+                    isActive: false,
+                    isDisabled: playerService.currentSubtitles.isEmpty,
+                    action: {
+                        if !playerService.currentSubtitles.isEmpty {
+                            showingVocabularyAnalysis = true
+                        } else {
+                            errorMessage = "请先生成字幕再进行生词解析"
+                            showingErrorAlert = true
                         }
                     }
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 22, weight: .medium))
-                        Text("重新转录")
-                            .font(.system(size: 10, weight: .medium))
-                    }
-                    .foregroundColor(playerService.isGeneratingSubtitles ? .secondary : .primary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                }
-                .disabled(playerService.isGeneratingSubtitles)
-                
-                // 听力模式
-                NavigationLink(destination: ListeningModeView(playerService: playerService)) {
-                    VStack(spacing: 2) {
-                        Image(systemName: "headphones.circle")
-                            .font(.system(size: 22, weight: .medium))
-                        Text("听力模式")
-                            .font(.system(size: 10, weight: .medium))
-                    }
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                }
-                .disabled(playerService.isGeneratingSubtitles || playerService.currentSubtitles.isEmpty)
-
-                
-                // 中文翻译按钮
-                Button {
-                    // 如果当前已有字幕，切换翻译状态
-                    if !playerService.currentSubtitles.isEmpty {
-                        if !showTranslation {
-                            // 开启翻译
-                            withAnimation {
-                                showTranslation = true
-                            }
-                            // 执行翻译操作
+                ),
+                FunctionButton(
+                    icon: "arrow.clockwise",
+                    title: "重新转录",
+                    isActive: false,
+                    isDisabled: playerService.isGeneratingSubtitles,
+                    action: {
+                        if !playerService.isGeneratingSubtitles {
                             Task {
-                                await translateSubtitles()
+                                await generateSubtitlesForVideo()
+                            }
+                        }
+                    }
+                ),
+                FunctionButton(
+                    icon: "headphones.circle",
+                    title: "听力模式",
+                    isActive: false,
+                    isDisabled: playerService.isGeneratingSubtitles || playerService.currentSubtitles.isEmpty,
+                    isNavigationLink: true,
+                    navigationDestination: AnyView(ListeningModeView(playerService: playerService))
+                ),
+                FunctionButton(
+                    icon: showTranslation ? "character.bubble.fill" : "character.bubble",
+                    title: "中文翻译",
+                    isActive: showTranslation,
+                    isDisabled: playerService.isGeneratingSubtitles || isTranslating,
+                    showProgress: isTranslating,
+                    action: {
+                        if !playerService.currentSubtitles.isEmpty {
+                            if !showTranslation {
+                                withAnimation {
+                                    showTranslation = true
+                                }
+                                Task {
+                                    await translateSubtitles()
+                                }
+                            } else {
+                                withAnimation {
+                                    showTranslation = false
+                                }
                             }
                         } else {
-                            // 关闭翻译
-                            withAnimation {
-                                showTranslation = false
-                            }
+                            errorMessage = "请先生成字幕再使用翻译功能"
+                            showingErrorAlert = true
                         }
-                    } else {
-                        // 如果没有字幕，提示用户先生成字幕
-                        errorMessage = "请先生成字幕再使用翻译功能"
-                        showingErrorAlert = true
                     }
-                } label: {
-                    VStack(spacing: 2) {
-                        ZStack {
-                            Image(systemName: showTranslation ? "character.bubble.fill" : "character.bubble")
-                                .font(.system(size: 22, weight: .medium))
-                                .foregroundColor(showTranslation ? .accentColor : .primary)
-                            
-                            // 显示翻译加载状态
-                            if isTranslating {
-                                ProgressView()
-                                    .scaleEffect(0.7)
-                                    .offset(x: 12, y: 12)
-                            }
-                        }
-                        
-                        Text("中文翻译")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(showTranslation ? .accentColor : .primary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                )
+            ])
+            
+            // 第二页：跟读练习按钮
+            secondPageButtons()
+        }
+        .tabViewStyle(.page(indexDisplayMode: .automatic))
+        .frame(height: 80)
+        .padding(.horizontal, 20)
+    }
+    
+    // MARK: - 功能按钮网格布局辅助函数
+    
+    private func secondPageButtons() -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 5), spacing: 8) {
+            NavigationLink(destination: destinationForShadowingPractice()) {
+                VStack(spacing: 2) {
+                    Image(systemName: "mic.badge.plus")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundColor((playerService.isGeneratingSubtitles || playerService.currentSubtitles.isEmpty || !isAudioReady) ? .secondary : .primary)
+                        .frame(height: 24)
+                    
+                    Text("跟读练习")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor((playerService.isGeneratingSubtitles || playerService.currentSubtitles.isEmpty || !isAudioReady) ? .secondary : .primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
-                .disabled(playerService.isGeneratingSubtitles || isTranslating)
-
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+            }
+            .disabled(playerService.isGeneratingSubtitles || playerService.currentSubtitles.isEmpty || !isAudioReady)
+        }
+        .padding(.horizontal, 8)
+    }
+    
+    private func videoFunctionButtonsGrid(buttons: [FunctionButton]) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 5), spacing: 8) {
+            ForEach(Array(buttons.enumerated()), id: \.offset) { index, button in
+                if button.isNavigationLink, let destination = button.navigationDestination {
+                    NavigationLink(destination: destination) {
+                        videoFunctionButtonView(button: button)
+                    }
+                    .disabled(button.isDisabled)
+                } else {
+                    Button(action: {
+                        button.action?()
+                    }) {
+                        videoFunctionButtonView(button: button)
+                    }
+                    .disabled(button.isDisabled)
+                }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 8)
+    }
+    
+    private func videoFunctionButtonView(button: FunctionButton) -> some View {
+        VStack(spacing: 2) {
+            ZStack {
+                Image(systemName: button.icon)
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundColor(button.isActive ? .accentColor : (button.isDisabled ? .secondary : .primary))
+                
+                if button.showProgress {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .offset(x: 12, y: 12)
+                }
+            }
+            .frame(height: 24)
+            
+            Text(button.title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(button.isActive ? .accentColor : (button.isDisabled ? .secondary : .primary))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 40)
     }
     
     private var mainControlsView: some View {
@@ -890,6 +896,21 @@ struct VideoPlayerView: View {
     }
     
     // MARK: - 辅助方法
+    
+    @ViewBuilder
+    private func destinationForShadowingPractice() -> some View {
+        if !playerService.currentSubtitles.isEmpty,
+           let audioURL = playerService.playbackState.currentEpisode?.audioURL {
+            SubtitleShadowingPracticeView(
+                video: video,
+                subtitles: playerService.currentSubtitles,
+                audioURL: audioURL,
+                startIndex: playerService.playbackState.currentSubtitleIndex ?? 0
+            )
+        } else {
+            EmptyView()
+        }
+    }
     
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()

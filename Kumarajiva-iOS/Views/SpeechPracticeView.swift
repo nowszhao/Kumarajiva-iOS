@@ -83,7 +83,8 @@ struct SpeechPracticeView: View {
         let nextItem = reviewList[nextIndex]
         _history.wrappedValue = convert(nextItem)
         // 可选：切回“跟读练习”tab
-        // selectedTab = 0
+        selectedTab = 0
+        
     }
     
     // 新增：切换到上一个
@@ -97,8 +98,7 @@ struct SpeechPracticeView: View {
         let prevItem = reviewList[prevIndex]
         _history.wrappedValue = convert(prevItem)
         // 可选：切回“跟读练习”tab
-        // selectedTab = 0
-        
+        selectedTab = 0
     }
     
     var body: some View {

@@ -20,6 +20,13 @@ class YouTubeAudioExtractor: ObservableObject {
 
     private init() {}
     
+    /// 获取视频的音频URL（不触发下载，仅返回URL）
+    /// - Parameter videoId: YouTube视频ID
+    /// - Returns: 音频URL字符串
+    func getAudioURL(for videoId: String) -> String {
+        return "\(backendBaseURL)/files/audio?id=\(videoId)"
+    }
+    
     /// 从YouTube视频ID提取音频流URL和字幕
     /// - Parameter videoId: YouTube视频ID
     /// - Returns: 包含音频URL和字幕的结果

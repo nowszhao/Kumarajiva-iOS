@@ -337,6 +337,7 @@ struct PracticeTabView: View {
                                 // 切换前停止任意播放
                                 AudioService.shared.stopPlayback()
                                 onPrev?()
+                               
                             }
                         }) {
                             ZStack {
@@ -440,6 +441,7 @@ struct PracticeTabView: View {
                                 // 切换前停止任意播放
                                 AudioService.shared.stopPlayback()
                                 onNext?()
+                               
                             }
                         }) {
                             ZStack {
@@ -505,7 +507,7 @@ struct PracticeTabView: View {
     }
     
     // 自动播放例句函数
-    private func startAutoPlay() {
+    public func startAutoPlay() {
         isExamplePlaying = true
         
         // 创建一个循环播放函数

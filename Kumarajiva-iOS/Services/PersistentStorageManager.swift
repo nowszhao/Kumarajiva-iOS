@@ -707,4 +707,44 @@ class PersistentStorageManager {
             print("✅ [Check] UserDefaults数据大小正常")
         }
     }
+    
+    // MARK: - 字幕跟读练习记录存储
+    
+    private let subtitlePracticeStatsFileName = "subtitle_practice_stats.json"
+    private var subtitlePracticeStatsURL: URL {
+        return applicationSupportURL.appendingPathComponent(subtitlePracticeStatsFileName)
+    }
+    
+    /// 保存字幕练习统计数据
+    func saveSubtitlePracticeStats(_ stats: [String: SubtitlePracticeStats]) {
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(stats)
+            try data.write(to: subtitlePracticeStatsURL)
+            print("🎯 [Storage] 字幕练习统计已保存: \(stats.count) 条记录")
+        } catch {
+            print("🎯 [Storage] 保存字幕练习统计失败: \(error)")
+        }
+    }
+    
+    /// 加载字幕练习统计数据
+    func loadSubtitlePracticeStats() -> [String: SubtitlePracticeStats] {
+        guard FileManager.default.fileExists(atPath: subtitlePracticeStatsURL.path) else {
+            print("🎯 [Storage] 字幕练习统计文件不存在")
+            return [:]
+        }
+        
+        do {
+            let data = try Data(contentsOf: subtitlePracticeStatsURL)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let stats = try decoder.decode([String: SubtitlePracticeStats].self, from: data)
+            print("🎯 [Storage] 加载字幕练习统计: \(stats.count) 条记录")
+            return stats
+        } catch {
+            print("🎯 [Storage] 加载字幕练习统计失败: \(error)")
+            return [:]
+        }
+    }
 } 

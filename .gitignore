@@ -60,3 +60,42 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.ropeproject/
+
+# Temporary files
+*.swp
+*.swo
+*~
+.codebuddy/
+
+# Backup files
+backup_*/
+
+# Temporary documentation and scripts
+*_修复*.md
+*修复*.md
+fix_*.sh
+check_*.sh
+verify_*.sh
+cleanup_*.sh
+COMPILATION_FIX.md
+BUG_FIX_SUMMARY.md
+IMPLEMENTATION_SUMMARY.md
+PIF_ERROR_FIX.md
+FINAL_FIX_GUIDE.md
+QUICK_START_GUIDE.md
+ADD_FILES_TO_XCODE.md
+
+# Server logs
+server.log
+*.log

@@ -113,6 +113,23 @@ download_threads: Dict[str, threading.Thread] = {}
 # YouTube 数据获取功能（替代 YouTube Data API v3）
 # =============================================================================
 
+def get_common_ydl_opts() -> dict:
+    """获取通用的 yt-dlp 配置，用于绕过 YouTube 403 错误"""
+    return {
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web'],
+                'player_skip': ['webpage', 'configs'],
+            }
+        },
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-us,en;q=0.5',
+            'Sec-Fetch-Mode': 'navigate',
+        },
+    }
+
 def get_cache_path(cache_type: str, identifier: str) -> Path:
     """获取缓存文件路径"""
     safe_id = hashlib.md5(identifier.encode()).hexdigest()[:12]
@@ -174,6 +191,7 @@ def resolve_channel_id(input_str: str) -> str:
             'skip_download': True,
             'extract_flat': True,
             'playlist_items': '1',  # 只获取一个视频来得到频道ID
+            **get_common_ydl_opts(),  # 添加通用配置
         }
         
         # 尝试不同的URL格式
@@ -227,6 +245,7 @@ def get_channel_info(channel_input: str) -> dict:
             'skip_download': True,
             'extract_flat': False,
             'playlist_items': '1:5',  # 获取前5个视频来得到频道详细信息
+            **get_common_ydl_opts(),  # 添加通用配置
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -287,6 +306,7 @@ def get_channel_videos(channel_input: str, limit: int = 20) -> List[dict]:
             'skip_download': True,
             'extract_flat': True,
             'playlist_items': f'1:{limit}',
+            **get_common_ydl_opts(),  # 添加通用配置
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -349,6 +369,7 @@ def get_video_info_detailed(video_id: str) -> dict:
             'skip_download': True,
             'extract_flat': False,
             'noplaylist': True,
+            **get_common_ydl_opts(),  # 添加通用配置
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -409,6 +430,7 @@ def search_channels(query: str, limit: int = 10) -> List[dict]:
             'skip_download': True,
             'extract_flat': True,
             'playlist_items': f'1:{limit}',
+            **get_common_ydl_opts(),  # 添加通用配置
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -782,6 +804,19 @@ def download_files(task: DownloadTask):
                 'preferredcodec': 'mp3',
                 'preferredquality': '128',
             }],
+            # 绕过 YouTube 403 错误的关键配置
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web'],
+                    'player_skip': ['webpage', 'configs'],
+                }
+            },
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-us,en;q=0.5',
+                'Sec-Fetch-Mode': 'navigate',
+            },
         }
         
         # 检查任务是否被取消
