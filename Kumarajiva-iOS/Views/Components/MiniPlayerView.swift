@@ -70,7 +70,7 @@ struct MiniPlayerView: View {
             .sheet(isPresented: $showingPlayer) {
                 if let episode = playerService.playbackState.currentEpisode {
                     NavigationView {
-                        PodcastPlayerView(episode: episode)
+                        PodcastPlayerView_New(episode: episode)
                     }
                 }
             }

@@ -20,7 +20,7 @@ class SubtitleShadowingViewModel: ObservableObject {
     @Published var lastWordMatches: [SubtitleWordMatch] = []
     
     // MARK: - Private Properties
-    private let video: YouTubeVideo
+    private let contentId: String  // 用于标识内容（播客或视频）
     let subtitles: [Subtitle]  // 需要被 View 访问，所以不能是 private
     private let audioURL: String
     private var player: AVPlayer?
@@ -49,14 +49,26 @@ class SubtitleShadowingViewModel: ObservableObject {
     }
     
     // MARK: - Initialization
-    init(video: YouTubeVideo, subtitles: [Subtitle], audioURL: String, startIndex: Int = 0) {
-        self.video = video
+    
+    /// 通用初始化方法（支持播客和视频）
+    init(contentId: String, subtitles: [Subtitle], audioURL: String, startIndex: Int = 0) {
+        self.contentId = contentId
         self.subtitles = subtitles
         self.audioURL = audioURL
         self.currentSubtitleIndex = max(0, min(startIndex, subtitles.count - 1))
         
         setupPlayer()
         loadCurrentStats()
+    }
+    
+    /// 便捷初始化方法 - YouTube视频
+    convenience init(video: YouTubeVideo, subtitles: [Subtitle], audioURL: String, startIndex: Int = 0) {
+        self.init(contentId: video.id.uuidString, subtitles: subtitles, audioURL: audioURL, startIndex: startIndex)
+    }
+    
+    /// 便捷初始化方法 - 播客节目
+    convenience init(episode: PodcastEpisode, subtitles: [Subtitle], audioURL: String, startIndex: Int = 0) {
+        self.init(contentId: episode.id, subtitles: subtitles, audioURL: audioURL, startIndex: startIndex)
     }
     
     deinit {
@@ -181,7 +193,7 @@ class SubtitleShadowingViewModel: ObservableObject {
             
             // 创建练习记录
             let record = SubtitlePracticeRecord(
-                videoId: video.id.uuidString,
+                videoId: contentId,
                 subtitleId: subtitle.id,
                 subtitleText: subtitle.text,
                 audioURL: savedURL,
@@ -244,8 +256,8 @@ class SubtitleShadowingViewModel: ObservableObject {
     // MARK: - Data Management
     private func loadCurrentStats() {
         guard let subtitle = currentSubtitle else { return }
-        currentStats = practiceService.getStats(videoId: video.id.uuidString, subtitleId: subtitle.id)
-        practiceRecords = practiceService.getRecords(videoId: video.id.uuidString, subtitleId: subtitle.id)
+        currentStats = practiceService.getStats(videoId: contentId, subtitleId: subtitle.id)
+        practiceRecords = practiceService.getRecords(videoId: contentId, subtitleId: subtitle.id)
     }
     
     func deleteRecord(id: UUID) {
@@ -315,7 +327,7 @@ class SubtitleShadowingViewModel: ObservableObject {
         
         // 生成唯一文件名
         let subtitleId = currentSubtitle?.id ?? UUID().uuidString
-        let fileName = "\(video.id)_\(subtitleId)_\(Date().timeIntervalSince1970).m4a"
+        let fileName = "\(contentId)_\(subtitleId)_\(Date().timeIntervalSince1970).m4a"
         let destinationURL = recordingsDir.appendingPathComponent(fileName)
         
         // 复制文件

@@ -39,7 +39,7 @@ struct PodcastDetailView: View {
                     emptyEpisodesView
                 } else {
                         ForEach(filteredEpisodes) { episode in
-                        NavigationLink(destination: PodcastPlayerView(episode: episode)) {
+                        NavigationLink(destination: PodcastPlayerView_New(episode: episode)) {
                             EpisodeRowView(episode: episode)
                         }
                             .id("\(episode.id)_\(episode.subtitles.count)")  // 使用复合ID，但保持稳定性

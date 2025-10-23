@@ -8,9 +8,20 @@ struct SubtitleShadowingPracticeView: View {
     @State private var showingHistory = false
     @State private var showingDeleteConfirmation = false
     
+    /// YouTube视频初始化
     init(video: YouTubeVideo, subtitles: [Subtitle], audioURL: String, startIndex: Int = 0) {
         _viewModel = StateObject(wrappedValue: SubtitleShadowingViewModel(
             video: video,
+            subtitles: subtitles,
+            audioURL: audioURL,
+            startIndex: startIndex
+        ))
+    }
+    
+    /// 播客节目初始化
+    init(episode: PodcastEpisode, subtitles: [Subtitle], audioURL: String, startIndex: Int = 0) {
+        _viewModel = StateObject(wrappedValue: SubtitleShadowingViewModel(
+            episode: episode,
             subtitles: subtitles,
             audioURL: audioURL,
             startIndex: startIndex

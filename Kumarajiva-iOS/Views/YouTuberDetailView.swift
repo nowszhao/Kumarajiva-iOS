@@ -147,7 +147,7 @@ struct YouTuberDetailView: View {
             List {
                 Section {
                     ForEach(currentYouTuber.videos) { video in
-                        NavigationLink(destination: VideoPlayerView(video: video)) {
+                        NavigationLink(destination: VideoPlayerView_New(video: video)) {
                             VideoRowView(video: video)
                         }
                     }
