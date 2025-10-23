@@ -12,6 +12,7 @@
 - **系统**: Linux/MacOS/Windows
 - **内存**: 512MB+
 - **网络**: 需要访问YouTube
+- **FFmpeg**: 用于音频转换（可选，但推荐）
 
 ### 安装步骤
 
@@ -64,12 +65,44 @@ sudo systemctl start youtube-proxy
 sudo systemctl status youtube-proxy
 ```
 
+### 🔐 YouTube Cookies 配置（重要）
+
+如果遇到 `Sign in to confirm you're not a bot` 错误，需要配置 YouTube cookies：
+
+#### 快速配置步骤
+
+1. **导出 Cookies**
+   - 在浏览器中访问 https://www.youtube.com 并登录
+   - 使用浏览器扩展导出 cookies（推荐 Chrome 的 "Get cookies.txt"）
+   - 保存为 `cookies.txt`
+
+2. **放置 Cookies 文件**
+   ```bash
+   # 将 cookies.txt 放在项目根目录，重命名为 youtube_cookies.txt
+   cp cookies.txt /path/to/youtube_cookies.txt
+   ```
+
+3. **重启服务**
+   ```bash
+   sudo systemctl restart youtube-proxy
+   ```
+
+4. **验证配置**
+   ```bash
+   curl http://YOUR_SERVER:5000/api/cookies/status
+   ```
+
+详细说明请参考 [YOUTUBE_COOKIES_SETUP.md](./YOUTUBE_COOKIES_SETUP.md)
+
 ### 📡 API 端点
 
 | 端点 | 方法 | 说明 | 示例 |
 |------|------|------|------|
 | `/audio` | GET | 获取音频流 | `/audio?id=eUNYgabsP1M` |
 | `/info` | GET | 获取视频信息 | `/info?id=eUNYgabsP1M` |
+| `/api/cookies/status` | GET | 检查 cookies 配置状态 | `/api/cookies/status` |
+| `/api/cookies/diagnose` | GET | 诊断 cookies 问题 | `/api/cookies/diagnose` |
+| `/api/test/youtube/<video_id>` | GET | 测试 YouTube 连接 | `/api/test/youtube/dQw4w9WgXcQ` |
 | `/health` | GET | 健康检查 | `/health` |
 | `/` | GET | 服务信息 | `/` |
 
@@ -164,9 +197,25 @@ server {
    sudo kill -9 PID
    ```
 
-3. **YouTube访问受限**
-   - 检查服务器IP是否被YouTube限制
-   - 考虑使用代理服务器
+3. **YouTube访问受限 / HTTP 403 错误**
+   
+   这是最常见的问题。快速诊断和修复：
+   
+   ```bash
+   # 运行诊断脚本
+   bash diagnose_403.sh
+   
+   # 或使用 Python 诊断工具
+   python3 auto_fix_403.py
+   ```
+   
+   **常见原因和解决方案**：
+   - **Cookies 已过期**: 重新导出新的 Cookies 到 `./youtube_cookies.txt`
+   - **IP 被限制**: 等待 1-2 小时后重试，或使用 VPN
+   - **Cookies 格式错误**: 确保使用 Netscape 格式导出
+   - **yt-dlp 版本过旧**: 运行 `pip install --upgrade yt-dlp`
+   
+   详细说明请参考 [HTTP_403_ADVANCED_FIX.md](./HTTP_403_ADVANCED_FIX.md)
 
 4. **yt-dlp版本过旧**
    ```bash

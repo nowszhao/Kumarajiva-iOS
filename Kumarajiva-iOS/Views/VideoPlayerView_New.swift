@@ -40,6 +40,9 @@ struct VideoPlayerView_New: View {
             functionButtons: createFunctionButtons(),
             secondPageButtons: AnyView(shadowingPracticeButton)
         )
+        .sheet(isPresented: $showingVocabularyAnalysis) {
+            VocabularyAnalysisView(playerService: playerService)
+        }
         .onReceive(youtubeExtractor.$downloadStatus) { status in
             print("📺 [VideoPlayer] 下载状态更新: '\(status)'")
             

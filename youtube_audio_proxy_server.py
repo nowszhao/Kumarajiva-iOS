@@ -79,6 +79,9 @@ CACHE_DIR.mkdir(exist_ok=True)
 # 缓存过期时间（12小时）
 CACHE_EXPIRE_HOURS = 12
 
+# YouTube Cookies 文件路径（可选）
+COOKIES_FILE = Path('./youtube_cookies.txt')
+
 # 任务状态枚举
 class TaskStatus(Enum):
     PENDING = "pending"
@@ -114,12 +117,14 @@ download_threads: Dict[str, threading.Thread] = {}
 # =============================================================================
 
 def get_common_ydl_opts() -> dict:
-    """获取通用的 yt-dlp 配置，用于绕过 YouTube 403 错误"""
-    return {
+    """获取通用的 yt-dlp 配置，用于绕过 YouTube 403 错误和机器人验证"""
+    opts = {
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'web'],
+                'player_client': ['android', 'web', 'tv', 'ios'],
                 'player_skip': ['webpage', 'configs'],
+                'skip_webpage': False,
+                'ignore_signaling': True,
             }
         },
         'http_headers': {
@@ -127,8 +132,28 @@ def get_common_ydl_opts() -> dict:
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'en-us,en;q=0.5',
             'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-Dest': 'document',
+            'Cache-Control': 'max-age=0',
+            'Pragma': 'no-cache',
         },
+        'socket_timeout': 30,
+        'retries': 15,
+        'fragment_retries': 15,
+        'skip_unavailable_fragments': True,
+        'allow_unplayable_formats': True,
+        'extractor_retries': 5,
+        'sleep_interval': 0.5,
+        'max_sleep_interval': 2,
     }
+    
+    if COOKIES_FILE.exists():
+        opts['cookiefile'] = str(COOKIES_FILE)
+        logger.info(f"📦 使用 YouTube cookies 文件: {COOKIES_FILE}")
+    else:
+        logger.warning(f"⚠️ 未找到 YouTube cookies 文件，将使用默认配置")
+    
+    return opts
 
 def get_cache_path(cache_type: str, identifier: str) -> Path:
     """获取缓存文件路径"""
@@ -790,9 +815,9 @@ def download_files(task: DownloadTask):
             'subtitleslangs': ['en'],
             'subtitlesformat': 'vtt',
             'writeinfojson': True,
-            'extract_audio': True,         # 正确写法
-            'audio_format': 'mp3',         # 正确写法
-            'audio_quality': '128k',       # 正确写法
+            'extract_audio': True,
+            'audio_format': 'mp3',
+            'audio_quality': '128k',
             'prefer_ffmpeg': True,
             'noplaylist': True,
             'ignoreerrors': False,
@@ -804,19 +829,7 @@ def download_files(task: DownloadTask):
                 'preferredcodec': 'mp3',
                 'preferredquality': '128',
             }],
-            # 绕过 YouTube 403 错误的关键配置
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'web'],
-                    'player_skip': ['webpage', 'configs'],
-                }
-            },
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
-                'Sec-Fetch-Mode': 'navigate',
-            },
+            **get_common_ydl_opts(),
         }
         
         # 检查任务是否被取消
@@ -1161,6 +1174,142 @@ def cancel_download():
             "message": f"Cannot cancel task in status: {task.status.value}",
             "status": task.status.value
         }), 400
+
+@app.route('/api/cookies/status')
+def cookies_status():
+    """检查 cookies 配置状态"""
+    cookies_configured = COOKIES_FILE.exists()
+    cookies_info = {
+        "cookies_configured": cookies_configured,
+        "cookies_file": str(COOKIES_FILE),
+    }
+    
+    if cookies_configured:
+        try:
+            file_size = COOKIES_FILE.stat().st_size
+            file_mtime = datetime.fromtimestamp(COOKIES_FILE.stat().st_mtime)
+            cookies_info["file_size"] = file_size
+            cookies_info["last_modified"] = file_mtime.isoformat()
+            cookies_info["status"] = "✅ Cookies 文件已配置"
+        except Exception as e:
+            cookies_info["status"] = f"⚠️ 无法读取 Cookies 文件: {e}"
+    else:
+        cookies_info["status"] = "❌ 未找到 Cookies 文件"
+    
+    cookies_info["help"] = "如果遇到 HTTP 403 错误，请尝试：\n1. 重新导出新的 Cookies（旧 Cookies 可能已过期）\n2. 确保 Cookies 文件格式正确（Netscape 格式）\n3. 检查 Cookies 文件是否包含有效的会话信息\n4. 重启服务器"
+    
+    return jsonify(cookies_info)
+
+@app.route('/api/cookies/diagnose')
+def cookies_diagnose():
+    """诊断 Cookies 问题"""
+    diagnosis = {
+        "timestamp": datetime.now().isoformat(),
+        "cookies_file_exists": COOKIES_FILE.exists(),
+    }
+    
+    if COOKIES_FILE.exists():
+        try:
+            with open(COOKIES_FILE, 'r', encoding='utf-8') as f:
+                content = f.read()
+                lines = content.strip().split('\n')
+                diagnosis["file_size"] = len(content)
+                diagnosis["line_count"] = len(lines)
+                diagnosis["is_netscape_format"] = lines[0].startswith('#') if lines else False
+                diagnosis["has_youtube_cookies"] = any('youtube' in line.lower() for line in lines)
+                
+                # 检查是否有有效的 cookies
+                valid_cookies = [l for l in lines if l.strip() and not l.startswith('#')]
+                diagnosis["valid_cookie_count"] = len(valid_cookies)
+                
+                if diagnosis["valid_cookie_count"] > 0:
+                    diagnosis["status"] = "✅ Cookies 文件看起来有效"
+                else:
+                    diagnosis["status"] = "❌ Cookies 文件为空或格式不正确"
+        except Exception as e:
+            diagnosis["status"] = f"❌ 无法读取 Cookies 文件: {e}"
+    else:
+        diagnosis["status"] = "❌ Cookies 文件不存在"
+    
+    return jsonify(diagnosis)
+
+@app.route('/api/test/youtube/<video_id>')
+def test_youtube_connection(video_id):
+    """测试 YouTube 连接和 yt-dlp 配置"""
+    test_result = {
+        "timestamp": datetime.now().isoformat(),
+        "video_id": video_id,
+        "tests": {}
+    }
+    
+    try:
+        # 测试 1: 基础连接
+        test_result["tests"]["basic_connection"] = {
+            "status": "testing",
+            "message": "正在测试基础连接..."
+        }
+        
+        ydl_opts = {
+            **get_common_ydl_opts(),
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,
+        }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
+            
+        test_result["tests"]["basic_connection"] = {
+            "status": "✅ 成功",
+            "message": "可以获取视频信息",
+            "video_title": info.get('title', 'N/A'),
+            "duration": info.get('duration', 'N/A'),
+            "formats_available": len(info.get('formats', []))
+        }
+        
+        # 测试 2: 音频格式可用性
+        test_result["tests"]["audio_formats"] = {
+            "status": "✅ 成功",
+            "message": "音频格式可用",
+            "audio_formats_count": len([f for f in info.get('formats', []) if f.get('vcodec') == 'none'])
+        }
+        
+        test_result["overall_status"] = "✅ YouTube 连接正常"
+        
+    except Exception as e:
+        error_msg = str(e)
+        test_result["tests"]["basic_connection"] = {
+            "status": "❌ 失败",
+            "error": error_msg
+        }
+        
+        # 诊断错误类型
+        if "403" in error_msg:
+            test_result["diagnosis"] = "🚫 HTTP 403 错误 - YouTube 拒绝访问"
+            test_result["solutions"] = [
+                "1. 检查 Cookies 是否过期: curl http://localhost:5000/api/cookies/diagnose",
+                "2. 重新导出 YouTube Cookies (需要新的登录会话)",
+                "3. 检查 IP 是否被限制 (等待 1-2 小时后重试)",
+                "4. 尝试使用 VPN 或代理"
+            ]
+        elif "bot" in error_msg.lower() or "sign in" in error_msg.lower():
+            test_result["diagnosis"] = "🤖 机器人验证错误"
+            test_result["solutions"] = [
+                "1. 导出有效的 YouTube Cookies",
+                "2. 确保 Cookies 文件位置正确: ./youtube_cookies.txt",
+                "3. 重启服务"
+            ]
+        else:
+            test_result["diagnosis"] = f"❌ 其他错误: {error_msg}"
+            test_result["solutions"] = [
+                "1. 检查网络连接",
+                "2. 检查 yt-dlp 是否最新: pip install --upgrade yt-dlp",
+                "3. 查看完整日志: tail -f youtube_download.log"
+            ]
+        
+        test_result["overall_status"] = "❌ YouTube 连接失败"
+    
+    return jsonify(test_result)
 
 @app.route('/health')
 def health_check():

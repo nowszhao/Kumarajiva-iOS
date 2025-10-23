@@ -36,6 +36,14 @@ struct PodcastPlayerView_New: View {
             functionButtons: createFunctionButtons(),
             secondPageButtons: AnyView(shadowingPracticeButton)
         )
+        .sheet(isPresented: $showingVocabularyAnalysis) {
+            VocabularyAnalysisView(playerService: playerService)
+        }
+        .alert("提示", isPresented: $showingErrorAlert) {
+            Button("确定", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
     }
     
     // MARK: - 播客特定的空状态视图
