@@ -1,5 +1,22 @@
 import SwiftUI
 
+private enum ContributionColorPalette {
+    static let levels: [Color] = [
+        Color(.systemGray5),
+        Color(red: 198.0 / 255.0, green: 228.0 / 255.0, blue: 139.0 / 255.0),
+        Color(red: 123.0 / 255.0, green: 201.0 / 255.0, blue: 111.0 / 255.0),
+        Color(red: 35.0 / 255.0, green: 154.0 / 255.0, blue: 59.0 / 255.0),
+        Color(red: 25.0 / 255.0, green: 97.0 / 255.0, blue: 39.0 / 255.0)
+    ]
+    
+    static func color(for level: Int) -> Color {
+        guard level >= 0, level < levels.count else {
+            return levels[0]
+        }
+        return levels[level]
+    }
+}
+
 // 学习贡献图视图
 struct ContributionGraphView: View {
     @ObservedObject var viewModel: ProfileViewModel
@@ -75,7 +92,7 @@ struct ContributionGraphView: View {
                         HStack(spacing: 3) {
                             ForEach(0..<5) { level in
                                 Rectangle()
-                                    .fill(colorForLevel(level))
+                                    .fill(ContributionColorPalette.color(for: level))
                                     .frame(width: 10, height: 10)
                                     .cornerRadius(2)
                             }
@@ -110,14 +127,7 @@ struct ContributionGraphView: View {
     }
     
     private func colorForLevel(_ level: Int) -> Color {
-        switch level {
-        case 0: return Color(.systemGray5)
-        case 1: return Color.green.opacity(0.2)
-        case 2: return Color.green.opacity(0.4)
-        case 3: return Color.green.opacity(0.6)
-        case 4: return Color.green.opacity(0.8)
-        default: return Color(.systemGray5)
-        }
+        ContributionColorPalette.color(for: level)
     }
 }
 
@@ -232,6 +242,11 @@ struct ContributionCellView: View {
             .fill(cellColor)
             .frame(width: cellSize, height: cellSize)
             .cornerRadius(2)
+            .overlay(
+                RoundedRectangle(cornerRadius: 2)
+                    .stroke(Color.white.opacity(data == nil ? 0 : 0.15), lineWidth: 0.6)
+            )
+            .shadow(color: Color.black.opacity(data == nil ? 0 : 0.08), radius: data == nil ? 0 : 1, x: 0, y: 0.4)
             .onTapGesture {
                 if let data = data {
                     hoveredItem = data
@@ -243,18 +258,10 @@ struct ContributionCellView: View {
     private var cellColor: Color {
         guard let data = data else {
             // 没有数据（真正的空数据）显示为浅灰色
-            return Color(.systemGray5)
+            return ContributionColorPalette.color(for: 0)
         }
         
-        let level = data.contributionLevel
-        switch level {
-        case 0: return Color(.systemGray5)
-        case 1: return Color.green.opacity(0.6)
-        case 2: return Color.green.opacity(0.7)
-        case 3: return Color.green.opacity(0.8)
-        case 4: return Color.green.opacity(0.9)
-        default: return Color(.systemGray5)
-        }
+        return ContributionColorPalette.color(for: data.contributionLevel)
     }
 }
 
@@ -282,9 +289,15 @@ struct TooltipView: View {
                 }
             }
             .padding(8)
-            .background(Color(.systemBackground))
-            .cornerRadius(6)
-            .shadow(radius: 4)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 4)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.white.opacity(0.4), lineWidth: 0.5)
+            )
             .position(x: UIScreen.main.bounds.width / 2, y: 50)
         }
     }
