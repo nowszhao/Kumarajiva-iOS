@@ -121,30 +121,34 @@ def get_common_ydl_opts() -> dict:
     opts = {
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'web', 'tv', 'ios'],
-                'player_skip': ['webpage', 'configs'],
-                'skip_webpage': False,
-                'ignore_signaling': True,
+                # 优先使用 Android 客户端，最稳定
+                'player_client': ['android', 'ios', 'mweb', 'web'],
+                'player_skip': ['webpage'],
+                'skip': ['hls', 'dash'],  # 跳过可能导致403的流格式
             }
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-us,en;q=0.5',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-Dest': 'document',
-            'Cache-Control': 'max-age=0',
-            'Pragma': 'no-cache',
+            # 模拟 Android 客户端
+            'User-Agent': 'com.google.android.youtube/19.09.37 (Linux; U; Android 13) gzip',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate',
+            'X-YouTube-Client-Name': '3',
+            'X-YouTube-Client-Version': '19.09.37',
         },
-        'socket_timeout': 30,
-        'retries': 15,
-        'fragment_retries': 15,
+        'socket_timeout': 60,
+        'retries': 20,
+        'fragment_retries': 20,
         'skip_unavailable_fragments': True,
-        'allow_unplayable_formats': True,
-        'extractor_retries': 5,
-        'sleep_interval': 0.5,
-        'max_sleep_interval': 2,
+        'extractor_retries': 10,
+        'file_access_retries': 10,
+        'sleep_interval': 1,
+        'max_sleep_interval': 5,
+        'sleep_interval_requests': 1,
+        'sleep_interval_subtitles': 0,
+        # 强制使用特定格式避免 SABR 流问题
+        'format_sort': ['proto:https', 'quality', 'res', 'fps'],
+        'merge_output_format': 'mp4',
     }
     
     if COOKIES_FILE.exists():
@@ -808,7 +812,8 @@ def download_files(task: DownloadTask):
                 logger.info(f"✅ {task.video_id}: 文件下载完成")
 
         ydl_opts = {
-            'format': 'bestaudio/best',
+            # 使用更兼容的格式选择器，避免 SABR 流问题
+            'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
             'outtmpl': str(audio_file.with_suffix('.%(ext)s')),
             'writesubtitles': True,
             'writeautomaticsub': True,

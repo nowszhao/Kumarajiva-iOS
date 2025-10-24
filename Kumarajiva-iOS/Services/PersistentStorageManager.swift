@@ -9,11 +9,13 @@ class PersistentStorageManager {
     private let podcastDataURL: URL
     private let subtitleCacheURL: URL
     private let youtuberDataURL: URL
+    private let aliyunDrivesDataURL: URL
     
     // 存储文件名
     private let podcastsFileName = "podcasts.json"
     private let subtitleCacheFileName = "subtitle_cache.json"
     private let youtubersFileName = "youtubers.json"
+    private let aliyunDrivesFileName = "aliyun_drives.json"
     
     // MARK: - 语音练习记录存储
     
@@ -69,11 +71,13 @@ class PersistentStorageManager {
             podcastDataURL = applicationSupportURL.appendingPathComponent(podcastsFileName)
             subtitleCacheURL = applicationSupportURL.appendingPathComponent(subtitleCacheFileName)
             youtuberDataURL = applicationSupportURL.appendingPathComponent(youtubersFileName)
+            aliyunDrivesDataURL = applicationSupportURL.appendingPathComponent(aliyunDrivesFileName)
             
             print("🎧 [Storage] 持久化存储初始化完成")
             print("🎧 [Storage] 播客数据路径: \(podcastDataURL.path)")
             print("🎧 [Storage] 字幕缓存路径: \(subtitleCacheURL.path)")
             print("📺 [Storage] YouTuber数据路径: \(youtuberDataURL.path)")
+            print("☁️ [Storage] 阿里云盘数据路径: \(aliyunDrivesDataURL.path)")
             
         } catch {
             // 如果无法创建应用程序支持目录，回退到文档目录
@@ -99,6 +103,7 @@ class PersistentStorageManager {
                 podcastDataURL = applicationSupportURL.appendingPathComponent(podcastsFileName)
                 subtitleCacheURL = applicationSupportURL.appendingPathComponent(subtitleCacheFileName)
                 youtuberDataURL = applicationSupportURL.appendingPathComponent(youtubersFileName)
+                aliyunDrivesDataURL = applicationSupportURL.appendingPathComponent(aliyunDrivesFileName)
                 
             } catch {
                 fatalError("无法创建持久化存储目录: \(error)")
@@ -746,5 +751,31 @@ class PersistentStorageManager {
             print("🎯 [Storage] 加载字幕练习统计失败: \(error)")
             return [:]
         }
+    }
+    
+    // MARK: - 阿里云盘数据存储
+    
+    /// 保存阿里云盘数据
+    func saveAliyunDrives(_ drives: [AliyunDrive]) throws {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(drives)
+        try data.write(to: aliyunDrivesDataURL)
+        print("☁️ [Storage] 阿里云盘数据已保存: \(drives.count) 个云盘")
+    }
+    
+    /// 加载阿里云盘数据
+    func loadAliyunDrives() throws -> [AliyunDrive] {
+        guard FileManager.default.fileExists(atPath: aliyunDrivesDataURL.path) else {
+            print("☁️ [Storage] 阿里云盘数据文件不存在")
+            return []
+        }
+        
+        let data = try Data(contentsOf: aliyunDrivesDataURL)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let drives = try decoder.decode([AliyunDrive].self, from: data)
+        print("☁️ [Storage] 加载阿里云盘数据: \(drives.count) 个云盘")
+        return drives
     }
 } 

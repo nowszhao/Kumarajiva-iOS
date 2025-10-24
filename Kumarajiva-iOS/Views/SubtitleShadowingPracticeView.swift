@@ -28,6 +28,16 @@ struct SubtitleShadowingPracticeView: View {
         ))
     }
     
+    /// 阿里云盘媒体文件初始化
+    init(mediaFile: AliyunMediaFile, subtitles: [Subtitle], audioURL: String, startIndex: Int = 0) {
+        _viewModel = StateObject(wrappedValue: SubtitleShadowingViewModel(
+            contentId: mediaFile.fileId,
+            subtitles: subtitles,
+            audioURL: audioURL,
+            startIndex: startIndex
+        ))
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // 导航栏

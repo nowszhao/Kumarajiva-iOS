@@ -25,9 +25,19 @@ struct Kumarajiva_iOSApp: App {
             }
             .onOpenURL { url in
                 print("📱 [App] 收到URL回调: \(url)")
-                // 处理OAuth回调
-                let handled = authService.handleOAuthCallback(url: url)
-                print("📱 [App] URL回调处理结果: \(handled)")
+                
+                // 处理不同类型的OAuth回调
+                if url.host == "oauth-callback" || url.host == "oauth-error" {
+                    // GitHub OAuth回调
+                    let handled = authService.handleOAuthCallback(url: url)
+                    print("📱 [App] GitHub OAuth回调处理结果: \(handled)")
+                } else if url.host == "aliyun-oauth-callback" {
+                    // 阿里云盘OAuth回调
+                    print("📱 [App] 阿里云盘OAuth回调，将由AddAliyunDriveView处理")
+                    // 回调会被AddAliyunDriveView的onOpenURL处理器捕获
+                } else {
+                    print("⚠️ [App] 未知的URL回调类型: \(url.host ?? "nil")")
+                }
             }
             .onAppear {
                 print("📱 [App] 应用启动")

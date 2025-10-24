@@ -514,9 +514,16 @@ class SubtitleParser {
     
     /// 解析SRT格式字幕
     static func parseSRT(content: String) throws -> [Subtitle] {
-        let lines = content.components(separatedBy: .newlines)
+        // 标准化换行符（处理 Windows \r\n 和 Mac \r）
+        let normalizedContent = content
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        
+        let lines = normalizedContent.components(separatedBy: .newlines)
         var subtitles: [Subtitle] = []
         var i = 0
+        
+        print("📝 [SubtitleParser] 开始解析SRT，总行数: \(lines.count)")
         
         while i < lines.count {
             let line = lines[i].trimmingCharacters(in: .whitespaces)
@@ -534,6 +541,11 @@ class SubtitleParser {
                 // 下一行应该是时间戳
                 if i < lines.count {
                     let timeLine = lines[i].trimmingCharacters(in: .whitespaces)
+                    
+                    // 调试：打印时间戳行
+                    if timeLine.isEmpty {
+                        print("⚠️ [SubtitleParser] 时间戳行为空，行号: \(i)")
+                    }
                     
                     if let (startTime, endTime) = parseSRTTimestamps(timeLine) {
                         i += 1
@@ -585,14 +597,27 @@ class SubtitleParser {
     /// 解析SRT时间戳
     static func parseSRTTimestamps(_ line: String) -> (TimeInterval, TimeInterval)? {
         // SRT格式: 00:00:01,234 --> 00:00:04,567
-        let components = line.components(separatedBy: " --> ")
-        guard components.count == 2 else { return nil }
+        // 也支持: 00:00:01.234 --> 00:00:04.567 (有些SRT用点而不是逗号)
         
-        let startTimeStr = components[0].trimmingCharacters(in: .whitespaces)
-        let endTimeStr = components[1].trimmingCharacters(in: .whitespaces)
+        // 尝试不同的分隔符
+        var components: [String]?
+        if line.contains(" --> ") {
+            components = line.components(separatedBy: " --> ")
+        } else if line.contains("-->") {
+            components = line.components(separatedBy: "-->")
+        }
+        
+        guard let parts = components, parts.count == 2 else {
+            print("⚠️ [SubtitleParser] 时间戳格式错误，无法找到 '-->'，内容: '\(line)'")
+            return nil
+        }
+        
+        let startTimeStr = parts[0].trimmingCharacters(in: .whitespaces)
+        let endTimeStr = parts[1].trimmingCharacters(in: .whitespaces)
         
         guard let startTime = parseSRTTimestamp(startTimeStr),
               let endTime = parseSRTTimestamp(endTimeStr) else {
+            print("⚠️ [SubtitleParser] 无法解析时间戳，开始: '\(startTimeStr)', 结束: '\(endTimeStr)'")
             return nil
         }
         
@@ -601,12 +626,25 @@ class SubtitleParser {
     
     /// 解析单个SRT时间戳
     static func parseSRTTimestamp(_ timestamp: String) -> TimeInterval? {
-        // 格式: 00:00:01,234
-        let parts = timestamp.components(separatedBy: ",")
-        guard parts.count == 2 else { return nil }
+        // 格式: 00:00:01,234 或 00:00:01.234
+        // 支持逗号和点作为毫秒分隔符
+        var parts: [String]
+        if timestamp.contains(",") {
+            parts = timestamp.components(separatedBy: ",")
+        } else if timestamp.contains(".") {
+            parts = timestamp.components(separatedBy: ".")
+        } else {
+            // 没有毫秒部分
+            parts = [timestamp, "0"]
+        }
         
-        let timePart = parts[0]
-        let millisecondsPart = parts[1]
+        guard parts.count == 2 else {
+            print("⚠️ [SubtitleParser] 时间戳格式错误: '\(timestamp)'")
+            return nil
+        }
+        
+        let timePart = parts[0].trimmingCharacters(in: .whitespaces)
+        let millisecondsPart = parts[1].trimmingCharacters(in: .whitespaces)
         
         let timeComponents = timePart.components(separatedBy: ":")
         guard timeComponents.count == 3,
@@ -614,6 +652,7 @@ class SubtitleParser {
               let minutes = Double(timeComponents[1]),
               let seconds = Double(timeComponents[2]),
               let milliseconds = Double(millisecondsPart) else {
+            print("⚠️ [SubtitleParser] 无法解析时间组件: '\(timestamp)'")
             return nil
         }
         
