@@ -300,3 +300,108 @@ struct BasePlayerView<Content: PlayableContent, SubtitleRow: View>: View {
         return formatter.string(from: date)
     }
 }
+
+// MARK: - 通用功能按钮构建器
+extension BasePlayerView {
+    /// 创建循环播放按钮
+    static func makeLoopButton(
+        isLooping: Bool,
+        action: @escaping () -> Void
+    ) -> FunctionButton {
+        FunctionButton(
+            icon: isLooping ? "repeat.circle.fill" : "repeat.circle",
+            title: "循环",
+            isActive: isLooping,
+            action: action
+        )
+    }
+    
+    /// 创建生词解析按钮
+    static func makeVocabularyButton(
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> FunctionButton {
+        FunctionButton(
+            icon: "book.circle",
+            title: "生词",
+            isActive: isEnabled,
+            action: action
+        )
+    }
+    
+    /// 创建听力模式按钮
+    static func makeListeningModeButton(
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> FunctionButton {
+        FunctionButton(
+            icon: isEnabled ? "ear.fill" : "ear",
+            title: "听力",
+            isActive: isEnabled,
+            action: action
+        )
+    }
+    
+    /// 创建中文翻译按钮
+    static func makeTranslationButton(
+        showTranslation: Bool,
+        isTranslating: Bool,
+        action: @escaping () -> Void
+    ) -> FunctionButton {
+        FunctionButton(
+            icon: isTranslating ? "hourglass" : (showTranslation ? "character.book.closed.fill" : "character.book.closed"),
+            title: "翻译",
+            isActive: showTranslation,
+            action: action
+        )
+    }
+}
+
+// MARK: - 通用翻译功能
+extension BasePlayerView {
+    /// 翻译字幕（通用方法）
+    static func translateSubtitles(
+        subtitles: [Subtitle],
+        isTranslating: Binding<Bool>,
+        showTranslation: Binding<Bool>,
+        onComplete: @escaping ([Subtitle]) -> Void
+    ) {
+        guard !isTranslating.wrappedValue else { return }
+        guard !subtitles.isEmpty else { return }
+        
+        Task {
+            await MainActor.run {
+                isTranslating.wrappedValue = true
+            }
+            
+            // 使用 TaskGroup 并发翻译所有字幕
+            await withTaskGroup(of: (Int, String?).self) { group in
+                for (index, subtitle) in subtitles.enumerated() {
+                    // 跳过已翻译的字幕
+                    if subtitle.translatedText != nil {
+                        continue
+                    }
+                    
+                    group.addTask {
+                        let translatedText = await EdgeTTSService.shared.translate(text: subtitle.text, to: "zh-CN")
+                        return (index, translatedText)
+                    }
+                }
+                
+                var updatedSubtitles = subtitles
+                for await (index, translatedText) in group {
+                    if let translatedText = translatedText {
+                        updatedSubtitles[index].translatedText = translatedText
+                    }
+                }
+                
+                await MainActor.run {
+                    onComplete(updatedSubtitles)
+                    showTranslation.wrappedValue = true
+                    isTranslating.wrappedValue = false
+                    print("✅ [BasePlayerView] 字幕翻译完成")
+                }
+            }
+        }
+    }
+}
