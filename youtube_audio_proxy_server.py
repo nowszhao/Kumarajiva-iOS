@@ -10,6 +10,7 @@ YouTube Audio Download Server
 4. 自动缓存管理（12小时过期 + LRU清理）
 5. 下载任务队列和进度跟踪
 6. 使用yt-dlp替代YouTube Data API v3获取频道和视频信息
+7. 优化的无认证配置，提高稳定性和兼容性
 
 部署要求:
 1. Python 3.8+
@@ -79,8 +80,7 @@ CACHE_DIR.mkdir(exist_ok=True)
 # 缓存过期时间（12小时）
 CACHE_EXPIRE_HOURS = 12
 
-# YouTube Cookies 文件路径（可选）
-COOKIES_FILE = Path('./youtube_cookies.txt')
+# 移除 Cookies 配置，使用更稳定的无认证方式
 
 # 任务状态枚举
 class TaskStatus(Enum):
@@ -117,46 +117,31 @@ download_threads: Dict[str, threading.Thread] = {}
 # =============================================================================
 
 def get_common_ydl_opts() -> dict:
-    """获取通用的 yt-dlp 配置，用于绕过 YouTube 403 错误和机器人验证"""
+    """获取通用的 yt-dlp 配置，使用最简化和稳定的设置"""
     opts = {
-        'extractor_args': {
-            'youtube': {
-                # 优先使用 Android 客户端，最稳定
-                'player_client': ['android', 'ios', 'mweb', 'web'],
-                'player_skip': ['webpage'],
-                'skip': ['hls', 'dash'],  # 跳过可能导致403的流格式
-            }
-        },
-        'http_headers': {
-            # 模拟 Android 客户端
-            'User-Agent': 'com.google.android.youtube/19.09.37 (Linux; U; Android 13) gzip',
-            'Accept': '*/*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate',
-            'X-YouTube-Client-Name': '3',
-            'X-YouTube-Client-Version': '19.09.37',
-        },
+        # 使用最基础的配置，避免复杂的 extractor_args
         'socket_timeout': 60,
-        'retries': 20,
-        'fragment_retries': 20,
+        'retries': 10,
+        'fragment_retries': 10,
         'skip_unavailable_fragments': True,
-        'extractor_retries': 10,
-        'file_access_retries': 10,
+        'extractor_retries': 5,
+        'file_access_retries': 5,
         'sleep_interval': 1,
-        'max_sleep_interval': 5,
+        'max_sleep_interval': 3,
         'sleep_interval_requests': 1,
         'sleep_interval_subtitles': 0,
-        # 强制使用特定格式避免 SABR 流问题
-        'format_sort': ['proto:https', 'quality', 'res', 'fps'],
-        'merge_output_format': 'mp4',
+        # 基础 HTTP 头
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+        },
+        # 基础选项
+        'no_warnings': False,  # 显示警告以便调试
+        'ignoreerrors': False,  # 不忽略错误，便于调试
+        'call_home': False,
     }
     
-    if COOKIES_FILE.exists():
-        opts['cookiefile'] = str(COOKIES_FILE)
-        logger.info(f"📦 使用 YouTube cookies 文件: {COOKIES_FILE}")
-    else:
-        logger.warning(f"⚠️ 未找到 YouTube cookies 文件，将使用默认配置")
-    
+    logger.info("🔧 使用简化的 yt-dlp 配置")
     return opts
 
 def get_cache_path(cache_type: str, identifier: str) -> Path:
@@ -214,45 +199,37 @@ def resolve_channel_id(input_str: str) -> str:
         return cached_data['channel_id']
     
     try:
-        # 使用yt-dlp获取频道信息
+        # 使用最简单的方法解析频道ID
         ydl_opts = {
             'quiet': True,
             'skip_download': True,
             'extract_flat': True,
-            'playlist_items': '1',  # 只获取一个视频来得到频道ID
-            **get_common_ydl_opts(),  # 添加通用配置
+            **get_common_ydl_opts(),
         }
         
-        # 尝试不同的URL格式
-        possible_urls = [
-            f'https://www.youtube.com/@{input_str}',
-            f'https://www.youtube.com/c/{input_str}', 
-            f'https://www.youtube.com/user/{input_str}',
-            f'https://www.youtube.com/channel/{input_str}',
-        ]
+        # 优先尝试 @ 格式，这是最新的标准格式
+        url = f'https://www.youtube.com/@{input_str}'
+        logger.info(f"🔍 尝试解析: {url}")
         
-        for url in possible_urls:
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(url, download=False)
-                    
-                    if info and 'channel_id' in info:
-                        channel_id = info['channel_id']
-                        logger.info(f"✅ 通过URL {url} 获取到频道ID: {channel_id}")
-                        
-                        # 保存到缓存
-                        save_cache(cache_path, {'channel_id': channel_id, 'resolved_from': url})
-                        return channel_id
-                        
-            except Exception as e:
-                logger.debug(f"🔍 尝试URL失败 {url}: {e}")
-                continue
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            
+            if info and 'channel_id' in info:
+                channel_id = info['channel_id']
+                logger.info(f"✅ 获取到频道ID: {channel_id}")
+                
+                # 保存到缓存
+                save_cache(cache_path, {'channel_id': channel_id, 'resolved_from': url})
+                return channel_id
         
-        raise Exception(f"无法解析频道标识: {input_str}")
+        # 如果 @ 格式失败，直接返回输入（假设它就是频道ID）
+        logger.warning(f"⚠️ 无法解析频道标识，假设为频道ID: {input_str}")
+        return input_str
         
     except Exception as e:
-        logger.error(f"❌ 频道ID解析失败: {e}")
-        raise Exception(f"频道不存在或无法访问: {input_str}")
+        logger.warning(f"⚠️ 频道ID解析失败: {e}")
+        # 返回原始输入作为频道ID
+        return input_str
 
 def get_channel_info(channel_input: str) -> dict:
     """获取频道信息"""
@@ -315,7 +292,7 @@ def get_channel_info(channel_input: str) -> dict:
         raise Exception(f"获取频道信息失败: {str(e)}")
 
 def get_channel_videos(channel_input: str, limit: int = 20) -> List[dict]:
-    """获取频道视频列表"""
+    """获取频道视频列表 - 使用最简单稳定的方法"""
     logger.info(f"🎬 获取频道视频: {channel_input}, 数量限制: {limit}")
     
     # 解析频道ID
@@ -330,56 +307,116 @@ def get_channel_videos(channel_input: str, limit: int = 20) -> List[dict]:
         return cached_data
     
     try:
+        # 使用最基础的配置
         ydl_opts = {
             'quiet': True,
             'skip_download': True,
             'extract_flat': True,
             'playlist_items': f'1:{limit}',
-            **get_common_ydl_opts(),  # 添加通用配置
+            'ignoreerrors': True,
+            **get_common_ydl_opts(),
         }
         
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f'https://www.youtube.com/channel/{channel_id}/videos', download=False)
-            
-            if not info or 'entries' not in info:
-                logger.warning(f"⚠️ 频道无视频或无法访问: {channel_id}")
-                return []
-            
-            videos = []
-            for entry in info['entries'][:limit]:
-                if not entry:
-                    continue
+        # 尝试多种方法获取频道视频
+        methods = [
+            # 方法1: 使用 /videos 页面（最直接）
+            {
+                'url': f'https://www.youtube.com/channel/{channel_id}/videos',
+                'name': '频道视频页面'
+            },
+            # 方法2: 使用搜索方式
+            {
+                'url': f'ytsearch{limit}:channel:{channel_id}',
+                'name': '搜索方式'
+            },
+            # 方法3: 使用频道主页但过滤结果
+            {
+                'url': f'https://www.youtube.com/channel/{channel_id}',
+                'name': '频道主页'
+            }
+        ]
+        
+        for method in methods:
+            try:
+                logger.info(f"🔍 尝试{method['name']}: {method['url']}")
+                
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(method['url'], download=False)
                     
-                video_info = {
-                    'video_id': entry.get('id', ''),
-                    'title': entry.get('title', ''),
-                    'description': (entry.get('description', '') or '')[:200],
-                    'duration': entry.get('duration', 0),
-                    'upload_date': entry.get('upload_date', ''),
-                    'view_count': entry.get('view_count', 0),
-                    'thumbnail': '',
-                    'webpage_url': entry.get('webpage_url', f"https://www.youtube.com/watch?v={entry.get('id', '')}")
-                }
-                
-                # 处理缩略图
-                if 'thumbnails' in entry and entry['thumbnails']:
-                    video_info['thumbnail'] = entry['thumbnails'][-1].get('url', '')
-                elif entry.get('id'):
-                    # 使用标准的YouTube缩略图URL
-                    video_info['thumbnail'] = f"https://img.youtube.com/vi/{entry['id']}/maxresdefault.jpg"
-                
-                videos.append(video_info)
-            
-            logger.info(f"✅ 获取频道视频成功: {len(videos)} 个视频")
-            
-            # 保存到缓存
-            save_cache(cache_path, videos)
-            
-            return videos
+                    if not info or 'entries' not in info:
+                        logger.debug(f"⚠️ {method['name']}无结果")
+                        continue
+                    
+                    videos = []
+                    processed_count = 0
+                    total_entries = len(info['entries'])
+                    
+                    logger.info(f"📋 {method['name']}返回 {total_entries} 个条目，开始过滤...")
+                    
+                    for entry in info['entries']:
+                        if not entry:
+                            continue
+                            
+                        # 过滤掉频道分类（如 "videos", "live", "shorts"）
+                        entry_title = entry.get('title', '').lower()
+                        entry_id = entry.get('id', '')
+                        
+                        # 跳过明显的分类页面
+                        if (not entry_id or 
+                            entry_title in ['videos', 'live', 'shorts', 'playlists', 'community', 'channels', 'about'] or
+                            entry_title.endswith(' - videos') or
+                            entry_title.endswith(' - live') or
+                            entry_title.endswith(' - shorts')):
+                            logger.debug(f"🚫 跳过分类页面: {entry_title}")
+                            continue
+                        
+                        # 确保是有效的视频ID（YouTube视频ID通常是11个字符）
+                        if len(entry_id) != 11:
+                            logger.debug(f"🚫 跳过无效ID: {entry_id} (长度: {len(entry_id)})")
+                            continue
+                            
+                        video_info = {
+                            'video_id': entry_id,
+                            'title': entry.get('title', ''),
+                            'description': (entry.get('description', '') or '')[:200],
+                            'duration': entry.get('duration', 0),
+                            'upload_date': entry.get('upload_date', ''),
+                            'view_count': entry.get('view_count', 0),
+                            'thumbnail': f"https://img.youtube.com/vi/{entry_id}/maxresdefault.jpg",
+                            'webpage_url': f"https://www.youtube.com/watch?v={entry_id}"
+                        }
+                        
+                        # 尝试获取更好的缩略图
+                        if 'thumbnails' in entry and entry['thumbnails']:
+                            video_info['thumbnail'] = entry['thumbnails'][-1].get('url', video_info['thumbnail'])
+                        
+                        videos.append(video_info)
+                        processed_count += 1
+                        
+                        # 达到限制数量就停止
+                        if processed_count >= limit:
+                            break
+                    
+                    if videos:
+                        logger.info(f"✅ 通过{method['name']}获取到 {len(videos)} 个有效视频")
+                        # 保存到缓存
+                        save_cache(cache_path, videos)
+                        return videos
+                    else:
+                        logger.debug(f"⚠️ {method['name']}未获取到有效视频")
+                        
+            except Exception as e:
+                logger.debug(f"⚠️ {method['name']}失败: {e}")
+                continue
+        
+        # 所有方法都失败了
+        logger.warning(f"⚠️ 所有方法都无法获取到有效视频")
+        return []
             
     except Exception as e:
         logger.error(f"❌ 获取频道视频失败: {e}")
-        raise Exception(f"获取频道视频失败: {str(e)}")
+        # 返回空列表而不是抛出异常，让调用方处理
+        return []
 
 def get_video_info_detailed(video_id: str) -> dict:
     """获取视频详细信息（比基础的get_video_info更详细）"""
@@ -542,15 +579,14 @@ def api_get_channel_videos():
     except ValueError:
         limit = 20
     
-    try:
-        videos = get_channel_videos(channel_input, limit)
-        return jsonify({
-            "videos": videos,
-            "count": len(videos)
-        })
-    except Exception as e:
-        logger.error(f"❌ 频道视频API错误: {e}")
-        return jsonify({"error": str(e)}), 400
+    # 获取频道视频，如果失败返回空列表
+    videos = get_channel_videos(channel_input, limit)
+    return jsonify({
+        "videos": videos,
+        "count": len(videos),
+        "channel_id": channel_input,
+        "status": "success" if videos else "no_videos_found"
+    })
 
 @app.route('/api/video/info')
 def api_get_video_info():
@@ -1180,7 +1216,8 @@ def cancel_download():
             "status": task.status.value
         }), 400
 
-@app.route('/api/cookies/status')
+# Cookies 功能已移除
+# @app.route('/api/cookies/status')
 def cookies_status():
     """检查 cookies 配置状态"""
     cookies_configured = COOKIES_FILE.exists()
@@ -1205,7 +1242,7 @@ def cookies_status():
     
     return jsonify(cookies_info)
 
-@app.route('/api/cookies/diagnose')
+# @app.route('/api/cookies/diagnose')
 def cookies_diagnose():
     """诊断 Cookies 问题"""
     diagnosis = {
@@ -1292,24 +1329,32 @@ def test_youtube_connection(video_id):
         if "403" in error_msg:
             test_result["diagnosis"] = "🚫 HTTP 403 错误 - YouTube 拒绝访问"
             test_result["solutions"] = [
-                "1. 检查 Cookies 是否过期: curl http://localhost:5000/api/cookies/diagnose",
-                "2. 重新导出 YouTube Cookies (需要新的登录会话)",
-                "3. 检查 IP 是否被限制 (等待 1-2 小时后重试)",
-                "4. 尝试使用 VPN 或代理"
+                "1. 等待 1-2 小时后重试（可能是临时限制）",
+                "2. 检查网络连接和 DNS 设置",
+                "3. 尝试更新 yt-dlp: pip install --upgrade yt-dlp",
+                "4. 考虑使用 VPN 或代理"
             ]
         elif "bot" in error_msg.lower() or "sign in" in error_msg.lower():
             test_result["diagnosis"] = "🤖 机器人验证错误"
             test_result["solutions"] = [
-                "1. 导出有效的 YouTube Cookies",
-                "2. 确保 Cookies 文件位置正确: ./youtube_cookies.txt",
-                "3. 重启服务"
+                "1. 等待一段时间后重试",
+                "2. 更新 yt-dlp 到最新版本",
+                "3. 检查是否需要更换 IP 地址"
+            ]
+        elif "tab page" in error_msg.lower():
+            test_result["diagnosis"] = "📄 页面格式识别错误"
+            test_result["solutions"] = [
+                "1. 更新 yt-dlp: pip install --upgrade yt-dlp",
+                "2. 检查频道 ID 或用户名是否正确",
+                "3. 尝试使用不同的频道标识格式"
             ]
         else:
             test_result["diagnosis"] = f"❌ 其他错误: {error_msg}"
             test_result["solutions"] = [
                 "1. 检查网络连接",
-                "2. 检查 yt-dlp 是否最新: pip install --upgrade yt-dlp",
-                "3. 查看完整日志: tail -f youtube_download.log"
+                "2. 更新 yt-dlp: pip install --upgrade yt-dlp",
+                "3. 查看完整日志: tail -f youtube_download.log",
+                "4. 检查视频 ID 是否有效"
             ]
         
         test_result["overall_status"] = "❌ YouTube 连接失败"
