@@ -31,31 +31,28 @@ free -h
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 # 安装
-# 启用 RPM Fusion Free 和 Nonfree 仓库
+#1. 启用 RPM Fusion Free 和 Nonfree 仓库
 sudo dnf install -y \
   https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
   https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
 
-# 然后安装 FFmpeg
+#2. 然后安装 FFmpeg
 sudo dnf install ffmpeg
+sudo dnf install python3.10
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3.10 get-pip.py
 
-# 安装依赖库
-pip3.8 install flask yt-dlp yt-dlp
-pip3.8 install --upgrade yt-dlp
+# 3. 安装 Deno
+curl -fsSL https://deno.land/x/install/install.sh | sh
+export DENO_INSTALL="$HOME/.deno"
+export PATH="$DENO_INSTALL/bin:$PATH"
+# (可将上两行加入 ~/.bashrc)
+deno --version
 
-```
 
-#### 2. 上传脚本到服务器
-将 `youtube_audio_proxy_server.py` 上传到服务器
+#3. 安装依赖库
+pip3.10 install flask 
+pip3.10 install -U "yt-dlp[default]"
 
-#### 3. 启动服务
-```bash
-# 前台运行（测试用）
-python3 youtube_audio_proxy_server.py
 
-# 后台运行（生产环境）
-nohup python3 youtube_audio_proxy_server.py > youtube_proxy.log 2>&1 &
-
-# 使用systemd管理（推荐）
-sudo systemctl start youtube-proxy
 ```

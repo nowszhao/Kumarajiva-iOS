@@ -55,6 +55,7 @@ from enum import Enum
 import shutil
 import mimetypes
 import re
+import subprocess
 
 app = Flask(__name__)
 
@@ -117,31 +118,58 @@ download_threads: Dict[str, threading.Thread] = {}
 # =============================================================================
 
 def get_common_ydl_opts() -> dict:
-    """获取通用的 yt-dlp 配置，使用最简化和稳定的设置"""
+    """获取通用的 yt-dlp 配置 - 符合 Issue #14404 要求"""
     opts = {
-        # 使用最基础的配置，避免复杂的 extractor_args
+        # 网络和重试配置
         'socket_timeout': 60,
-        'retries': 10,
-        'fragment_retries': 10,
+        'retries': 3,
+        'fragment_retries': 3,
         'skip_unavailable_fragments': True,
-        'extractor_retries': 5,
-        'file_access_retries': 5,
-        'sleep_interval': 1,
-        'max_sleep_interval': 3,
-        'sleep_interval_requests': 1,
-        'sleep_interval_subtitles': 0,
-        # 基础 HTTP 头
+        'extractor_retries': 3,
+        'file_access_retries': 3,
+        
+        # 请求间隔
+        'sleep_interval': 2,
+        'max_sleep_interval': 5,
+        'sleep_interval_requests': 2,
+        'sleep_interval_subtitles': 1,
+        
+        # 浏览器头信息
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
         },
+        
+        # 关键：Issue #14404 要求的 JavaScript 运行时配置
+        'js_runtimes': ['deno', 'node', 'bun'],  # 按优先级排序
+        
+        # YouTube extractor 参数 - 优化配置减少警告
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web'],  # 优先使用 Android 和 Web 客户端
+                'player_skip': ['webpage', 'configs'],  # 跳过网页解析和配置
+                'skip': ['dash', 'hls'],  # 跳过可能需要 PO Token 的格式
+            }
+        },
+        
         # 基础选项
-        'no_warnings': False,  # 显示警告以便调试
-        'ignoreerrors': False,  # 不忽略错误，便于调试
+        'no_warnings': True,  # 隐藏警告减少日志噪音
+        'ignoreerrors': False,
         'call_home': False,
+        'no_check_certificate': True,
+        
+        # 其他选项
+        'geo_bypass': True,
+        'geo_bypass_country': 'US',
+        'extract_flat': False,
     }
     
-    logger.info("🔧 使用简化的 yt-dlp 配置")
+    logger.info("🔧 使用符合 Issue #14404 要求的 yt-dlp 配置")
     return opts
 
 def get_cache_path(cache_type: str, identifier: str) -> Path:
@@ -438,45 +466,109 @@ def get_video_info_detailed(video_id: str) -> dict:
             **get_common_ydl_opts(),  # 添加通用配置
         }
         
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
+        # 尝试多种策略获取视频信息
+        info = None
+        last_error = None
+        
+        # 策略1：标准获取
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
+        except Exception as e:
+            last_error = e
+            logger.warning(f"⚠️ 标准信息获取失败: {e}")
             
-            if not info:
-                raise Exception("无法获取视频信息")
-            
-            # 提取详细视频信息
-            video_info = {
-                'id': video_id,  # iOS端期望字段名为'id'
-                'title': info.get('title', ''),
-                'description': (info.get('description', '') or '')[:500],
-                'duration': info.get('duration', 0),
-                'uploader': info.get('uploader', ''),
-                'channel_id': info.get('channel_id', ''),
-                'channel': info.get('channel', ''),
-                'view_count': info.get('view_count', 0),
-                'like_count': info.get('like_count', 0),
-                'upload_date': info.get('upload_date', ''),
-                'webpage_url': info.get('webpage_url', ''),
-                'thumbnail': '',
-                'updated_at': datetime.now().isoformat()
-            }
-            
-            # 处理缩略图
-            if 'thumbnails' in info and info['thumbnails']:
-                video_info['thumbnail'] = info['thumbnails'][-1].get('url', '')
-            else:
-                video_info['thumbnail'] = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
-            
-            logger.info(f"✅ 获取视频详细信息成功: {video_info['title']}")
-            
-            # 保存到缓存
-            save_cache(cache_path, video_info)
-            
-            return video_info
+            # 策略2：使用 android 客户端
+            try:
+                logger.info(f"🔄 尝试 Android 客户端获取视频信息: {video_id}")
+                android_opts = ydl_opts.copy()
+                android_opts['extractor_args'] = {
+                    'youtube': {
+                        'player_client': ['android'],
+                        'player_skip': ['webpage'],
+                    }
+                }
+                android_opts['no_warnings'] = False  # 显示警告以便调试
+                with yt_dlp.YoutubeDL(android_opts) as ydl:
+                    info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
+                logger.info(f"✅ Android 客户端获取信息成功: {video_id}")
+            except Exception as e2:
+                last_error = e2
+                logger.warning(f"⚠️ Android 客户端信息获取失败: {e2}")
+                
+                # 策略3：使用 web 客户端
+                try:
+                    logger.info(f"🔄 尝试 Web 客户端获取视频信息: {video_id}")
+                    web_opts = ydl_opts.copy()
+                    web_opts['extractor_args'] = {
+                        'youtube': {
+                            'player_client': ['web'],
+                            'player_skip': ['configs'],
+                        }
+                    }
+                    web_opts['no_warnings'] = False  # 显示警告以便调试
+                    with yt_dlp.YoutubeDL(web_opts) as ydl:
+                        info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
+                    logger.info(f"✅ Web 客户端获取信息成功: {video_id}")
+                except Exception as e3:
+                    last_error = e3
+                    logger.error(f"❌ Web 客户端信息获取失败: {e3}")
+                    logger.error(f"❌ 最终错误详情: {str(last_error)}")
+        
+        if not info:
+            raise last_error or Exception("无法获取视频信息")
+        
+        # 提取详细视频信息
+        video_info = {
+            'id': video_id,  # iOS端期望字段名为'id'
+            'title': info.get('title', ''),
+            'description': (info.get('description', '') or '')[:500],
+            'duration': info.get('duration', 0),
+            'uploader': info.get('uploader', ''),
+            'channel_id': info.get('channel_id', ''),
+            'channel': info.get('channel', ''),
+            'view_count': info.get('view_count', 0),
+            'like_count': info.get('like_count', 0),
+            'upload_date': info.get('upload_date', ''),
+            'webpage_url': info.get('webpage_url', ''),
+            'thumbnail': '',
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        # 处理缩略图
+        if 'thumbnails' in info and info['thumbnails']:
+            video_info['thumbnail'] = info['thumbnails'][-1].get('url', '')
+        else:
+            video_info['thumbnail'] = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+        
+        logger.info(f"✅ 获取视频详细信息成功: {video_info['title']}")
+        
+        # 保存到缓存
+        save_cache(cache_path, video_info)
+        
+        return video_info
             
     except Exception as e:
-        logger.error(f"❌ 获取视频详细信息失败: {e}")
-        raise Exception(f"获取视频信息失败: {str(e)}")
+        error_msg = f"获取视频信息失败 ({video_id}): {str(e)}"
+        logger.error(f"❌ {error_msg}")
+        
+        # 提供更多诊断信息
+        logger.error(f"🔍 诊断信息:")
+        logger.error(f"   - 视频ID: {video_id}")
+        logger.error(f"   - URL: https://www.youtube.com/watch?v={video_id}")
+        logger.error(f"   - 错误类型: {type(e).__name__}")
+        
+        # 检查是否是网络连接问题
+        if "network" in str(e).lower() or "connection" in str(e).lower():
+            logger.error(f"   - 可能原因: 网络连接问题")
+        elif "403" in str(e) or "forbidden" in str(e).lower():
+            logger.error(f"   - 可能原因: YouTube访问被限制，需要更新yt-dlp或使用代理")
+        elif "private" in str(e).lower() or "unavailable" in str(e).lower():
+            logger.error(f"   - 可能原因: 视频私有、删除或地区限制")
+        elif "age" in str(e).lower():
+            logger.error(f"   - 可能原因: 年龄限制视频")
+        
+        raise Exception(error_msg)
 
 def search_channels(query: str, limit: int = 10) -> List[dict]:
     """搜索频道"""
@@ -848,14 +940,16 @@ def download_files(task: DownloadTask):
                 logger.info(f"✅ {task.video_id}: 文件下载完成")
 
         ydl_opts = {
-            # 使用更兼容的格式选择器，避免 SABR 流问题
-            'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
+            # 优化的格式选择器，避免被限制的格式
+            'format': 'bestaudio[acodec!=none]/best[acodec!=none]/bestaudio/best',
             'outtmpl': str(audio_file.with_suffix('.%(ext)s')),
             'writesubtitles': True,
             'writeautomaticsub': True,
             'subtitleslangs': ['en'],
             'subtitlesformat': 'vtt',
             'writeinfojson': True,
+            
+            # 音频处理配置
             'extract_audio': True,
             'audio_format': 'mp3',
             'audio_quality': '128k',
@@ -865,11 +959,15 @@ def download_files(task: DownloadTask):
             'no_warnings': True,
             'quiet': True,
             'progress_hooks': [lambda d: progress_hook(d)],
+            
+            # FFmpeg 后处理器
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
                 'preferredquality': '128',
             }],
+            
+            # 合并通用配置
             **get_common_ydl_opts(),
         }
         
@@ -878,9 +976,135 @@ def download_files(task: DownloadTask):
             logger.info(f"⚠️ 任务已取消: {task.video_id}")
             return
         
-        # 执行下载
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([f'https://www.youtube.com/watch?v={task.video_id}'])
+        # 执行下载，使用多重备用策略
+        download_success = False
+        last_error = None
+        
+        # 策略1：Android 客户端（优先使用，减少 PO Token 警告）
+        try:
+            logger.info(f"🔄 尝试 Android 客户端策略: {task.video_id}")
+            android_opts = ydl_opts.copy()
+            android_opts['extractor_args'] = {
+                'youtube': {
+                    'player_client': ['android'],
+                    'player_skip': ['webpage', 'configs'],
+                    'skip': ['dash', 'hls'],  # 跳过可能需要 PO Token 的格式
+                }
+            }
+            android_opts['no_warnings'] = True  # 减少警告信息
+            with yt_dlp.YoutubeDL(android_opts) as ydl:
+                ydl.download([f'https://www.youtube.com/watch?v={task.video_id}'])
+            download_success = True
+            logger.info(f"✅ Android 客户端下载成功: {task.video_id}")
+        except Exception as e:
+            last_error = e
+            logger.warning(f"⚠️ Android 客户端下载失败: {e}")
+            
+            # 策略2：Web 客户端
+            try:
+                logger.info(f"🔄 尝试 Web 客户端策略: {task.video_id}")
+                web_opts = ydl_opts.copy()
+                web_opts['extractor_args'] = {
+                    'youtube': {
+                        'player_client': ['web'],
+                        'player_skip': ['configs'],
+                    }
+                }
+                web_opts['no_warnings'] = True
+                with yt_dlp.YoutubeDL(web_opts) as ydl:
+                    ydl.download([f'https://www.youtube.com/watch?v={task.video_id}'])
+                download_success = True
+                logger.info(f"✅ Web 客户端下载成功: {task.video_id}")
+            except Exception as e2:
+                last_error = e2
+                logger.warning(f"⚠️ Web 客户端下载失败: {e2}")
+                
+                # 策略3：iOS 客户端（备用）
+                try:
+                    logger.info(f"🔄 尝试 iOS 客户端策略: {task.video_id}")
+                    ios_opts = ydl_opts.copy()
+                    ios_opts['extractor_args'] = {
+                        'youtube': {
+                            'player_client': ['ios'],
+                            'player_skip': ['webpage'],
+                        }
+                    }
+                    ios_opts['no_warnings'] = True
+                    with yt_dlp.YoutubeDL(ios_opts) as ydl:
+                        ydl.download([f'https://www.youtube.com/watch?v={task.video_id}'])
+                    download_success = True
+                    logger.info(f"✅ iOS 客户端下载成功: {task.video_id}")
+                except Exception as e3:
+                    last_error = e3
+                    logger.warning(f"⚠️ iOS 客户端下载失败: {e3}")
+                    
+                    # 策略4：TV 客户端（有时候限制更少）
+                    try:
+                        logger.info(f"🔄 尝试 TV 客户端策略: {task.video_id}")
+                        tv_opts = {
+                            'format': 'bestaudio/best',
+                            'outtmpl': str(audio_file.with_suffix('.%(ext)s')),
+                            'extract_audio': True,
+                            'audio_format': 'mp3',
+                            'audio_quality': '128k',
+                            'noplaylist': True,
+                            'no_warnings': False,
+                            'quiet': False,
+                            'progress_hooks': [lambda d: progress_hook(d)],
+                            'postprocessors': [{
+                                'key': 'FFmpegExtractAudio',
+                                'preferredcodec': 'mp3',
+                                'preferredquality': '128',
+                            }],
+                            'extractor_args': {
+                                'youtube': {
+                                    'player_client': ['tv_embedded'],
+                                    'player_skip': ['webpage', 'configs'],
+                                }
+                            },
+                            'socket_timeout': 60,
+                            'retries': 3,
+                            'sleep_interval': 5,
+                        }
+                        with yt_dlp.YoutubeDL(tv_opts) as ydl:
+                            ydl.download([f'https://www.youtube.com/watch?v={task.video_id}'])
+                        download_success = True
+                        logger.info(f"✅ TV 客户端下载成功: {task.video_id}")
+                    except Exception as e4:
+                        last_error = e4
+                        logger.warning(f"⚠️ TV 客户端下载失败: {e4}")
+                        
+                        # 策略5：使用嵌入式播放器
+                        try:
+                            logger.info(f"🔄 尝试嵌入式播放器策略: {task.video_id}")
+                            embed_url = f'https://www.youtube.com/embed/{task.video_id}'
+                            embed_opts = {
+                                'format': 'bestaudio/best',
+                                'outtmpl': str(audio_file.with_suffix('.%(ext)s')),
+                                'extract_audio': True,
+                                'audio_format': 'mp3',
+                                'audio_quality': '128k',
+                                'noplaylist': True,
+                                'progress_hooks': [lambda d: progress_hook(d)],
+                                'postprocessors': [{
+                                    'key': 'FFmpegExtractAudio',
+                                    'preferredcodec': 'mp3',
+                                    'preferredquality': '128',
+                                }],
+                                'socket_timeout': 30,
+                                'retries': 2,
+                                'sleep_interval': 2,
+                            }
+                            with yt_dlp.YoutubeDL(embed_opts) as ydl:
+                                ydl.download([embed_url])
+                            download_success = True
+                            logger.info(f"✅ 嵌入式播放器下载成功: {task.video_id}")
+                        except Exception as e5:
+                            last_error = e5
+                            logger.error(f"❌ 所有下载策略均失败: {e5}")
+        
+        if not download_success:
+            raise last_error or Exception("所有下载策略均失败")
         
         # 验证文件 - 检查实际下载的文件
         # yt-dlp可能会下载不同的格式，我们需要查找实际的文件
@@ -1606,8 +1830,77 @@ def cleanup_timer():
         time.sleep(3600)  # 每小时清理一次
         cleanup_old_files()
 
+def check_js_runtime():
+    """检查 JavaScript 运行时 (Deno/Node.js) - Issue #14404 要求"""
+    js_runtimes = []
+    
+    # 检查 Deno (推荐)
+    try:
+        result = subprocess.run(['deno', '--version'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            version_line = result.stdout.split('\n')[0]
+            js_runtimes.append(f"Deno: {version_line}")
+            logger.info(f"✅ 检测到 {version_line}")
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        logger.warning("⚠️  未检测到 Deno")
+    
+    # 检查 Node.js
+    try:
+        result = subprocess.run(['node', '--version'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            js_runtimes.append(f"Node.js: {result.stdout.strip()}")
+            logger.info(f"✅ 检测到 Node.js {result.stdout.strip()}")
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        logger.warning("⚠️  未检测到 Node.js")
+    
+    if not js_runtimes:
+        logger.error("❌ 未检测到任何 JavaScript 运行时!")
+        logger.error("   根据 yt-dlp Issue #14404，YouTube 下载需要 JavaScript 运行时")
+        logger.error("   请安装 Deno (推荐): https://deno.com/")
+        logger.error("   或安装 Node.js: https://nodejs.org/")
+        return False
+    
+    logger.info(f"🚀 可用的 JavaScript 运行时: {', '.join(js_runtimes)}")
+    return True
+
+def check_yt_dlp_version():
+    """检查 yt-dlp 版本并提供更新建议"""
+    try:
+        version = yt_dlp.version.__version__
+        logger.info(f"📦 当前 yt-dlp 版本: {version}")
+        
+        # 根据 Issue #14404，需要 2024.09.23+ 版本
+        required_version = "2024.09.23"
+        if version < required_version:
+            logger.error(f"❌ yt-dlp 版本过旧! 需要 {required_version}+ 以支持新的 YouTube 要求")
+            logger.error("   升级命令: pip install -U \"yt-dlp[default]\"")
+            return False
+        else:
+            logger.info("✅ yt-dlp 版本符合要求")
+            
+        return version
+    except Exception as e:
+        logger.warning(f"⚠️  无法检查 yt-dlp 版本: {e}")
+        return "unknown"
+
 if __name__ == '__main__':
     logger.info("🚀 Starting YouTube Audio Download Server with yt-dlp Data API...")
+    
+    # 检查 yt-dlp 版本 (Issue #14404 要求)
+    yt_dlp_version = check_yt_dlp_version()
+    if yt_dlp_version == False:
+        logger.error("❌ yt-dlp 版本不符合要求，服务器可能无法正常下载 YouTube 视频")
+        logger.error("   请运行: pip install -U \"yt-dlp[default]\"")
+    
+    # 检查 JavaScript 运行时 (Issue #14404 要求)
+    js_runtime_ok = check_js_runtime()
+    if not js_runtime_ok:
+        logger.error("❌ 缺少 JavaScript 运行时，YouTube 下载将失败")
+        logger.error("   解决方案:")
+        logger.error("   1. 安装 Deno (推荐): curl -fsSL https://deno.land/install.sh | sh")
+        logger.error("   2. 或安装 Node.js: https://nodejs.org/")
+        logger.error("   3. 重启服务器")
+    
     logger.info("📁 Download directory: " + str(DOWNLOAD_DIR.absolute()))
     logger.info("📦 Cache directory: " + str(CACHE_DIR.absolute()))
     logger.info("⏰ Cache expiry: " + str(CACHE_EXPIRE_HOURS) + " hours")
