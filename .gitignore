@@ -99,3 +99,13 @@ ADD_FILES_TO_XCODE.md
 # Server logs
 server.log
 *.log
+
+# Download and cache directories
+downloads/
+cache/
+.build/
+.codebuddy/
+.ropeproject/
+.vscode/
+build/
+DerivedData/

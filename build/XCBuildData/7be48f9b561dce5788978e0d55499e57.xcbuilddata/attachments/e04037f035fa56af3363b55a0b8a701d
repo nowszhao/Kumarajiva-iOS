@@ -1,0 +1,808 @@
+{
+  "" : {
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva-iOS-master.dia",
+    "emit-module-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva-iOS-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva-iOS-master-emit-module.dia",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva-iOS-master.swiftdeps"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/ContentView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContentView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContentView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContentView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContentView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContentView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContentView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Kumarajiva_iOSApp.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva_iOSApp.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva_iOSApp.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva_iOSApp.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva_iOSApp.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva_iOSApp.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva_iOSApp.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva_iOSApp.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Kumarajiva_iOSApp~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/ContributionData.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionData.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionData.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionData.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionData.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionData.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionData.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionData.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionData~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/History.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/History.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/History.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/History.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/History.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/History.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/History.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/History.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/History~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/HistoryFilter.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryFilter.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryFilter.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryFilter.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryFilter.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryFilter.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryFilter.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryFilter.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryFilter~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/PlaybackMode.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaybackMode.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaybackMode.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaybackMode.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaybackMode.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaybackMode.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaybackMode.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaybackMode.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaybackMode~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/Podcast.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Podcast.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Podcast.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Podcast.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Podcast.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Podcast.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Podcast.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Podcast.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Podcast~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/Progress.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Progress.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Progress.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Progress.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Progress.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Progress.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Progress.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Progress.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Progress~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/Quiz.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Quiz.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Quiz.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Quiz.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Quiz.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Quiz.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Quiz.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Quiz.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Quiz~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/ReviewResult.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewResult.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewResult.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewResult.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewResult.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewResult.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewResult.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewResult.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewResult~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/SpeechPracticeRecord.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecord.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecord.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecord.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecord.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecord.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecord.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecord.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecord~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/SpeechRecognitionServiceType.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionServiceType.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionServiceType.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionServiceType.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionServiceType.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionServiceType.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionServiceType.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionServiceType.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionServiceType~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/Stats.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Stats.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Stats.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Stats.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Stats.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Stats.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Stats.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Stats.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Stats~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/StudyRecord.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StudyRecord.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StudyRecord.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StudyRecord.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StudyRecord.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StudyRecord.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StudyRecord.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StudyRecord.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StudyRecord~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/TTSServiceType.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/TTSServiceType.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/TTSServiceType.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/TTSServiceType.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/TTSServiceType.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/TTSServiceType.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/TTSServiceType.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/TTSServiceType.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/TTSServiceType~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/User.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/User.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/User.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/User.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/User.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/User.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/User.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/User.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/User~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/Word.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Word.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Word.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Word.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Word.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Word.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Word.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Word.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/Word~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/WordCollocation.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocation.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocation.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocation.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocation.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocation.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocation.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocation.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocation~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/WordTypeFilter.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordTypeFilter.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordTypeFilter.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordTypeFilter.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordTypeFilter.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordTypeFilter.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordTypeFilter.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordTypeFilter.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordTypeFilter~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Models/YouTuber.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuber.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuber.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuber.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuber.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuber.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuber.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuber.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuber~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/APIService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/APIService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/APIService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/APIService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/APIService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/APIService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/APIService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/APIService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/APIService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/AudioService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AudioService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AudioService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AudioService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AudioService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AudioService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AudioService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AudioService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AudioService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/AuthService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/EdgeTTSService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/EdgeTTSService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/EdgeTTSService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/EdgeTTSService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/EdgeTTSService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/EdgeTTSService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/EdgeTTSService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/EdgeTTSService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/EdgeTTSService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/LLMService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LLMService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LLMService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LLMService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LLMService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LLMService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LLMService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LLMService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LLMService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/NetworkMonitor.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NetworkMonitor.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NetworkMonitor.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NetworkMonitor.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NetworkMonitor.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NetworkMonitor.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NetworkMonitor.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NetworkMonitor.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NetworkMonitor~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/NowPlayingService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NowPlayingService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NowPlayingService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NowPlayingService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NowPlayingService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NowPlayingService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NowPlayingService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NowPlayingService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/NowPlayingService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/PersistentStorageManager.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PersistentStorageManager.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PersistentStorageManager.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PersistentStorageManager.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PersistentStorageManager.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PersistentStorageManager.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PersistentStorageManager.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PersistentStorageManager.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PersistentStorageManager~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/PodcastDataService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDataService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDataService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDataService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDataService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDataService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDataService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDataService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDataService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/PodcastPlayerService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/PodcastSearchService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastSearchService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastSearchService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastSearchService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastSearchService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastSearchService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastSearchService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastSearchService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastSearchService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/RSSParserService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/RSSParserService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/RSSParserService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/RSSParserService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/RSSParserService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/RSSParserService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/RSSParserService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/RSSParserService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/RSSParserService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/SRTParser.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SRTParser.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SRTParser.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SRTParser.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SRTParser.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SRTParser.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SRTParser.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SRTParser.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SRTParser~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/SpeechPracticeRecordService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecordService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecordService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecordService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecordService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecordService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecordService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecordService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeRecordService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/SpeechRecognitionService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecognitionService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/SpeechRecordService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecordService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecordService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecordService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecordService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecordService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecordService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecordService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechRecordService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/SubtitleGenerationTaskManager.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleGenerationTaskManager.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleGenerationTaskManager.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleGenerationTaskManager.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleGenerationTaskManager.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleGenerationTaskManager.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleGenerationTaskManager.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleGenerationTaskManager.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleGenerationTaskManager~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/UserSettings.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/UserSettings.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/UserSettings.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/UserSettings.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/UserSettings.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/UserSettings.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/UserSettings.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/UserSettings.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/UserSettings~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/WhisperKitService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WhisperKitService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WhisperKitService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WhisperKitService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WhisperKitService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WhisperKitService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WhisperKitService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WhisperKitService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WhisperKitService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/WordCollocationService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/YouTubeAudioExtractor.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeAudioExtractor.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeAudioExtractor.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeAudioExtractor.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeAudioExtractor.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeAudioExtractor.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeAudioExtractor.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeAudioExtractor.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeAudioExtractor~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Services/YouTubeDataService.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeDataService.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeDataService.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeDataService.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeDataService.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeDataService.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeDataService.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeDataService.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTubeDataService~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Utils/PronounceURLGenerator.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PronounceURLGenerator.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PronounceURLGenerator.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PronounceURLGenerator.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PronounceURLGenerator.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PronounceURLGenerator.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PronounceURLGenerator.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PronounceURLGenerator.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PronounceURLGenerator~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/ViewModels/AuthViewModel.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthViewModel.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthViewModel.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthViewModel.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthViewModel.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthViewModel.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthViewModel.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthViewModel.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AuthViewModel~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/ViewModels/HistoryViewModel.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryViewModel.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryViewModel.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryViewModel.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryViewModel.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryViewModel.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryViewModel.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryViewModel.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryViewModel~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/ViewModels/ProfileViewModel.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileViewModel.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileViewModel.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileViewModel.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileViewModel.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileViewModel.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileViewModel.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileViewModel.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileViewModel~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/ViewModels/ReviewViewModel.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewViewModel.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewViewModel.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewViewModel.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewViewModel.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewViewModel.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewViewModel.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewViewModel.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewViewModel~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/ViewModels/SpeechPracticeViewModel.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeViewModel.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeViewModel.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeViewModel.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeViewModel.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeViewModel.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeViewModel.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeViewModel.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeViewModel~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/ViewModels/VocabularyViewModel.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyViewModel.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyViewModel.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyViewModel.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyViewModel.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyViewModel.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyViewModel.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyViewModel.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyViewModel~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/AddPodcastView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddPodcastView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddPodcastView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddPodcastView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddPodcastView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddPodcastView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddPodcastView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddPodcastView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddPodcastView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/AddYouTuberView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddYouTuberView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddYouTuberView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddYouTuberView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddYouTuberView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddYouTuberView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddYouTuberView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddYouTuberView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/AddYouTuberView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/Components/MiniPlayerView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MiniPlayerView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MiniPlayerView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MiniPlayerView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MiniPlayerView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MiniPlayerView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MiniPlayerView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MiniPlayerView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MiniPlayerView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/Components/OptimizedListeningModeView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/OptimizedListeningModeView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/OptimizedListeningModeView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/OptimizedListeningModeView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/OptimizedListeningModeView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/OptimizedListeningModeView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/OptimizedListeningModeView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/OptimizedListeningModeView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/OptimizedListeningModeView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/Components/PlaylistView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaylistView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaylistView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaylistView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaylistView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaylistView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaylistView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaylistView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PlaylistView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/Components/WordHighlightSubtitleView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordHighlightSubtitleView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordHighlightSubtitleView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordHighlightSubtitleView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordHighlightSubtitleView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordHighlightSubtitleView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordHighlightSubtitleView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordHighlightSubtitleView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordHighlightSubtitleView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/ContributionGraphView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionGraphView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionGraphView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionGraphView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionGraphView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionGraphView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionGraphView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionGraphView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ContributionGraphView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/HistoryView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/HistoryView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/ListeningModeView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningModeView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningModeView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningModeView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningModeView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningModeView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningModeView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningModeView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningModeView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/ListeningPracticeView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningPracticeView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningPracticeView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningPracticeView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningPracticeView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningPracticeView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningPracticeView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningPracticeView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ListeningPracticeView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/LoginView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LoginView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LoginView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LoginView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LoginView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LoginView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LoginView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LoginView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/LoginView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/MainView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MainView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MainView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MainView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MainView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MainView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MainView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MainView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/MainView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/PodcastDetailView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDetailView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDetailView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDetailView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDetailView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDetailView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDetailView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDetailView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastDetailView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/PodcastPlayerView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PodcastPlayerView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/PracticeTabView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PracticeTabView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PracticeTabView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PracticeTabView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PracticeTabView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PracticeTabView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PracticeTabView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PracticeTabView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/PracticeTabView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/ProfileView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ProfileView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/QuizView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/QuizView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/QuizView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/QuizView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/QuizView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/QuizView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/QuizView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/QuizView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/QuizView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/ReviewView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/ReviewView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/SpeechPracticeView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SpeechPracticeView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/StorageSettingsView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StorageSettingsView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StorageSettingsView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StorageSettingsView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StorageSettingsView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StorageSettingsView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StorageSettingsView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StorageSettingsView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/StorageSettingsView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/SubscriptionView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubscriptionView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubscriptionView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubscriptionView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubscriptionView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubscriptionView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubscriptionView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubscriptionView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubscriptionView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/SubtitleManagementView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleManagementView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleManagementView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleManagementView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleManagementView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleManagementView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleManagementView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleManagementView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleManagementView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/SubtitleTaskManagerView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleTaskManagerView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleTaskManagerView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleTaskManagerView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleTaskManagerView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleTaskManagerView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleTaskManagerView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleTaskManagerView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/SubtitleTaskManagerView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/VideoListeningView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoListeningView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoListeningView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoListeningView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoListeningView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoListeningView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoListeningView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoListeningView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoListeningView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/VideoPlayerView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoPlayerView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoPlayerView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoPlayerView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoPlayerView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoPlayerView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoPlayerView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoPlayerView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VideoPlayerView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/VocabularyAnalysisView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyAnalysisView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyAnalysisView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyAnalysisView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyAnalysisView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyAnalysisView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyAnalysisView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyAnalysisView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyAnalysisView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/VocabularyView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/VocabularyView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/WordCollocationView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordCollocationView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/WordLearningView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordLearningView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordLearningView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordLearningView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordLearningView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordLearningView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordLearningView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordLearningView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/WordLearningView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/Kumarajiva-iOS/Views/YouTuberDetailView.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuberDetailView.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuberDetailView.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuberDetailView.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuberDetailView.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuberDetailView.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuberDetailView.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuberDetailView.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/YouTuberDetailView~partial.swiftmodule"
+  },
+  "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/changhozhao/github/04-proproject/doing/Kumarajiva-iOS/build/Kumarajiva-iOS.build/Debug-iphonesimulator/Kumarajiva-iOS.build/Objects-normal/x86_64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}
