@@ -197,6 +197,27 @@ open Kumarajiva-iOS.xcodeproj
 
 ### 配置说明
 
+#### 🎧 YouTube 音频代理服务（可选）
+
+如果需要播客或 YouTube 音频功能，需要部署 YouTube 音频代理服务：
+
+```bash
+# 1. 安装依赖
+pip3 install flask yt-dlp
+
+# 2. 配置 Cookies（重要！）
+# 从浏览器导出 cookies.txt 以避免机器人检测
+# 详见: YOUTUBE_COOKIES_SETUP.md
+
+# 3. 启动服务
+python3 youtube_audio_proxy_server.py
+```
+
+**重要**: YouTube 现在要求身份验证，必须配置 cookies 才能正常使用：
+- 📖 [详细配置指南](./YOUTUBE_COOKIES_SETUP.md)
+- 📝 [快速说明](./get_cookies_instructions.txt)
+- 🚀 [部署文档](./DEPLOYMENT_README.md)
+
 #### API 服务配置
 在 `APIService.swift` 中配置后端服务地址：
 ```swift

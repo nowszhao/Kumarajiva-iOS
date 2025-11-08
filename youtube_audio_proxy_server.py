@@ -81,7 +81,13 @@ CACHE_DIR.mkdir(exist_ok=True)
 # 缓存过期时间（12小时）
 CACHE_EXPIRE_HOURS = 12
 
-# 移除 Cookies 配置，使用更稳定的无认证方式
+# Cookies 配置 - 从浏览器导出的 cookies
+COOKIES_FILE = Path('./cookies.txt')  # Netscape cookies 格式
+# 使用说明:
+# 1. 安装浏览器扩展 "Get cookies.txt LOCALLY" (Chrome/Edge/Firefox)
+# 2. 登录 YouTube 网站
+# 3. 点击扩展导出 cookies.txt 文件
+# 4. 将 cookies.txt 放到脚本同目录下
 
 # 任务状态枚举
 class TaskStatus(Enum):
@@ -118,20 +124,20 @@ download_threads: Dict[str, threading.Thread] = {}
 # =============================================================================
 
 def get_common_ydl_opts() -> dict:
-    """获取通用的 yt-dlp 配置 - 符合 Issue #14404 要求"""
+    """获取通用的 yt-dlp 配置 - 使用 Android TV 客户端避免 PO Token"""
     opts = {
         # 网络和重试配置
         'socket_timeout': 60,
-        'retries': 3,
-        'fragment_retries': 3,
+        'retries': 5,
+        'fragment_retries': 5,
         'skip_unavailable_fragments': True,
-        'extractor_retries': 3,
-        'file_access_retries': 3,
+        'extractor_retries': 5,
+        'file_access_retries': 5,
         
         # 请求间隔
-        'sleep_interval': 2,
-        'max_sleep_interval': 5,
-        'sleep_interval_requests': 2,
+        'sleep_interval': 1,
+        'max_sleep_interval': 3,
+        'sleep_interval_requests': 1,
         'sleep_interval_subtitles': 1,
         
         # 浏览器头信息
@@ -145,20 +151,16 @@ def get_common_ydl_opts() -> dict:
             'Upgrade-Insecure-Requests': '1',
         },
         
-        # 关键：Issue #14404 要求的 JavaScript 运行时配置
-        'js_runtimes': ['deno', 'node', 'bun'],  # 按优先级排序
-        
-        # YouTube extractor 参数 - 优化配置减少警告
+        # 关键：使用 Android TV 客户端（不需要 PO Token，不需要 cookies）
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'web'],  # 优先使用 Android 和 Web 客户端
-                'player_skip': ['webpage', 'configs'],  # 跳过网页解析和配置
-                'skip': ['dash', 'hls'],  # 跳过可能需要 PO Token 的格式
+                'player_client': ['android_creator'],  # Android Creator Studio 客户端最稳定
+                'player_skip': ['webpage', 'configs'],
             }
         },
         
         # 基础选项
-        'no_warnings': True,  # 隐藏警告减少日志噪音
+        'no_warnings': False,
         'ignoreerrors': False,
         'call_home': False,
         'no_check_certificate': True,
@@ -169,7 +171,8 @@ def get_common_ydl_opts() -> dict:
         'extract_flat': False,
     }
     
-    logger.info("🔧 使用符合 Issue #14404 要求的 yt-dlp 配置")
+    logger.info(f"🔧 使用 Android Creator 客户端（无需 cookies/PO Token）")
+    
     return opts
 
 def get_cache_path(cache_type: str, identifier: str) -> Path:
@@ -458,62 +461,72 @@ def get_video_info_detailed(video_id: str) -> dict:
         return cached_data
     
     try:
+        # 策略1：使用 Android Creator 客户端（最稳定，无需 cookies/PO Token）
         ydl_opts = {
             'quiet': True,
             'skip_download': True,
             'extract_flat': False,
             'noplaylist': True,
-            **get_common_ydl_opts(),  # 添加通用配置
+            **get_common_ydl_opts(),
         }
         
-        # 尝试多种策略获取视频信息
         info = None
         last_error = None
         
-        # 策略1：标准获取
         try:
+            logger.info(f"🔄 使用 Android Creator 客户端: {video_id}")
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
+            logger.info(f"✅ Android Creator 获取成功: {video_id}")
         except Exception as e:
             last_error = e
-            logger.warning(f"⚠️ 标准信息获取失败: {e}")
+            logger.warning(f"⚠️ Android Creator 获取失败: {e}")
             
-            # 策略2：使用 android 客户端
+            # 策略2：Android Music 客户端
             try:
-                logger.info(f"🔄 尝试 Android 客户端获取视频信息: {video_id}")
-                android_opts = ydl_opts.copy()
-                android_opts['extractor_args'] = {
-                    'youtube': {
-                        'player_client': ['android'],
-                        'player_skip': ['webpage'],
-                    }
+                logger.info(f"🔄 尝试 Android Music 客户端: {video_id}")
+                music_opts = {
+                    'quiet': False,
+                    'skip_download': True,
+                    'extract_flat': False,
+                    'noplaylist': True,
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['android_music'],
+                            'player_skip': ['webpage'],
+                        }
+                    },
                 }
-                android_opts['no_warnings'] = False  # 显示警告以便调试
-                with yt_dlp.YoutubeDL(android_opts) as ydl:
+                
+                with yt_dlp.YoutubeDL(music_opts) as ydl:
                     info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
-                logger.info(f"✅ Android 客户端获取信息成功: {video_id}")
+                logger.info(f"✅ Android Music 获取成功: {video_id}")
             except Exception as e2:
                 last_error = e2
-                logger.warning(f"⚠️ Android 客户端信息获取失败: {e2}")
+                logger.error(f"❌ Android Music 获取失败: {e2}")
                 
-                # 策略3：使用 web 客户端
+                # 策略3：TV Embedded 客户端（最后备用）
                 try:
-                    logger.info(f"🔄 尝试 Web 客户端获取视频信息: {video_id}")
-                    web_opts = ydl_opts.copy()
-                    web_opts['extractor_args'] = {
-                        'youtube': {
-                            'player_client': ['web'],
-                            'player_skip': ['configs'],
-                        }
+                    logger.info(f"🔄 尝试 TV Embedded 客户端: {video_id}")
+                    tv_opts = {
+                        'quiet': False,
+                        'skip_download': True,
+                        'extract_flat': False,
+                        'noplaylist': True,
+                        'extractor_args': {
+                            'youtube': {
+                                'player_client': ['tv_embedded'],
+                                'player_skip': ['webpage', 'configs'],
+                            }
+                        },
                     }
-                    web_opts['no_warnings'] = False  # 显示警告以便调试
-                    with yt_dlp.YoutubeDL(web_opts) as ydl:
+                    
+                    with yt_dlp.YoutubeDL(tv_opts) as ydl:
                         info = ydl.extract_info(f'https://www.youtube.com/watch?v={video_id}', download=False)
-                    logger.info(f"✅ Web 客户端获取信息成功: {video_id}")
+                    logger.info(f"✅ TV Embedded 获取成功: {video_id}")
                 except Exception as e3:
                     last_error = e3
-                    logger.error(f"❌ Web 客户端信息获取失败: {e3}")
-                    logger.error(f"❌ 最终错误详情: {str(last_error)}")
+                    logger.error(f"❌ TV Embedded 获取失败: {e3}")
         
         if not info:
             raise last_error or Exception("无法获取视频信息")
@@ -976,132 +989,86 @@ def download_files(task: DownloadTask):
             logger.info(f"⚠️ 任务已取消: {task.video_id}")
             return
         
-        # 执行下载，使用多重备用策略
+        # 执行下载，使用 Android Creator 客户端（无需 cookies/PO Token）
         download_success = False
         last_error = None
         
-        # 策略1：Android 客户端（优先使用，减少 PO Token 警告）
+        # 策略1：Android Creator 客户端（最稳定）
         try:
-            logger.info(f"🔄 尝试 Android 客户端策略: {task.video_id}")
-            android_opts = ydl_opts.copy()
-            android_opts['extractor_args'] = {
+            logger.info(f"🔄 使用 Android Creator 客户端下载: {task.video_id}")
+            creator_opts = ydl_opts.copy()
+            creator_opts['extractor_args'] = {
                 'youtube': {
-                    'player_client': ['android'],
+                    'player_client': ['android_creator'],
                     'player_skip': ['webpage', 'configs'],
-                    'skip': ['dash', 'hls'],  # 跳过可能需要 PO Token 的格式
                 }
             }
-            android_opts['no_warnings'] = True  # 减少警告信息
-            with yt_dlp.YoutubeDL(android_opts) as ydl:
+            with yt_dlp.YoutubeDL(creator_opts) as ydl:
                 ydl.download([f'https://www.youtube.com/watch?v={task.video_id}'])
             download_success = True
-            logger.info(f"✅ Android 客户端下载成功: {task.video_id}")
+            logger.info(f"✅ Android Creator 下载成功: {task.video_id}")
         except Exception as e:
             last_error = e
-            logger.warning(f"⚠️ Android 客户端下载失败: {e}")
+            logger.warning(f"⚠️ Android Creator 下载失败: {e}")
             
-            # 策略2：Web 客户端
+            # 策略2：Android Music 客户端
             try:
-                logger.info(f"🔄 尝试 Web 客户端策略: {task.video_id}")
-                web_opts = ydl_opts.copy()
-                web_opts['extractor_args'] = {
+                logger.info(f"🔄 尝试 Android Music 客户端: {task.video_id}")
+                music_opts = ydl_opts.copy()
+                music_opts['extractor_args'] = {
                     'youtube': {
-                        'player_client': ['web'],
-                        'player_skip': ['configs'],
+                        'player_client': ['android_music'],
+                        'player_skip': ['webpage'],
                     }
                 }
-                web_opts['no_warnings'] = True
-                with yt_dlp.YoutubeDL(web_opts) as ydl:
+                with yt_dlp.YoutubeDL(music_opts) as ydl:
                     ydl.download([f'https://www.youtube.com/watch?v={task.video_id}'])
                 download_success = True
-                logger.info(f"✅ Web 客户端下载成功: {task.video_id}")
+                logger.info(f"✅ Android Music 下载成功: {task.video_id}")
             except Exception as e2:
                 last_error = e2
-                logger.warning(f"⚠️ Web 客户端下载失败: {e2}")
-                
-                # 策略3：iOS 客户端（备用）
-                try:
-                    logger.info(f"🔄 尝试 iOS 客户端策略: {task.video_id}")
-                    ios_opts = ydl_opts.copy()
-                    ios_opts['extractor_args'] = {
+                logger.warning(f"⚠️ Android Music 下载失败: {e2}")
+            
+        
+        # 如果主策略失败，尝试 TV Embedded 客户端
+        if not download_success:
+            logger.warning(f"⚠️ 主策略失败，尝试 TV Embedded 客户端")
+            
+            try:
+                logger.info(f"🔄 使用 TV Embedded 客户端: {task.video_id}")
+                tv_opts = {
+                    'format': 'bestaudio/best',
+                    'outtmpl': str(audio_file.with_suffix('.%(ext)s')),
+                    'writesubtitles': True,
+                    'writeautomaticsub': True,
+                    'subtitleslangs': ['en'],
+                    'subtitlesformat': 'vtt',
+                    'extract_audio': True,
+                    'audio_format': 'mp3',
+                    'audio_quality': '128k',
+                    'noplaylist': True,
+                    'progress_hooks': [lambda d: progress_hook(d)],
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'mp3',
+                        'preferredquality': '128',
+                    }],
+                    'extractor_args': {
                         'youtube': {
-                            'player_client': ['ios'],
-                            'player_skip': ['webpage'],
+                            'player_client': ['tv_embedded'],
+                            'player_skip': ['webpage', 'configs'],
                         }
-                    }
-                    ios_opts['no_warnings'] = True
-                    with yt_dlp.YoutubeDL(ios_opts) as ydl:
-                        ydl.download([f'https://www.youtube.com/watch?v={task.video_id}'])
-                    download_success = True
-                    logger.info(f"✅ iOS 客户端下载成功: {task.video_id}")
-                except Exception as e3:
-                    last_error = e3
-                    logger.warning(f"⚠️ iOS 客户端下载失败: {e3}")
-                    
-                    # 策略4：TV 客户端（有时候限制更少）
-                    try:
-                        logger.info(f"🔄 尝试 TV 客户端策略: {task.video_id}")
-                        tv_opts = {
-                            'format': 'bestaudio/best',
-                            'outtmpl': str(audio_file.with_suffix('.%(ext)s')),
-                            'extract_audio': True,
-                            'audio_format': 'mp3',
-                            'audio_quality': '128k',
-                            'noplaylist': True,
-                            'no_warnings': False,
-                            'quiet': False,
-                            'progress_hooks': [lambda d: progress_hook(d)],
-                            'postprocessors': [{
-                                'key': 'FFmpegExtractAudio',
-                                'preferredcodec': 'mp3',
-                                'preferredquality': '128',
-                            }],
-                            'extractor_args': {
-                                'youtube': {
-                                    'player_client': ['tv_embedded'],
-                                    'player_skip': ['webpage', 'configs'],
-                                }
-                            },
-                            'socket_timeout': 60,
-                            'retries': 3,
-                            'sleep_interval': 5,
-                        }
-                        with yt_dlp.YoutubeDL(tv_opts) as ydl:
-                            ydl.download([f'https://www.youtube.com/watch?v={task.video_id}'])
-                        download_success = True
-                        logger.info(f"✅ TV 客户端下载成功: {task.video_id}")
-                    except Exception as e4:
-                        last_error = e4
-                        logger.warning(f"⚠️ TV 客户端下载失败: {e4}")
-                        
-                        # 策略5：使用嵌入式播放器
-                        try:
-                            logger.info(f"🔄 尝试嵌入式播放器策略: {task.video_id}")
-                            embed_url = f'https://www.youtube.com/embed/{task.video_id}'
-                            embed_opts = {
-                                'format': 'bestaudio/best',
-                                'outtmpl': str(audio_file.with_suffix('.%(ext)s')),
-                                'extract_audio': True,
-                                'audio_format': 'mp3',
-                                'audio_quality': '128k',
-                                'noplaylist': True,
-                                'progress_hooks': [lambda d: progress_hook(d)],
-                                'postprocessors': [{
-                                    'key': 'FFmpegExtractAudio',
-                                    'preferredcodec': 'mp3',
-                                    'preferredquality': '128',
-                                }],
-                                'socket_timeout': 30,
-                                'retries': 2,
-                                'sleep_interval': 2,
-                            }
-                            with yt_dlp.YoutubeDL(embed_opts) as ydl:
-                                ydl.download([embed_url])
-                            download_success = True
-                            logger.info(f"✅ 嵌入式播放器下载成功: {task.video_id}")
-                        except Exception as e5:
-                            last_error = e5
-                            logger.error(f"❌ 所有下载策略均失败: {e5}")
+                    },
+                }
+                
+                with yt_dlp.YoutubeDL(tv_opts) as ydl:
+                    ydl.download([f'https://www.youtube.com/watch?v={task.video_id}'])
+                download_success = True
+                logger.info(f"✅ TV Embedded 下载成功: {task.video_id}")
+            except Exception as tv_error:
+                last_error = tv_error
+                logger.error(f"❌ TV Embedded 也失败: {tv_error}")
+                logger.error(f"❌ 备用策略也失败: {fallback_error}")
         
         if not download_success:
             raise last_error or Exception("所有下载策略均失败")

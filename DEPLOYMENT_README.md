@@ -103,9 +103,25 @@ YouTube 会检测频繁的自动化请求，并要求验证"你不是机器人"�
 ERROR: Sign in to confirm you're not a bot
 ```
 
-### 解决方案（无需 Cookies）
+### 🎯 推荐解决方案：使用 Cookies（最稳定）
 
-本服务器采用多重策略绕过机器人检测，**无需登录或 cookies**：
+从浏览器导出 cookies 是最可靠的方法：
+
+1. **安装浏览器扩展**
+   - Chrome/Edge: [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/cclelndahbckbenkjhflpdbgdldlbecc)
+   - Firefox: [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/)
+
+2. **登录 YouTube** 并导出 cookies.txt
+
+3. **放置文件**：将 `cookies.txt` 放到项目目录下
+
+4. **重启服务**
+
+详细说明：查看 [YOUTUBE_COOKIES_SETUP.md](./YOUTUBE_COOKIES_SETUP.md)
+
+### 备用方案：无 Cookies 模式
+
+如果不想使用 cookies，本服务器也提供多重策略：
 
 #### 1. **多客户端策略**（优先级排序）
 - **iOS 客户端** → 最稳定，限制最少
@@ -137,6 +153,9 @@ ERROR: Sign in to confirm you're not a bot
 
 ### 如果仍然遇到限制
 
+**首选方案**：从浏览器导出 cookies.txt（见上面说明）
+
+**备用方案**：
 1. **等待几分钟**：如果短时间内请求过多，等待 5-10 分钟
 2. **检查 IP**：确保服务器 IP 未被 YouTube 封禁
 3. **更新 yt-dlp**：`pip3 install -U yt-dlp`
