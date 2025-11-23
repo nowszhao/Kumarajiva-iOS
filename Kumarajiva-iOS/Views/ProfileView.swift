@@ -245,6 +245,8 @@ struct SettingsDetailView: View {
     @State private var playbackSpeed: Float = UserSettings.shared.playbackSpeed
     @State private var autoLoadWhisperModel: Bool = UserSettings.shared.autoLoadWhisperModel
     @State private var allowCellularDownload: Bool = UserSettings.shared.allowCellularDownload
+    @State private var llmCookie: String = UserSettings.shared.llmCookie
+    @State private var isEditingCookie = false
     @StateObject private var networkMonitor = NetworkMonitor.shared
     
     var body: some View {
@@ -389,6 +391,22 @@ struct SettingsDetailView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+            }
+            
+            Section {
+                NavigationLink(destination: LLMCookieSettingsView(cookie: $llmCookie)) {
+                    HStack {
+                        Text("LLM Cookie")
+                        Spacer()
+                        Text(llmCookie.isEmpty ? "未设置" : "已设置")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            } header: {
+                Text("智能对话设置")
+            } footer: {
+                Text("配置LLM服务所需的认证Cookie。保持默认值即可正常使用。")
             }
             
             Section {
@@ -622,5 +640,88 @@ struct ContributionCardView: View {
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 5, y: 2)
         .padding(.horizontal)
+    }
+}
+
+// MARK: - LLM Cookie 设置视图
+struct LLMCookieSettingsView: View {
+    @Binding var cookie: String
+    @State private var editingCookie: String = ""
+    @Environment(\.presentationMode) var presentationMode
+    
+    var body: some View {
+        Form {
+            Section {
+                TextEditor(text: $editingCookie)
+                    .frame(minHeight: 200)
+                    .font(.system(.caption, design: .monospaced))
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+            } header: {
+                Text("Cookie内容")
+            } footer: {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("请输入从浏览器复制的完整Cookie字符串。")
+                    Text("⚠️ Cookie包含敏感信息，请勿分享给他人。")
+                        .foregroundColor(.orange)
+                }
+            }
+            
+            Section {
+                HStack {
+                    Text("当前长度")
+                    Spacer()
+                    Text("\(editingCookie.count) 字符")
+                        .foregroundColor(.secondary)
+                }
+                
+                HStack {
+                    Text("状态")
+                    Spacer()
+                    HStack {
+                        Circle()
+                            .fill(editingCookie.isEmpty ? .red : .green)
+                            .frame(width: 8, height: 8)
+                        Text(editingCookie.isEmpty ? "未配置" : "已配置")
+                            .foregroundColor(.secondary)
+                    }
+                }
+            } header: {
+                Text("Cookie信息")
+            }
+            
+            Section {
+                Button(action: {
+                    // 恢复默认Cookie
+                    editingCookie = ""
+                    UserSettings.shared.llmCookie = ""
+                    cookie = UserSettings.shared.llmCookie
+                }) {
+                    HStack {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text("恢复默认Cookie")
+                        Spacer()
+                    }
+                }
+                .foregroundColor(.blue)
+            } footer: {
+                Text("恢复为应用内置的默认Cookie值")
+            }
+        }
+        .navigationTitle("LLM Cookie设置")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("保存") {
+                    UserSettings.shared.llmCookie = editingCookie
+                    cookie = editingCookie
+                    presentationMode.wrappedValue.dismiss()
+                }
+                .disabled(editingCookie == cookie)
+            }
+        }
+        .onAppear {
+            editingCookie = cookie
+        }
     }
 }
