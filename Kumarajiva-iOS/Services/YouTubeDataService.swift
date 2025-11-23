@@ -31,11 +31,11 @@ class YouTubeDataService: ObservableObject {
     // 后端服务配置
     private let backendBaseURL: String
     
-    // 配置更长的超时时间的URLSession
+    // 配置更长的超时时间的URLSession（考虑到 yt-dlp + Deno 首次启动需要较长时间）
     private lazy var urlSession: URLSession = {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30.0  // 请求超时30秒
-        config.timeoutIntervalForResource = 60.0 // 资源超时60秒
+        config.timeoutIntervalForRequest = 120  // 请求超时90秒（首次 Deno 启动需要更长时间）
+        config.timeoutIntervalForResource = 360.0 // 资源超时120秒
         return URLSession(configuration: config)
     }()
     
@@ -327,7 +327,7 @@ class YouTubeDataService: ObservableObject {
         
         components.queryItems = [
             URLQueryItem(name: "id", value: channelId),
-            URLQueryItem(name: "limit", value: "100")
+            URLQueryItem(name: "limit", value: "50")  // 减少到50个视频，提升加载速度
         ]
         
         guard let url = components.url else {
